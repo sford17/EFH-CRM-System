@@ -19,6 +19,13 @@ templates.post('/', (req, res) => {
   res.status(201).json(db.one('SELECT * FROM email_templates WHERE id = ?', id));
 });
 
+// Pictures for templates (banners, your own diagrams). Inserted as [[image: id]].
+templates.post('/images', (req, res) => {
+  const id = require('../services/branding').saveImage(req.body?.image, { kind: 'email_image', userId: req.user.id, maxBytes: 2 * 1024 * 1024 });
+  const a = db.one('SELECT id, width, height FROM assets WHERE id = ?', id);
+  res.status(201).json({ ...a, url: `/assets/${id}`, tag: `[[image: ${id}${req.body?.alt ? ` | ${String(req.body.alt).replace(/[|\]\n]/g, ' ').trim()}` : ''}]]` });
+});
+
 templates.patch('/:id', (req, res) => {
   const id = intParam(req.params.id);
   notFound(db.one('SELECT 1 FROM email_templates WHERE id = ?', id), 'Template');

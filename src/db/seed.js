@@ -4,6 +4,7 @@ const { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_T
 const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 const { IO_EXPIRY_AUTOMATION } = require('./tracker-defaults');
 const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
+const { applyTemplateGraphics } = require('./graphics-defaults');
 
 // Indicative commission rates; edit them on the Lenders page to match your
 // aggregator's schedule.
@@ -202,7 +203,7 @@ function seedDefaults() {
     }
     if (!db.one('SELECT 1 FROM email_templates LIMIT 1')) {
       for (const [name, category, subject, body] of TEMPLATES) {
-        db.insert('email_templates', { name, category, subject, body, sms_body: TEMPLATE_SMS[name] || null });
+        db.insert('email_templates', { name, category, subject, body: applyTemplateGraphics(name, body), sms_body: TEMPLATE_SMS[name] || null });
       }
     }
     if (!db.getSetting('automations_seeded')) {

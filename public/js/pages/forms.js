@@ -5,6 +5,7 @@ import {
 } from '../core.js';
 import { addresseePicker, householdOf } from './household.js';
 import { partiesFieldset } from './parties.js';
+import { bodyPreview } from './graphics.js';
 
 export const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 export const CONTACT_STATUSES = ['lead', 'prospect', 'client', 'past_client', 'lost'];
@@ -192,8 +193,8 @@ export async function sendTemplateDialog({ contactId, dealId, parties = [] }) {
     previewBtn.disabled = !select.value;
     if (!select.value) return;
     const p = await api(`/templates/${select.value}/preview`, { method: 'POST', body: body() });
-    preview.replaceChildren(h('div.muted', `To: ${p.to || '(no email address)'}`), h('h3', p.subject), h('pre', p.body),
-      p.sms ? h('div.sms-companion', h('strong.small', `Also texts ${p.mobile || '(no mobile – SMS will be skipped)'}:`), h('div.sms-bubble', p.sms)) : null);
+    preview.replaceChildren(...[h('div.muted', `To: ${p.to || '(no email address)'}`), h('h3', p.subject), bodyPreview(p.body),
+      p.sms ? h('div.sms-companion', h('strong.small', `Also texts ${p.mobile || '(no mobile – SMS will be skipped)'}:`), h('div.sms-bubble', p.sms)) : null].filter(Boolean));
   };
   select.addEventListener('change', showPreview);
   const picker = addresseePicker(members, addressees, (ids) => { addressees = ids; showPreview(); });

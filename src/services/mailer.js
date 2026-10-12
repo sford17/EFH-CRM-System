@@ -21,7 +21,7 @@ function getTransport() {
   return transport;
 }
 
-function queueEmail({ to, subject, body, contactId = null, dealId = null, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
+function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId = null, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
   if (!to) throw new Error('Recipient has no email address');
   return db.insert('outbox', {
     sender_user_id: senderUserId,
@@ -31,6 +31,7 @@ function queueEmail({ to, subject, body, contactId = null, dealId = null, templa
     body,
     contact_id: contactId,
     deal_id: dealId,
+    loan_id: loanId,
     template_id: templateId,
     automation_id: automationId,
     send_after: sendAfter || nowIso(),
@@ -61,6 +62,7 @@ function queueTemplate(templateId, { contactId, dealId, loanId, automationId, se
     body: render(template.body, ctx),
     contactId: ctx.contact?.id ?? null,
     dealId: ctx.deal?.id ?? null,
+    loanId: ctx.loan?.id ?? null, // so a fixed-rate chart shows the loan the email is about
     templateId,
     automationId,
     sendAfter,
@@ -111,7 +113,7 @@ async function processDue() {
     try {
       const senderId = senderFor(mail);
       const account = senderId ? outlook.accountForUser(senderId) : null;
-      const email = buildEmail({ body: mail.body, senderUserId: senderId });
+      const email = buildEmail({ body: mail.body, senderUserId: senderId, context: { contactId: mail.contact_id, dealId: mail.deal_id, loanId: mail.loan_id } });
       const files = mail.attachments ? JSON.parse(mail.attachments).map((a) => ({ ...a, data: Buffer.from(a.data, 'base64') })) : [];
       if (account) {
         const sent = await outlook.sendMail(account, { to: mail.to_email, subject: mail.subject, email, files });
@@ -119,7 +121,7 @@ async function processDue() {
         outlook.recordEmail(account, {
           graphId: sent.graphId, conversationId: sent.conversationId, direction: 'out',
           fromEmail: account.email, fromName: account.display_name, to: sent.to, cc: [],
-          subject: mail.subject, body: mail.body, preview: null, hasAttachments: files.length > 0, webLink: sent.webLink, sentAt: nowIso(),
+          subject: mail.subject, body: email.plain, preview: null, hasAttachments: files.length > 0, webLink: sent.webLink, sentAt: nowIso(),
         }, { contactIds: [mail.contact_id], dealId: mail.deal_id });
       } else if (t) {
         await t.sendMail({

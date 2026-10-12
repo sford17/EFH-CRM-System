@@ -528,3 +528,12 @@ fieldset.parties-fieldset legend { font-size: .82rem; color: var(--text-2); font
 .party-contact { display: flex; flex-wrap: wrap; gap: .25rem .75rem; }
 .send-to { margin-bottom: .75rem; }
 .send-to select { width: 100%; }
+
+/* ---- Email graphics in the template editor ---- */
+.graphics-toolbar { display: grid; gap: .35rem; }
+.toolbar-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.toolbar-row select { max-width: 100%; }
+.graphic-hint:empty { display: none; }
+.body-preview p.pre { margin: 0 0 .8rem; white-space: pre-wrap; }
+.graphic-chip { display: flex; width: fit-content; align-items: center; gap: .45rem; margin: 0 0 .8rem; padding: .35rem .75rem; border: 1px dashed var(--accent); border-radius: 8px; background: var(--accent-soft); color: var(--text); font-size: .9rem; }
+.graphic-icon { font-size: 1rem; }

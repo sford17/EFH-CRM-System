@@ -50,6 +50,7 @@ function createApp() {
     stages: STAGES,
     document_checklist: DOCUMENT_CHECKLIST,
     party_roles: Object.entries(require('./services/parties').ROLES).map(([key, r]) => ({ key, label: r.label, types: r.types })),
+    email_graphics: require('./services/emailGraphics').GRAPHICS,
   }));
   app.use('/api/contacts', require('./routes/contacts'));
   app.use('/api/deals', require('./routes/deals'));

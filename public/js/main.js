@@ -202,7 +202,11 @@ async function boot() {
   else route();
 }
 
-window.addEventListener('hashchange', () => { if (state.user) route(); });
+window.addEventListener('hashchange', () => {
+  // Pop-ups belong to the page they were opened on.
+  for (const d of document.querySelectorAll('dialog[open]')) d.close();
+  if (state.user) route();
+});
 // Lets pages re-render the current route after a change.
 window.addEventListener('crm:refresh', () => route());
 boot().catch((err) => toast(err.message, 'error'));

@@ -65,7 +65,10 @@ test('deal lifecycle: checklist, stage automations, settlement commissions', asy
   d = (await api.get(`/deals/${deal.id}`)).data;
   const docEmail = db.one('SELECT * FROM outbox WHERE deal_id = ? AND subject LIKE ?', deal.id, 'Documents needed%');
   assert.ok(docEmail, 'document request email queued');
-  assert.match(docEmail.body, /- Signed contract of sale/);
+  assert.match(docEmail.body, /\[\[documents\]\]/, 'checklist graphic, filled in when sent');
+  const built = require('../src/services/emailHtml').buildEmail({ body: docEmail.body, context: { contactId: docEmail.contact_id, dealId: deal.id } });
+  assert.match(built.text, /- Signed contract of sale/);
+  assert.match(built.html, /Signed contract of sale/);
 
   assert.equal((await api.post(`/deals/${deal.id}/stage`, { stage: 'lost' })).status, 400, 'lost requires a reason');
   assert.equal((await api.post(`/deals/${deal.id}/stage`, { stage: 'bogus' })).status, 400);

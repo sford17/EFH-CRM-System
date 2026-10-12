@@ -21,8 +21,9 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Mortgage tracker** | A tab on each contact covering their properties, valuation history by method (full, desktop, kerbside, AVM, contract price…), loans and the properties securing them, and other assets. Shows LVR, equity, usable equity and net position, plus a lending structure diagram that flags cross-collateralisation and LVRs over 80% |
 | **Client lending reviews** | A branded review document built from the mortgage tracker, with four commentary sections (Loan Review, Actions to Consider, Broker to Action, Next Steps) pre-filled with suggestions. Preview it live, download as PDF or Word, or email it to the client with the PDF attached |
 | **Calendar (Calendly)** | Calendly bookings appear on a Calendar page, the dashboard and each client's record. Bookings are matched to clients (newcomers become leads), cancellations get a follow-up task, and a **Booking link** button copies, emails or texts a pre-filled Calendly link |
-| **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Emails are sent as formatted HTML with your logo, brand colour and each sender's own signature, with images embedded |
-| **Email templates** | 18 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
+| **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Every email has your logo on a band of your brand colour, a footer with your business details and disclaimer, and each sender's own signature, with images embedded |
+| **Email templates** | 18 editable templates with merge fields, headings and bullet points, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
+| **Email graphics** | Charts and diagrams built from each client's details, in your brand colours: loan progress tracker, loan details card, key dates, document checklist, position summary, lending structure diagram, equity chart, property value chart and fixed-rate countdown. Also branded buttons (e.g. "Book a time") and your own images. They show even when a client's email blocks pictures |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Commission rates, clawback periods, BDM contacts, settled volume, and logos (uploaded or fetched from the lender's website) shown across the pipeline, tracker, review documents and client emails |
@@ -162,11 +163,43 @@ Notes:
 
 ## Branding and email signatures
 
-- **Settings → Branding** (admin): upload a PNG or JPG logo, then choose a main colour (colours from your logo are suggested) and a sidebar colour. Colours are adjusted automatically where needed so text stays readable. You can choose a *Branded* email style (logo and colour band) or a *Plain* one that looks like a normal email.
+- **Settings → Branding** (admin): upload a PNG or JPG logo, then choose a main colour (colours from your logo are suggested) and a sidebar colour. Colours are adjusted automatically where needed so text stays readable.
+- **Email style:** *Banner* (the default) puts your logo on a band of your main colour, with a footer in a light tint of it. *Classic* puts your logo on white under a thin colour bar. *Plain* looks like a normal email with just your signature. Every email the CRM sends uses this style: templates, automations, one-off emails and lending reviews. Replies are kept plain so they sit naturally in the conversation.
+- **Email footer:** your business name, phone, email, website and ACL / credit representative number (from **Settings → Business**), plus an optional footer note such as a general-advice disclaimer.
 - **Settings → My email signature** (each user): Outlook doesn't let other apps read your signature, so copy it from Outlook and paste it in. Images embedded in the signature are kept. Images that only exist on your PC (common when copying from Outlook desktop) can't be copied; add them with **Insert image**. Without a signature, your name, business name and phone are used.
 - The signature is added when an email is sent, so templates end with just "Kind regards,". Replies sent from the CRM get your signature above the quoted conversation.
 - Logos and signature images are embedded in the email itself, so clients see them without clicking "download pictures", even when the CRM runs on your own computer.
 - **Preview** buttons (Settings, new email, Send template) show exactly how an email will look.
+
+## Charts and diagrams in emails
+
+Templates can include graphics that are filled in with each client's details when the email is sent, in your brand colours. In **Email templates**, open a template and use the toolbar above the message:
+
+- **📊 Insert chart or diagram** adds one of these:
+
+  | Graphic | Shows | Needs |
+  | --- | --- | --- |
+  | Loan progress tracker | Where the loan is up to, from fact find to settled | A deal |
+  | Loan details card | Lender (with logo), amount, rate, property and LVR | A deal |
+  | Key dates | Pre-approval expiry, finance due date and settlement, with days to go | A deal |
+  | Document checklist | Documents still needed and those already received | A deal |
+  | Position summary | Property value, total lending, LVR and usable equity | Mortgage tracker |
+  | Lending structure diagram | Each lender and loan, what secures it, and each property's LVR | Mortgage tracker |
+  | Equity chart | Each property's value split into loan and equity | Mortgage tracker |
+  | Property value chart | The main property's valuations over time | Mortgage tracker (2+ valuations) |
+  | Fixed rate countdown | Days until the fixed rate ends, with the loan details | A fixed-rate loan |
+
+- **▭ Insert button** adds a button in your brand colour, for example *Book a time* linking to your Calendly booking link.
+- **🖼 Insert image** uploads a picture (PNG, JPG or GIF, up to 2 MB), such as a banner, a birthday graphic or your own diagram.
+- **👁 Preview** shows the email with example figures.
+
+Each graphic sits on its own line in the message as a tag like `[[progress]]` or `[[button: Book a time | {{broker.booking_link}}]]`, so you can also move or delete it by editing the text. If a client doesn't have the details a graphic needs (e.g. no deal, or no Calendly link for a button), it's simply left out of their email. Previews flag that so you know.
+
+The standard templates now include the right graphics. Stage-update emails have the progress tracker and key dates or loan details, *Document request* has the checklist, *Annual loan review* shows the client's position, lending structure and property value, and *Fixed rate expiry review* has the countdown. If you'd already edited one of these templates, it's left as you had it, so add graphics with the toolbar.
+
+The charts are built from the email's own formatting rather than pictures, so they display even in email programs that block downloaded images (like Outlook does by default). The text-only copy of each email describes them in words.
+
+You can also start a paragraph with `# ` to make it a heading, and start lines with `- ` for bullet points.
 
 ## Calendly
 

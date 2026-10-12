@@ -17,10 +17,11 @@ const pickImage = () => new Promise((resolve) => {
 
 // Shows a rendered email (template, or subject/body text) in a sandboxed frame.
 export async function previewEmail(payload, title = 'Email preview') {
-  const { url, subject } = await attempt(() => api('/email-preview', { method: 'POST', body: payload }));
+  const { url, subject, sample } = await attempt(() => api('/email-preview', { method: 'POST', body: payload }));
   modal(subject ? `Preview: ${subject}` : title, [
+    sample ? h('p.muted.small', 'Shown with example figures. Each client gets their own details.') : null,
     h('iframe.email-frame', { src: url, sandbox: '', title: 'Email preview' }),
-    h('p.muted.small', 'Images appear in the real email as embedded pictures, so clients see them without clicking "download images".'),
+    h('p.muted.small', 'Charts are built into the email itself, so they show even when the client\'s email program blocks pictures. Logos and images are embedded, so clients see them without clicking "download images".'),
   ], { wide: true });
 }
 
@@ -101,14 +102,17 @@ export async function brandingCard() {
   };
 
   const style = h('select', { 'aria-label': 'Email style' },
-    h('option', { value: 'branded', selected: b.email_style === 'branded' }, 'Branded – logo and colour band at the top'),
+    h('option', { value: 'banner', selected: b.email_style === 'banner' }, 'Banner – logo on a band of your main colour, with a branded footer'),
+    h('option', { value: 'branded', selected: b.email_style === 'branded' }, 'Classic – logo on white with a thin colour bar, and a branded footer'),
     h('option', { value: 'plain', selected: b.email_style === 'plain' }, 'Plain – looks like a normal email (signature only)'));
   const emailLogo = h('input', { type: 'checkbox', checked: b.email_logo });
+  const footerDetails = h('input', { type: 'checkbox', checked: b.email_footer_details });
+  const footerNote = h('textarea', { rows: 3, maxlength: 600, placeholder: 'e.g. General advice only. Credit Representative 123456 of Example Aggregator, ACL 654321.' }, b.email_footer || '');
 
   const save = async () => {
     const brand = await attempt(() => api('/branding', {
       method: 'PUT',
-      body: { primary: primary.get(), sidebar: sidebar.get(), email_style: style.value, email_logo: emailLogo.checked },
+      body: { primary: primary.get(), sidebar: sidebar.get(), email_style: style.value, email_logo: emailLogo.checked, email_footer_details: footerDetails.checked, email_footer: footerNote.value },
     }), 'Branding saved');
     announce(brand);
   };
@@ -130,10 +134,12 @@ export async function brandingCard() {
       h('div.field', h('span', 'Main colour (buttons, links, email accent)'), primary.el, swatches),
       h('div.field', h('span', 'Sidebar colour'), sidebar.el),
       h('div.field.full', h('span', 'Email style'), style),
-      h('label.field.check.full', emailLogo, 'Show the logo at the top of emails (untick if your signature already has it)')),
+      h('label.field.check.full', emailLogo, 'Show the logo at the top of emails (untick if your signature already has it)'),
+      h('label.field.check.full', footerDetails, 'Show your business name, phone, email, website and ACL number in the email footer (from Settings → Business)'),
+      h('label.field.full', h('span', 'Footer note (optional, e.g. a disclaimer)'), footerNote)),
     h('p.muted.small', 'Colours are adjusted automatically where needed so text stays readable, including in dark mode.'),
     h('div.actions',
-      h('button.secondary', { type: 'button', onclick: () => previewEmail({}) }, 'Preview an email'),
+      h('button.secondary', { type: 'button', onclick: async () => { await save(); previewEmail({}); } }, 'Save & preview an email'),
       h('button.secondary', { type: 'button', onclick: reset }, 'Reset colours'),
       h('button', { type: 'button', onclick: save }, 'Save branding')));
 }

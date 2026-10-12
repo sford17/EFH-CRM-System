@@ -8,6 +8,19 @@ const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 const { IO_EXPIRY_AUTOMATION, FIXED_RATE_TEXT_UPDATES } = require('./tracker-defaults');
 const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
 
+// Existing installs: add graphics to standard templates the broker hasn't
+// edited, and move the default "branded" email look to the new colour banner.
+function addGraphicsDefaults(db) {
+  const { TEMPLATES } = require('./seed');
+  const { applyTemplateGraphics } = require('./graphics-defaults');
+  for (const [name, , , body] of TEMPLATES) {
+    const row = db.one('SELECT id, body FROM email_templates WHERE name = ?', name);
+    const updated = applyTemplateGraphics(name, body);
+    if (row && row.body === body && updated !== body) db.update('email_templates', row.id, { body: updated });
+  }
+  if (['', 'branded'].includes(db.getSetting('brand_email_style', ''))) db.setSetting('brand_email_style', 'banner');
+}
+
 // Existing installs: templates and (switched-off) automations for keeping the
 // agent and solicitor up to date.
 function addPartyDefaults(db) {
@@ -484,9 +497,19 @@ MIGRATIONS.push(
   },
 );
 
+MIGRATIONS.push(
+  // 11. Branded email graphics: emails remember the loan they're about, the
+  // standard templates gain charts, and emails get the new branded header.
+  (db) => {
+    db.get().exec('ALTER TABLE outbox ADD COLUMN loan_id INTEGER REFERENCES loans(id) ON DELETE SET NULL;');
+    addGraphicsDefaults(db);
+  },
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;
 module.exports.addCalendarDefaults = addCalendarDefaults;
 module.exports.addTrackerDefaults = addTrackerDefaults;
 module.exports.addPartyDefaults = addPartyDefaults;
+module.exports.addGraphicsDefaults = addGraphicsDefaults;

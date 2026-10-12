@@ -1,8 +1,10 @@
 import { api, h, pageHeader, table, badge, dateTime, attempt, confirmDialog, label, formModal, modal, toast } from '../core.js';
 import { refresh } from './forms.js';
 import { smsLog, counted } from './sms.js';
+import { graphicsToolbar, graphicFor } from './graphics.js';
+import { previewEmail } from './branding.js';
 
-const MERGE_HELP = 'Your email signature is added automatically when the email is sent, so end the message with something like "Kind regards,". Merge fields: {{contact.first_name}} {{contact.full_name}} {{deal.title}} {{deal.loan_amount|money}} {{deal.lender_name}} {{deal.settlement_date|date}} {{deal.fixed_expiry_date|date}} {{deal.pre_approval_expiry|date}} {{deal.outstanding_documents}} {{broker.name}} {{broker.phone}} {{business.name}} {{agent.name}} {{agent.company}} {{solicitor.name}} {{buyers_agent.name}}, and {{recipient.first_name}} for emails sent to the agent or solicitor on a deal. Templates in the "marketing" category are not sent to contacts who opted out.';
+const MERGE_HELP = 'Emails go out with your logo, colours, business details and signature, so end the message with something like "Kind regards,". Start a paragraph with "# " for a heading, or lines with "- " for bullet points. Merge fields: {{contact.first_name}} {{contact.full_name}} {{deal.title}} {{deal.loan_amount|money}} {{deal.lender_name}} {{deal.settlement_date|date}} {{deal.fixed_expiry_date|date}} {{deal.pre_approval_expiry|date}} {{deal.outstanding_documents}} {{broker.name}} {{broker.phone}} {{business.name}} {{agent.name}} {{agent.company}} {{solicitor.name}} {{buyers_agent.name}}, and {{recipient.first_name}} for emails sent to the agent or solicitor on a deal. Templates in the "marketing" category are not sent to contacts who opted out.';
 
 const templateFields = [
   { name: 'name', label: 'Name', required: true },
@@ -19,9 +21,14 @@ export async function templatesPage() {
       await attempt(() => api(t ? `/templates/${t.id}` : '/templates', { method: t ? 'PATCH' : 'POST', body: v }), 'Template saved');
       refresh();
     });
-    d.querySelector('form').prepend(h('p.muted.small.full', MERGE_HELP));
+    const form = d.querySelector('form');
+    form.prepend(h('p.muted.small.full', MERGE_HELP));
     const smsBox = d.querySelector('textarea[name=sms_body]');
     smsBox.after(counted(smsBox));
+    // Charts, buttons and images, plus a preview with example figures.
+    const bodyBox = form.elements.body;
+    const preview = () => previewEmail({ subject: form.elements.subject.value, body: bodyBox.value || ' ', merge: true }, 'Template preview');
+    bodyBox.closest('.field').before(graphicsToolbar(bodyBox, { onPreview: preview }));
   };
   return h('div',
     pageHeader('Email templates', h('button', { type: 'button', onclick: () => edit() }, '+ New template')),
@@ -30,6 +37,7 @@ export async function templatesPage() {
       { label: 'Name', value: (t) => h('a', { href: '#/templates', onclick: (e) => { e.preventDefault(); edit(t); } }, t.name) },
       { label: 'Category', value: (t) => badge(t.category || 'general') },
       { label: 'Subject', value: (t) => t.subject },
+      { label: 'Graphics', value: (t) => { const n = t.body.split(/\n{2,}/).filter((p) => graphicFor(p)).length; return n ? h('span', `📊 ${n}`) : ''; } },
       { label: 'SMS', value: (t) => (t.sms_body ? h('span', { title: t.sms_body }, '✓ also texts') : '') },
       {
         label: '', value: (t) => h('button.link.small', {

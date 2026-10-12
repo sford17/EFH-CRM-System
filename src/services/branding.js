@@ -47,8 +47,10 @@ function getBrand() {
     primary: db.getSetting('brand_primary', '') || DEFAULTS.primary,
     sidebar: db.getSetting('brand_sidebar', '') || DEFAULTS.sidebar,
     customised: Boolean(db.getSetting('brand_primary', '') || db.getSetting('brand_sidebar', '')),
-    email_style: db.getSetting('brand_email_style', 'branded') || 'branded',
+    email_style: db.getSetting('brand_email_style', 'banner') || 'banner',
     email_logo: db.getSetting('brand_email_logo', '1') !== '0',
+    email_footer_details: db.getSetting('brand_email_footer_details', '1') !== '0',
+    email_footer: db.getSetting('brand_email_footer', ''),
     logo: logo ? { id: logo.id, url: `/assets/${logo.id}`, width: logo.width, height: logo.height } : null,
     version: db.getSetting('brand_version', '0'),
   };
@@ -58,17 +60,26 @@ function bump() {
   db.setSetting('brand_version', String(Date.now()));
 }
 
-function saveBrand({ primary, sidebar, email_style, email_logo }) {
+const EMAIL_STYLES = ['banner', 'branded', 'plain'];
+const MAX_FOOTER = 600;
+
+function saveBrand({ primary, sidebar, email_style, email_logo, email_footer_details, email_footer }) {
   for (const [key, value] of [['brand_primary', primary], ['brand_sidebar', sidebar]]) {
     if (value === undefined) continue;
     if (value && !isHex(value)) throw new HttpError(400, 'Colours must look like #1f5fbf');
     db.setSetting(key, value ? value.toLowerCase() : '');
   }
   if (email_style !== undefined) {
-    if (!['branded', 'plain'].includes(email_style)) throw new HttpError(400, 'Unknown email style');
+    if (!EMAIL_STYLES.includes(email_style)) throw new HttpError(400, 'Unknown email style');
     db.setSetting('brand_email_style', email_style);
   }
   if (email_logo !== undefined) db.setSetting('brand_email_logo', email_logo ? '1' : '0');
+  if (email_footer_details !== undefined) db.setSetting('brand_email_footer_details', email_footer_details ? '1' : '0');
+  if (email_footer !== undefined) {
+    const text = String(email_footer ?? '').trim();
+    if (text.length > MAX_FOOTER) throw new HttpError(400, `Keep the footer note under ${MAX_FOOTER} characters`);
+    db.setSetting('brand_email_footer', text);
+  }
   bump();
   return getBrand();
 }
@@ -169,10 +180,20 @@ function css() {
 // Colours for emails, which always have a white background.
 function emailColours() {
   const b = getBrand();
-  return { primary: b.primary, link: readableOn(b.primary, '#ffffff') };
+  const link = readableOn(b.primary, '#ffffff');
+  return {
+    primary: b.primary,
+    onPrimary: textOn(b.primary),
+    link, // links and small coloured text
+    dark: readableOn(mix(link, '#000000', 0.15), '#ffffff', 7), // headings and figures
+    soft: mix(b.primary, '#ffffff', 0.9), // tile and footer backgrounds
+    tint: mix(b.primary, '#ffffff', 0.55), // secondary chart colour
+    button: b.primary,
+    onButton: textOn(b.primary),
+  };
 }
 
 module.exports = {
   getBrand, saveBrand, setLogo, removeLogo, saveImage, getAsset, css, emailColours,
-  imageSize, contrast, readableOn, isHex,
+  imageSize, contrast, readableOn, isHex, mix, EMAIL_STYLES,
 };

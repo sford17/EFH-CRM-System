@@ -86,7 +86,7 @@ export async function composeDialog({ contactId, dealId, to, subject = '', body 
   const send = h('button', { type: 'submit' }, 'Send');
   const preview = h('button.secondary', {
     type: 'button',
-    onclick: () => previewEmail({ subject: form.elements.subject.value, body: form.elements.body.value || ' ' }),
+    onclick: () => previewEmail({ subject: form.elements.subject.value, body: form.elements.body.value || ' ', contact_id: mainId() || undefined, deal_id: dealId || undefined }),
   }, 'Preview');
   form.append(h('div.actions.full', preview, send));
   const d = modal(toParty ? `Email ${toParty.name} (${toParty.role_label.toLowerCase()})` : 'New email', [picker, templateSel, form, via], { wide: true });
