@@ -21,15 +21,12 @@ const partnerFields = [
   { name: 'notes', label: 'Notes', type: 'textarea', full: true },
 ];
 
-const lenderFields = [
+export const lenderFields = [
   { name: 'name', label: 'Lender', required: true },
   { name: 'website', label: 'Website (for fetching a logo)', placeholder: 'westpac.com.au' },
   { name: 'upfront_pct', label: 'Upfront commission (% of loan)', type: 'number', step: 0.01, required: true, default: 0.65 },
   { name: 'trail_pct', label: 'Trail commission (% p.a.)', type: 'number', step: 0.01, required: true, default: 0.15 },
   { name: 'clawback_months', label: 'Clawback period (months)', type: 'number', step: 1, required: true, default: 24 },
-  { name: 'bdm_name', label: 'BDM name' },
-  { name: 'bdm_email', label: 'BDM email', type: 'email' },
-  { name: 'bdm_phone', label: 'BDM phone' },
   { name: 'active', label: 'Active', type: 'checkbox', default: true },
   { name: 'notes', label: 'Notes (policy, turnaround times…)', type: 'textarea', full: true },
 ];
@@ -46,7 +43,7 @@ const pickImage = () => new Promise((resolve) => {
   input.click();
 });
 
-function logoCell(l) {
+export function logoCell(l) {
   const done = async (msg) => { toast(msg); await loadLookups(true); window.dispatchEvent(new Event('crm:refresh')); };
   const upload = async () => {
     const image = await pickImage();
@@ -108,23 +105,6 @@ export const partnersPage = crudPage({
     { label: 'Referrals', value: (p) => String(p.referrals), class: 'num' },
     { label: 'Settled', value: (p) => `${p.settled_count} · ${money(p.settled_volume)}`, class: 'num' },
     { label: 'Fee', value: (p) => pct(p.referral_fee_pct), class: 'num' },
-  ],
-});
-
-export const lendersPage = crudPage({
-  title: 'Lenders',
-  path: '/lenders',
-  fields: lenderFields,
-  intro: 'Commission rates drive the expected upfront and trail entries created at settlement. Defaults are indicative – update them to match your aggregator schedule.',
-  intro2: 'Logos appear on pipeline cards, the mortgage tracker, lending reviews, and client emails that mention the lender. Upload the logo from your lender\'s broker portal for the best quality, or fetch the website icon.',
-  columns: [
-    { label: 'Logo', value: (l) => logoCell(l) },
-    { label: 'Lender', value: (l) => h('div', h('strong', l.name), l.active ? null : badge('inactive'), l.website ? h('div.muted.small', l.website) : null) },
-    { label: 'Upfront', value: (l) => pct(l.upfront_pct), class: 'num' },
-    { label: 'Trail', value: (l) => pct(l.trail_pct), class: 'num' },
-    { label: 'Clawback', value: (l) => `${l.clawback_months} mths`, class: 'num' },
-    { label: 'BDM', value: (l) => [l.bdm_name, l.bdm_phone].filter(Boolean).join(' · ') || '—' },
-    { label: 'Settled', value: (l) => `${l.settled_count} · ${money(l.settled_volume)}`, class: 'num' },
   ],
 });
 

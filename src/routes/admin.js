@@ -53,7 +53,7 @@ settings.put('/', auth.requireRole('admin'), (req, res) => {
 // ---- Simple CRUD resources -----------------------------------------------------
 function simpleCrud(table, fields, { required = ['name'], list, label = 'Record' } = {}) {
   const r = express.Router();
-  r.get('/', (req, res) => res.json({ rows: list ? list() : db.all(`SELECT * FROM ${table} ORDER BY name`) }));
+  r.get('/', (req, res) => res.json({ rows: list ? list(req) : db.all(`SELECT * FROM ${table} ORDER BY name`) }));
   r.post('/', (req, res) => {
     const row = pick(req.body, fields);
     requireFields(row, required);
@@ -77,16 +77,72 @@ function simpleCrud(table, fields, { required = ['name'], list, label = 'Record'
 
 const lenders = simpleCrud(
   'lenders',
-  ['name', 'website', 'upfront_pct', 'trail_pct', 'clawback_months', 'bdm_name', 'bdm_email', 'bdm_phone', 'notes', 'active'],
+  ['name', 'website', 'upfront_pct', 'trail_pct', 'clawback_months', 'notes', 'active'],
   {
     label: 'Lender',
-    list: () => db.all(
+    // Includes the primary BDM and the signed-in broker's own accreditation.
+    list: (req) => db.all(
       `SELECT l.*, (SELECT COUNT(*) FROM deals d WHERE d.lender_id = l.id AND d.stage = 'settled') AS settled_count,
-              (SELECT COALESCE(SUM(loan_amount),0) FROM deals d WHERE d.lender_id = l.id AND d.stage = 'settled') AS settled_volume
-       FROM lenders l ORDER BY l.active DESC, l.name`,
+              (SELECT COALESCE(SUM(loan_amount),0) FROM deals d WHERE d.lender_id = l.id AND d.stage = 'settled') AS settled_volume,
+              (SELECT COUNT(*) FROM deals d WHERE d.lender_id = l.id AND d.stage NOT IN ('settled','lost')) AS open_deals,
+              b.id AS bdm_id, b.name AS bdm_name, b.email AS bdm_email, COALESCE(b.mobile, b.phone) AS bdm_phone,
+              (SELECT COUNT(*) FROM lender_contacts c WHERE c.lender_id = l.id) AS contact_count,
+              a.accreditation_number, a.status AS accreditation_status, a.renewal_due
+       FROM lenders l
+       LEFT JOIN lender_contacts b ON b.id = (SELECT id FROM lender_contacts c WHERE c.lender_id = l.id ORDER BY c.is_primary DESC, c.role != 'bdm', c.id LIMIT 1)
+       LEFT JOIN lender_accreditations a ON a.lender_id = l.id AND a.user_id = ?
+       ORDER BY l.active DESC, l.name`,
+      req.user.id,
     ),
   },
 );
+
+const lenderService = require('../services/lenders');
+
+// One lender: details, contacts, everyone's accreditation, emails and open deals.
+lenders.get('/:id', (req, res) => {
+  const id = intParam(req.params.id);
+  const lender = notFound(db.one('SELECT * FROM lenders WHERE id = ?', id), 'Lender');
+  const { listEmails } = require('./outlook');
+  res.json({
+    ...lender,
+    contacts: lenderService.contactsFor(id),
+    accreditations: lenderService.accreditationsFor(id),
+    emails: listEmails({ lenderId: id, limit: 50 }),
+    outbox: db.all(
+      `SELECT o.id, o.to_email, o.subject, o.status, o.sent_at, o.send_after, o.contact_id,
+              c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name
+       FROM outbox o LEFT JOIN contacts c ON c.id = o.contact_id
+       WHERE o.lender_id = ? AND COALESCE(o.sent_via,'') != 'outlook' ORDER BY o.id DESC LIMIT 50`,
+      id,
+    ),
+    deals: db.all(
+      `SELECT d.id, d.title, d.stage, d.loan_amount, d.application_ref, d.contact_id, d.owner_id,
+              c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name
+       FROM deals d JOIN contacts c ON c.id = d.contact_id
+       WHERE d.lender_id = ? AND d.stage NOT IN ('settled','lost') ORDER BY d.stage_changed_at DESC`,
+      id,
+    ),
+    contact_roles: lenderService.CONTACT_ROLES,
+    accreditation_statuses: lenderService.ACCREDITATION_STATUSES,
+  });
+});
+
+lenders.post('/:id/contacts', (req, res) => res.status(201).json(lenderService.addContact(intParam(req.params.id), req.body || {})));
+lenders.patch('/contacts/:contactId', (req, res) => res.json(lenderService.updateContact(intParam(req.params.contactId), req.body || {})));
+lenders.delete('/contacts/:contactId', (req, res) => {
+  lenderService.removeContact(intParam(req.params.contactId));
+  res.json({ ok: true });
+});
+
+// PUT /lenders/:id/accreditations/:userId creates or updates that broker's accreditation.
+lenders.put('/:id/accreditations/:userId', (req, res) => {
+  res.json(lenderService.saveAccreditation(intParam(req.params.id), intParam(req.params.userId), req.body || {}, req.user));
+});
+lenders.delete('/accreditations/:accId', (req, res) => {
+  lenderService.removeAccreditation(intParam(req.params.accId), req.user);
+  res.json({ ok: true });
+});
 
 const partners = simpleCrud(
   'referral_partners',

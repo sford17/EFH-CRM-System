@@ -80,12 +80,14 @@ const LIST_SQL = `
          e.has_attachments, e.deal_id, u.name AS mailbox_owner,
          (SELECT GROUP_CONCAT(c.first_name || ' ' || COALESCE(c.last_name,''), ', ') FROM email_contacts ec
             JOIN contacts c ON c.id = ec.contact_id WHERE ec.email_id = e.id) AS contact_names,
-         (SELECT MIN(ec.contact_id) FROM email_contacts ec WHERE ec.email_id = e.id) AS contact_id
+         (SELECT MIN(ec.contact_id) FROM email_contacts ec WHERE ec.email_id = e.id) AS contact_id,
+         e.lender_id, (SELECT name FROM lenders WHERE id = e.lender_id) AS lender_name
   FROM emails e JOIN mail_accounts a ON a.id = e.account_id JOIN users u ON u.id = a.user_id`;
 
-function listEmails({ contactIds, dealId, direction, q, limit = 50 }) {
+function listEmails({ contactIds, dealId, lenderId, direction, q, limit = 50 }) {
   const where = [];
   const params = [];
+  if (lenderId) { where.push('e.lender_id = ?'); params.push(lenderId); }
   if (contactIds) {
     where.push(`e.id IN (SELECT email_id FROM email_contacts WHERE contact_id IN (${contactIds.map(() => '?').join(',')}))`);
     params.push(...contactIds);
@@ -122,6 +124,7 @@ emails.get('/:id', (req, res) => {
     'SELECT c.id, c.first_name, c.last_name, c.email FROM email_contacts ec JOIN contacts c ON c.id = ec.contact_id WHERE ec.email_id = ?',
     id,
   );
+  email.lender = email.lender_id ? db.one('SELECT id, name FROM lenders WHERE id = ?', email.lender_id) : null;
   email.can_reply = email.mailbox_user_id === req.user.id && Boolean(email.mailbox_connected);
   delete email.graph_id;
   res.json(email);

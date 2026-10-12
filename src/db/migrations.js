@@ -506,6 +506,50 @@ MIGRATIONS.push(
   },
 );
 
+MIGRATIONS.push(
+  // 12. Lender contacts (BDMs etc.) and broker accreditations; emails linked to lenders.
+  `
+  CREATE TABLE lender_contacts (
+    id          INTEGER PRIMARY KEY,
+    lender_id   INTEGER NOT NULL REFERENCES lenders(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,
+    role        TEXT NOT NULL DEFAULT 'bdm' CHECK (role IN ('bdm','assistant_bdm','scenario_desk','credit','settlements','broker_support','other')),
+    email       TEXT,
+    phone       TEXT,
+    mobile      TEXT,
+    region      TEXT,
+    notes       TEXT,
+    is_primary  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_lender_contacts_lender ON lender_contacts(lender_id);
+  CREATE INDEX idx_lender_contacts_email ON lender_contacts(lower(email));
+
+  CREATE TABLE lender_accreditations (
+    id                   INTEGER PRIMARY KEY,
+    lender_id            INTEGER NOT NULL REFERENCES lenders(id) ON DELETE CASCADE,
+    user_id              INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    accreditation_number TEXT,
+    status               TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','pending','suspended','not_accredited')),
+    accredited_on        TEXT,
+    renewal_due          TEXT,
+    notes                TEXT,
+    updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    UNIQUE (lender_id, user_id)
+  );
+
+  ALTER TABLE emails ADD COLUMN lender_id INTEGER REFERENCES lenders(id) ON DELETE SET NULL;
+  ALTER TABLE outbox ADD COLUMN lender_id INTEGER REFERENCES lenders(id) ON DELETE SET NULL;
+  CREATE INDEX idx_emails_lender ON emails(lender_id);
+  CREATE INDEX idx_emails_conversation ON emails(account_id, conversation_id);
+
+  -- The single BDM recorded on each lender becomes its primary BDM contact.
+  INSERT INTO lender_contacts (lender_id, name, role, email, phone, is_primary)
+    SELECT id, COALESCE(NULLIF(trim(bdm_name), ''), bdm_email, bdm_phone), 'bdm', NULLIF(trim(bdm_email), ''), NULLIF(trim(bdm_phone), ''), 1
+    FROM lenders WHERE COALESCE(trim(bdm_name), '') != '' OR COALESCE(trim(bdm_email), '') != '' OR COALESCE(trim(bdm_phone), '') != '';
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

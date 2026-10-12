@@ -26,7 +26,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Email graphics** | Charts and diagrams built from each client's details, in your brand colours: loan progress tracker, loan details card, key dates, document checklist, position summary, lending structure diagram, equity chart, property value chart and fixed-rate countdown. Also branded buttons (e.g. "Book a time") and your own images. They show even when a client's email blocks pictures |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
-| **Lenders** | Commission rates, clawback periods, BDM contacts, settled volume, and logos (uploaded or fetched from the lender's website) shown across the pipeline, tracker, review documents and client emails |
+| **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
 | **Reports** | Settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
 | **Team** | Admin, broker and assistant roles, with notifications for automation alerts |
@@ -100,6 +100,21 @@ Tick **Shares finances** for a couple (it's ticked automatically for spouses and
 - **Lending reviews:** a review is prepared for the household (for example "Mia & Tom Jones", which also appears in the PDF and Word file names). Untick a name to address it to one person only.
 
 To separate a couple's finances again, edit the relationship and untick *Shares finances*, or click **Unlink**. Both contacts and all their records are kept.
+
+## Lenders: accreditation & BDMs
+
+The **Lenders** page lists every lender with *your* accreditation number (and whether it's active, pending or due for renewal), the main BDM with their phone and an **✉ Email** button, open and settled deals, and commission rates. Use the search box to find a lender, BDM or accreditation number. Click a lender to open its page:
+
+- **Accreditation:** your accreditation / broker ID number, status, the date you were accredited and when renewal is due. Renewals within 60 days are flagged, and overdue ones show in red. Each team member records their own; admins can add or edit anyone's with **+ Team member…**. Don't store portal passwords here.
+- **BDM & lender contacts:** your BDM plus anyone else you deal with there (assistant BDM, scenario desk, credit, settlements, broker support), with email, mobile, office phone and region. Tick *Main contact* for the one shown on the Lenders list. BDM details recorded before this update were moved here automatically.
+- **Emails:** everything sent to or received from that lender's contacts.
+- **Open deals** with that lender, each with its own *Email BDM* link.
+
+**Emailing a BDM:** click **✉ Email BDM** on the lender page, on the Lenders list, or on a deal (*Email [lender] BDM*). Choose who it goes to, and optionally *About a client*: start typing their name and pick them, then choose the deal. **+ Insert deal summary** adds the client, loan amount, property value and LVR, security, stage and key dates for you to edit.
+
+When the email is about a client, it's filed on the client's timeline (e.g. *Email sent to Westpac (Hannah Price, BDM): …*), on the deal and on the lender. With Outlook connected, the BDM's replies in that conversation are filed on the client too, and you get a notification. Emails with lender contacts that aren't about a client are kept on the lender's page only.
+
+On each deal, the Loan card shows the broker's **accreditation number** with that lender and the BDM's phone number, ready for lodging or a quick call.
 
 ## Agent, solicitor & buyer's agent
 

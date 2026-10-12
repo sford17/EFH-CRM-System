@@ -6,7 +6,8 @@ import { tasksPage } from './pages/tasks.js';
 import { automationsPage, automationPage } from './pages/automations.js';
 import { templatesPage, outboxPage } from './pages/comms.js';
 import { commissionsPage } from './pages/commissions.js';
-import { partnersPage, lendersPage, settingsPage } from './pages/admin.js';
+import { partnersPage, settingsPage } from './pages/admin.js';
+import { lendersPage, lenderPage } from './pages/lenders.js';
 import { reportsPage } from './pages/reports.js';
 import { calculatorsPage } from './pages/calculators.js';
 import { inboxPage } from './pages/email.js';
@@ -52,6 +53,7 @@ const ROUTES = [
   [/^\/commissions$/, commissionsPage],
   [/^\/partners$/, partnersPage],
   [/^\/lenders$/, lendersPage],
+  [/^\/lenders\/(\d+)$/, lenderPage],
   [/^\/reports$/, reportsPage],
   [/^\/calculators$/, calculatorsPage],
   [/^\/settings$/, settingsPage],

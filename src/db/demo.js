@@ -30,6 +30,26 @@ function seedDemo() {
     const qldAgent = partner({ name: 'Kylie Nguyen', company: 'Ipswich First National', type: 'real_estate', email: 'kylie@ipswichfn.example', mobile: '0423 456 789' });
     const buyersAgent = partner({ name: 'Ben Carter', company: 'Northern Beaches Buyers Agency', type: 'buyers_agent', email: 'ben@nbba.example', mobile: '0434 567 890' });
 
+    // BDMs and accreditation numbers.
+    const bdm = (lenderName, row) => db.insert('lender_contacts', { lender_id: lender(lenderName), role: 'bdm', ...row });
+    bdm('Westpac', { name: 'Hannah Price', email: 'hannah.price@westpac.example', mobile: '0411 222 333', region: 'NSW & ACT', is_primary: 1 });
+    bdm('Westpac', { name: 'Westpac scenario desk', role: 'scenario_desk', email: 'scenarios@westpac.example', phone: '1300 000 111' });
+    bdm('Commonwealth Bank', { name: 'Raj Patel', email: 'raj.patel@cba.example', mobile: '0422 333 444', region: 'QLD', is_primary: 1 });
+    bdm('Macquarie Bank', { name: 'Sophie Turner', email: 'sophie.turner@macquarie.example', mobile: '0433 444 555', region: 'NSW', is_primary: 1 });
+    bdm('ANZ', { name: 'Chris Wong', email: 'chris.wong@anz.example', mobile: '0444 555 666', is_primary: 1 });
+    bdm('ING', { name: 'Leah Martin', email: 'leah.martin@ing.example', mobile: '0455 666 777', region: 'VIC', is_primary: 1 });
+    const accredit = (lenderName, userIdValue, number, renewalMonths, status = 'active') => db.insert('lender_accreditations', {
+      lender_id: lender(lenderName), user_id: userIdValue, accreditation_number: number, status,
+      accredited_on: addMonths(t0, -30), renewal_due: renewalMonths === null ? null : addMonths(t0, renewalMonths),
+    });
+    accredit('Westpac', admin, 'WBC-448120', 9);
+    accredit('Commonwealth Bank', admin, '7701234', 14);
+    accredit('Macquarie Bank', admin, 'MQ88231', 1);
+    accredit('ANZ', admin, '502117', -1);
+    accredit('ING', admin, 'ING-30921', 20);
+    accredit('ING', broker, 'ING-30977', 20);
+    accredit('NAB', admin, null, null, 'pending');
+
     const contact = (row) => db.insert('contacts', { owner_id: admin, marketing_opt_in: 1, ...row });
     const c = {
       olivia: contact({ first_name: 'Olivia', last_name: 'Brown', email: 'olivia@example.com', mobile: '0411 111 111', status: 'lead', lead_source: 'website', employment_type: 'payg', annual_income: 98000, suburb: 'Parramatta', state: 'NSW' }),

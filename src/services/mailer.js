@@ -21,7 +21,7 @@ function getTransport() {
   return transport;
 }
 
-function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId = null, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
+function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId = null, lenderId = null, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
   if (!to) throw new Error('Recipient has no email address');
   return db.insert('outbox', {
     sender_user_id: senderUserId,
@@ -32,6 +32,7 @@ function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId
     contact_id: contactId,
     deal_id: dealId,
     loan_id: loanId,
+    lender_id: lenderId,
     template_id: templateId,
     automation_id: automationId,
     send_after: sendAfter || nowIso(),
@@ -99,7 +100,8 @@ function senderFor(mail) {
 
 function logActivity(mail, text) {
   if (!mail.contact_id) return;
-  db.insert('activities', { contact_id: mail.contact_id, deal_id: mail.deal_id, type: 'email', body: `${text}: ${mail.subject}` });
+  const lender = mail.lender_id ? require('./lenders').describeRecipient(mail.lender_id, String(mail.to_email).split(/[;,]/)[0].trim()) : null;
+  db.insert('activities', { contact_id: mail.contact_id, deal_id: mail.deal_id, type: 'email', body: `${text}${lender ? ` to ${lender}` : ''}: ${mail.subject}` });
 }
 
 // Sends everything due in the outbox, in order of preference: through the
@@ -122,7 +124,7 @@ async function processDue() {
           graphId: sent.graphId, conversationId: sent.conversationId, direction: 'out',
           fromEmail: account.email, fromName: account.display_name, to: sent.to, cc: [],
           subject: mail.subject, body: email.plain, preview: null, hasAttachments: files.length > 0, webLink: sent.webLink, sentAt: nowIso(),
-        }, { contactIds: [mail.contact_id], dealId: mail.deal_id });
+        }, { contactIds: [mail.contact_id], dealId: mail.deal_id, lenderId: mail.lender_id });
       } else if (t) {
         await t.sendMail({
           from, to: mail.to_email, subject: mail.subject, text: email.text, html: email.html,

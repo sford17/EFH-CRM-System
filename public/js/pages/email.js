@@ -9,13 +9,16 @@ const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 const arrow = (dir) => h(`span.mail-dir.${dir}`, { title: dir === 'in' ? 'Received' : 'Sent' }, dir === 'in' ? '↙' : '↗');
 
 // Compact list of synced emails for a contact or deal.
-export function mailList(mail, { empty = 'No emails with this client yet.' } = {}) {
+// `showClient` adds who the email was about (used on lender pages).
+export function mailList(mail, { empty = 'No emails with this client yet.', showClient = false } = {}) {
   if (!mail.length) return h('p.empty', empty);
   return h('ul.mail-list', mail.map((m) => h('li',
     h('button.mail-row', { type: 'button', onclick: () => openEmail(m.id) },
       arrow(m.direction),
       h('div.mail-main',
         h('div.mail-subject', m.subject || '(no subject)', m.has_attachments ? h('span.muted', { title: 'Has attachments' }, ' 📎') : null),
+        showClient && m.contact_names ? h('div.small', `About ${m.contact_names.trim()}`) : null,
+        !showClient && m.lender_name ? h('div.small', `With ${m.lender_name}`) : null,
         h('div.muted.small', m.preview || '')),
       h('div.muted.small.mail-date', dateTime(m.sent_at))))));
 }
@@ -40,7 +43,8 @@ export async function openEmail(id) {
       h('div', h('dt', 'To'), h('dd', (e.to_emails || '').split(',').join(', '))),
       e.cc_emails ? h('div', h('dt', 'Cc'), h('dd', e.cc_emails.split(',').join(', '))) : null,
       h('div', h('dt', 'Date'), h('dd', dateTime(e.sent_at))),
-      h('div', h('dt', 'Client'), h('dd', e.contacts.map((c, i) => [i ? ', ' : '', h('a', { href: `#/contacts/${c.id}`, onclick: () => d.close() }, `${c.first_name} ${c.last_name || ''}`)]))),
+      e.contacts.length ? h('div', h('dt', 'Client'), h('dd', e.contacts.map((c, i) => [i ? ', ' : '', h('a', { href: `#/contacts/${c.id}`, onclick: () => d.close() }, `${c.first_name} ${c.last_name || ''}`)]))) : null,
+      e.lender ? h('div', h('dt', 'Lender'), h('dd', h('a', { href: `#/lenders/${e.lender.id}`, onclick: () => d.close() }, e.lender.name))) : null,
       h('div', h('dt', 'Mailbox'), h('dd', e.mailbox_owner))),
     e.has_attachments ? h('p.muted.small', '📎 This email has attachments – open it in Outlook to view them.') : null,
     h('pre.email-body', e.body_text || e.preview || ''),

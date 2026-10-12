@@ -5,9 +5,10 @@
 // with PKCE). The CRM then:
 //   - sends email through that mailbox (it lands in the user's Sent Items);
 //   - periodically pulls Inbox and Sent Items and stores any message to or
-//     from a known contact, logging it on the contact's timeline;
+//     from a known contact or lender contact (e.g. a BDM), logging it on the
+//     client's timeline;
 //   - replies to stored messages in the same Outlook conversation.
-// Messages with people who are not contacts are never stored.
+// Messages with people who are not contacts or lender contacts are never stored.
 const crypto = require('node:crypto');
 const db = require('../db');
 const { encrypt, decrypt } = require('../secrets');
@@ -220,21 +221,41 @@ function normalise(m, direction) {
   };
 }
 
-// Saves a message if it involves at least one contact. Returns
-// { id, contactIds, dealId } or null when skipped / already stored.
-function recordEmail(account, msg, { contactIds: extraIds = [], dealId = null } = {}) {
+// Saves a message if it involves at least one contact or a lender's staff
+// (e.g. a BDM). Replies in a conversation already filed against a client are
+// filed against that client too, so a BDM's answer about a client lands on
+// the client's timeline. Returns { id, contactIds, dealId, lenderId } or null
+// when skipped / already stored.
+function recordEmail(account, msg, { contactIds: extraIds = [], dealId = null, lenderId = null } = {}) {
   if (db.one('SELECT 1 FROM emails WHERE account_id = ? AND graph_id = ?', account.id, msg.graphId)) return null;
   const addresses = [...new Set(msg.direction === 'in' ? [msg.fromEmail] : [...msg.to, ...msg.cc])].filter(Boolean);
   const matched = addresses.length
     ? db.all(`SELECT id FROM contacts WHERE lower(email) IN (${addresses.map(() => '?').join(',')})`, ...addresses).map((r) => r.id)
     : [];
-  const contactIds = [...new Set([...extraIds.filter(Boolean), ...matched])];
-  if (!contactIds.length) return null;
+  const lenders = require('./lenders'); // loaded lazily, like automation below
+  lenderId = lenderId || lenders.lenderForAddresses(addresses);
+  const thread = msg.conversationId
+    ? db.one('SELECT id, deal_id, lender_id FROM emails WHERE account_id = ? AND conversation_id = ? ORDER BY sent_at DESC LIMIT 1', account.id, msg.conversationId)
+    : null;
+  const threadContacts = thread && (lenderId || thread.lender_id)
+    ? db.all('SELECT contact_id FROM email_contacts WHERE email_id = ?', thread.id).map((r) => r.contact_id)
+    : [];
+  if (thread) {
+    lenderId = lenderId || thread.lender_id;
+    dealId = dealId || (lenderId ? thread.deal_id : null);
+  }
+  const contactIds = [...new Set([...extraIds.filter(Boolean), ...matched, ...threadContacts])];
+  if (!contactIds.length && !lenderId) return null;
 
   if (!dealId && contactIds.length === 1) {
     const open = db.all("SELECT id FROM deals WHERE (contact_id = ? OR co_borrower_id = ?) AND stage NOT IN ('settled','lost')", contactIds[0], contactIds[0]);
     if (open.length === 1) dealId = open[0].id;
   }
+  // "Email sent to Westpac (Jane Smith, BDM): …" on the client's timeline.
+  const lenderLabel = lenderId ? lenders.describeRecipient(lenderId, msg.direction === 'in' ? msg.fromEmail : addresses.find((a) => lenders.lenderForAddresses([a]) === lenderId)) : null;
+  const activityText = lenderLabel
+    ? `${msg.direction === 'in' ? `Email from ${lenderLabel}` : `Email sent to ${lenderLabel}`}: ${msg.subject}`
+    : `${msg.direction === 'in' ? 'Email received' : 'Email sent'}: ${msg.subject}`;
   const body = String(msg.body || '').slice(0, MAX_BODY);
   return db.transaction(() => {
     const id = db.insert('emails', {
@@ -252,6 +273,7 @@ function recordEmail(account, msg, { contactIds: extraIds = [], dealId = null } 
       has_attachments: msg.hasAttachments ? 1 : 0,
       web_link: msg.webLink,
       deal_id: dealId,
+      lender_id: lenderId,
       sent_at: msg.sentAt,
     });
     for (const contactId of contactIds) {
@@ -262,21 +284,26 @@ function recordEmail(account, msg, { contactIds: extraIds = [], dealId = null } 
         user_id: account.user_id,
         type: 'email',
         email_id: id,
-        body: `${msg.direction === 'in' ? 'Email received' : 'Email sent'}: ${msg.subject}`,
+        body: activityText,
         created_at: msg.sentAt,
       });
       if (msg.direction === 'out') {
         db.run('UPDATE contacts SET last_contacted_at = ? WHERE id = ? AND (last_contacted_at IS NULL OR last_contacted_at < ?)', msg.sentAt, contactId, msg.sentAt);
       }
     }
-    return { id, contactIds, dealId };
+    return { id, contactIds, dealId, lenderId };
   });
 }
 
 function onInbound(account, msg, saved) {
-  const contact = db.one('SELECT first_name, last_name FROM contacts WHERE id = ?', saved.contactIds[0]);
-  const who = contact ? [contact.first_name, contact.last_name].filter(Boolean).join(' ') : msg.fromName || msg.fromEmail;
-  db.insert('notifications', { user_id: account.user_id, message: `Email from ${who}: ${msg.subject}`, link: `#/contacts/${saved.contactIds[0]}` });
+  const contact = saved.contactIds.length ? db.one('SELECT first_name, last_name FROM contacts WHERE id = ?', saved.contactIds[0]) : null;
+  const lender = saved.lenderId ? require('./lenders').describeRecipient(saved.lenderId, msg.fromEmail) : null;
+  const client = contact ? [contact.first_name, contact.last_name].filter(Boolean).join(' ') : null;
+  const message = lender
+    ? `Email from ${lender}${client ? ` about ${client}` : ''}: ${msg.subject}`
+    : `Email from ${client || msg.fromName || msg.fromEmail}: ${msg.subject}`;
+  const link = contact ? `#/contacts/${saved.contactIds[0]}` : `#/lenders/${saved.lenderId}`;
+  db.insert('notifications', { user_id: account.user_id, message, link });
   const automation = require('./automation'); // loaded lazily: automation → mailer → outlook
   for (const contactId of saved.contactIds) {
     automation.emit('email.received', { contactId, dealId: saved.dealId, subject: msg.subject, from_email: msg.fromEmail });

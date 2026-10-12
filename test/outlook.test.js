@@ -242,6 +242,55 @@ test('replying from the CRM uses the Outlook conversation', async () => {
   assert.equal((await other.post(`/emails/${inbound.id}/reply`, { body: 'hi' })).status, 403);
 });
 
+test('emailing a BDM about a client files it, and the reply, on the client', async () => {
+  const wbc = db.one("SELECT id FROM lenders WHERE name = 'Westpac'").id;
+  await api.post(`/lenders/${wbc}/contacts`, { name: 'Hannah Price', email: 'Hannah@WBC.example', role: 'bdm' });
+  const client = db.one("SELECT id FROM contacts WHERE email = 'Client@Example.com'");
+  const deal = (await api.post('/deals', { contact_id: client.id, lender_id: wbc, loan_amount: 500000 })).data;
+  const someoneElse = (await api.post('/contacts', { first_name: 'Other' })).data;
+  assert.equal((await api.post('/outbox', { to_email: 'hannah@wbc.example', subject: 'x', body: 'x', lender_id: wbc, contact_id: someoneElse.id, deal_id: deal.id })).status, 400, 'deal must belong to the client');
+
+  const r = await api.post('/outbox', {
+    to_email: 'hannah@wbc.example', subject: 'Scenario: self-employed', body: 'Hi Hannah,\n\nQuick scenario.\n\nKind regards,', lender_id: wbc, contact_id: client.id, deal_id: deal.id,
+  });
+  assert.equal(r.data.sent_via, 'outlook');
+  const sent = fake.sent[fake.sent.length - 1];
+  assert.deepEqual(sent.toRecipients, [{ emailAddress: { address: 'hannah@wbc.example' } }]);
+  const out = db.one("SELECT * FROM emails WHERE subject = 'Scenario: self-employed'");
+  assert.equal(out.lender_id, wbc);
+  assert.equal(out.deal_id, deal.id);
+  assert.ok(db.one('SELECT 1 FROM email_contacts WHERE email_id = ? AND contact_id = ?', out.id, client.id));
+  assert.ok(db.one("SELECT 1 FROM activities WHERE contact_id = ? AND body = 'Email sent to Westpac (Hannah Price, BDM): Scenario: self-employed'", client.id));
+
+  // Hannah replies in the same conversation: it lands on the client too.
+  fake.messages.inbox.push(msg({
+    conversationId: `conv-${sent.id}`, subject: 'RE: Scenario: self-employed', from: { emailAddress: { address: 'hannah@wbc.example', name: 'Hannah Price' } },
+  }));
+  // A new email from Hannah not about a client is kept on the lender only.
+  fake.messages.inbox.push(msg({ conversationId: 'c-policy', subject: 'Policy update', from: { emailAddress: { address: 'hannah@wbc.example', name: 'Hannah Price' } } }));
+  // Strangers are still ignored.
+  fake.messages.inbox.push(msg({ conversationId: 'c-spam', subject: 'Win big', from: { emailAddress: { address: 'spam@nowhere.example' } } }));
+  await api.post('/outlook/sync');
+  const reply = db.one("SELECT * FROM emails WHERE subject = 'RE: Scenario: self-employed'");
+  assert.equal(reply.lender_id, wbc);
+  assert.equal(reply.deal_id, deal.id);
+  assert.ok(db.one('SELECT 1 FROM email_contacts WHERE email_id = ? AND contact_id = ?', reply.id, client.id));
+  assert.ok(db.one("SELECT 1 FROM activities WHERE contact_id = ? AND body = 'Email from Westpac (Hannah Price, BDM): RE: Scenario: self-employed'", client.id));
+  assert.ok(db.one("SELECT 1 FROM notifications WHERE message LIKE 'Email from Westpac (Hannah Price, BDM) about % RE: Scenario: self-employed'"));
+
+  const policy = db.one("SELECT * FROM emails WHERE subject = 'Policy update'");
+  assert.equal(policy.lender_id, wbc);
+  assert.equal(db.one('SELECT COUNT(*) AS n FROM email_contacts WHERE email_id = ?', policy.id).n, 0);
+  assert.ok(db.one(`SELECT 1 FROM notifications WHERE message = 'Email from Westpac (Hannah Price, BDM): Policy update' AND link = '#/lenders/${wbc}'`));
+  assert.equal(db.one("SELECT COUNT(*) AS n FROM emails WHERE subject = 'Win big'").n, 0);
+
+  const page = (await api.get(`/lenders/${wbc}`)).data;
+  assert.deepEqual(page.emails.map((e) => e.subject).sort(), ['Policy update', 'RE: Scenario: self-employed', 'Scenario: self-employed']);
+  assert.equal(page.emails.find((e) => e.subject === 'Scenario: self-employed').contact_id, client.id);
+  const detail = (await api.get(`/emails/${reply.id}`)).data;
+  assert.deepEqual(detail.lender, { id: wbc, name: 'Westpac' });
+});
+
 test('expired access tokens are refreshed automatically', async () => {
   db.run("UPDATE mail_accounts SET token_expires_at = '2000-01-01T00:00:00.000Z'");
   const before = fake.tokenCalls.filter((c) => c.grant_type === 'refresh_token').length;

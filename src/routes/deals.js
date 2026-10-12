@@ -88,6 +88,10 @@ router.get('/:id', (req, res) => {
   deal.sms = db.all('SELECT id, body, status, error, from_number, send_after, sent_at FROM sms_messages WHERE deal_id = ? ORDER BY id DESC LIMIT 50', id);
   deal.mail = listEmails({ contactIds: [deal.contact_id, deal.co_borrower_id].filter(Boolean), limit: 50 });
   deal.parties = parties.list(deal.id);
+  // The broker's accreditation number with this lender, and who to email there.
+  const lenders = require('../services/lenders');
+  deal.accreditation = lenders.accreditationOf(deal.lender_id, deal.owner_id);
+  deal.lender_contacts = deal.lender_id ? lenders.contactsFor(deal.lender_id) : [];
   res.json(deal);
 });
 

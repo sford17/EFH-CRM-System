@@ -537,3 +537,16 @@ fieldset.parties-fieldset legend { font-size: .82rem; color: var(--text-2); font
 .body-preview p.pre { margin: 0 0 .8rem; white-space: pre-wrap; }
 .graphic-chip { display: flex; width: fit-content; align-items: center; gap: .45rem; margin: 0 0 .8rem; padding: .35rem .75rem; border: 1px dashed var(--accent); border-radius: 8px; background: var(--accent-soft); color: var(--text); font-size: .9rem; }
 .graphic-icon { font-size: 1rem; }
+
+/* ---- Lender pages ---- */
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .02em; }
+.lender-title { display: flex; align-items: center; gap: .9rem; }
+.lender-title .lender-logo.md { max-height: 40px; }
+.accreditation-list li, .lender-contacts li { display: grid; gap: .2rem; padding: .6rem 0; border-bottom: 1px solid var(--border); }
+.accreditation-list li:last-child, .lender-contacts li:last-child { border-bottom: 0; }
+.accreditation-number { font-size: 1.15rem; font-weight: 600; }
+.lender-contacts .badge { margin-left: .3rem; }
+.lender-email { display: grid; gap: .75rem; }
+.lender-email .field { display: grid; gap: .3rem; }
+.lender-email input[hidden], .lender-email select[hidden], .lender-email button[hidden] { display: none; }
+.label-row { display: flex; justify-content: space-between; align-items: center; }

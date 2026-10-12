@@ -79,15 +79,21 @@ outbox.get('/', (req, res) => {
   });
 });
 
-// Ad-hoc email to a contact, sent straight away.
+// Ad-hoc email, sent straight away: to a contact, or to someone at a lender
+// (lender_id), optionally about a contact/deal so it's filed on their timeline.
 outbox.post('/', async (req, res) => {
-  const row = pick(req.body, ['contact_id', 'deal_id', 'subject', 'body', 'to_email']);
+  const row = pick(req.body, ['contact_id', 'deal_id', 'lender_id', 'subject', 'body', 'to_email']);
   requireFields(row, ['subject', 'body']);
-  const contact = row.contact_id ? db.one('SELECT email FROM contacts WHERE id = ?', row.contact_id) : null;
+  const contact = row.contact_id ? notFound(db.one('SELECT id, email FROM contacts WHERE id = ?', row.contact_id), 'Contact') : null;
+  if (row.lender_id) notFound(db.one('SELECT 1 FROM lenders WHERE id = ?', row.lender_id), 'Lender');
+  if (row.deal_id) {
+    const deal = notFound(db.one('SELECT contact_id, co_borrower_id FROM deals WHERE id = ?', row.deal_id), 'Deal');
+    if (contact && ![deal.contact_id, deal.co_borrower_id].includes(contact.id)) throw new HttpError(400, 'That deal belongs to a different client');
+  }
   if (!row.to_email && !contact?.email) throw new HttpError(400, 'This contact has no email address');
   const id = mailer.queueEmail({
     to: row.to_email || contact?.email, subject: row.subject, body: row.body, contactId: row.contact_id, dealId: row.deal_id,
-    senderUserId: req.user.id,
+    lenderId: row.lender_id || null, senderUserId: req.user.id,
   });
   await mailer.processOutbox();
   res.status(201).json(db.one('SELECT * FROM outbox WHERE id = ?', id));

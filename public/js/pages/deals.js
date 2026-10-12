@@ -5,6 +5,7 @@ import {
 import { dealFields, coBorrowerField, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard, composeDialog } from './email.js';
 import { partiesCard } from './parties.js';
+import { emailLenderDialog } from './lenders.js';
 import { smsCard } from './sms.js';
 
 // Moves a deal, asking for extra details where a stage needs them.
@@ -182,6 +183,7 @@ export async function dealPage(id) {
           deal.co_borrower_name ? [' & ', h('a', { href: `#/contacts/${deal.co_borrower_id}` }, deal.co_borrower_name)] : null)),
       h('div.actions',
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ dealId: deal.id, contactId: deal.contact_id, parties: deal.parties }) }, 'Send template'),
+        deal.lender_id ? h('button.secondary', { type: 'button', onclick: () => emailLenderDialog({ lenderId: deal.lender_id, contactId: deal.contact_id, dealId: deal.id }) }, `Email ${deal.lender_name} BDM`) : null,
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
         deal.stage !== 'lost' ? h('button.secondary', { type: 'button', onclick: async () => { if (await moveDeal(deal, 'lost')) refresh(); } }, 'Mark lost') : null,
         h('button.danger.ghost', { type: 'button', onclick: remove }, 'Delete'))),
@@ -200,7 +202,13 @@ export async function dealPage(id) {
           info('Loan amount', deal.loan_amount ? money(deal.loan_amount) : null),
           info('LVR', deal.lvr ? `${deal.lvr}%` : null),
           info('Deposit / equity', deal.deposit ? money(deal.deposit) : null),
-          info('Lender', deal.lender_name ? lenderTag(deal.lender_logo_id, deal.lender_name, 'md') : null),
+          info('Lender', deal.lender_name ? h('a', { href: `#/lenders/${deal.lender_id}` }, lenderTag(deal.lender_logo_id, deal.lender_name, 'md')) : null),
+          deal.lender_id ? info('Accreditation', deal.accreditation?.accreditation_number
+            ? h('span', h('span.mono', deal.accreditation.accreditation_number), deal.accreditation.status !== 'active' ? [' ', badge(deal.accreditation.status, 'warn')] : null,
+              deal.accreditation.renewal_overdue ? h('span.text-danger.small', ' renewal overdue') : null)
+            : h('a.small', { href: `#/lenders/${deal.lender_id}` }, `Add ${deal.owner_name ? `${deal.owner_name.split(' ')[0]}'s` : 'the broker\'s'} number`)) : null,
+          deal.lender_contacts?.[0] ? info('BDM', h('span', deal.lender_contacts[0].name,
+            deal.lender_contacts[0].mobile || deal.lender_contacts[0].phone ? [' · ', h('a', { href: `tel:${(deal.lender_contacts[0].mobile || deal.lender_contacts[0].phone).replace(/\s/g, '')}` }, deal.lender_contacts[0].mobile || deal.lender_contacts[0].phone)] : null)) : null,
           info('Product', deal.product_name),
           info('Rate', deal.interest_rate ? `${pct(deal.interest_rate)} ${label(deal.rate_type || '')}` : null),
           info('Fixed expiry', deal.fixed_expiry_date ? `${date(deal.fixed_expiry_date)} (${relDays(deal.fixed_expiry_date)})` : null),
