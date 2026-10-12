@@ -1,0 +1,31 @@
+'use strict';
+const automation = require('./automation');
+const mailer = require('./mailer');
+
+let timer;
+
+async function tick(log = console) {
+  try {
+    const results = automation.runScheduled();
+    if (results.length) log.info(`[scheduler] ${results.length} scheduled automation run(s)`);
+    const sent = await mailer.processOutbox();
+    if (sent) log.info(`[scheduler] processed ${sent} outbox email(s)`);
+  } catch (err) {
+    log.error('[scheduler] tick failed', err);
+  }
+}
+
+// Scheduled automations are de-duplicated by run key, so ticking often is safe.
+function start(intervalMs = Number(process.env.SCHEDULER_INTERVAL_MS || 5 * 60 * 1000)) {
+  stop();
+  setImmediate(() => tick());
+  timer = setInterval(() => tick(), intervalMs);
+  timer.unref();
+}
+
+function stop() {
+  if (timer) clearInterval(timer);
+  timer = undefined;
+}
+
+module.exports = { start, stop, tick };
