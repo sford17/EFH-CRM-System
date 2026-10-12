@@ -157,6 +157,7 @@ test('upgrading an existing install adds SMS to the default automations', () => 
   db.run('UPDATE email_templates SET sms_body = NULL');
   db.get().exec(`DROP TABLE sms_messages; ALTER TABLE contacts DROP COLUMN sms_opt_out; ALTER TABLE users DROP COLUMN sms_from;
     ALTER TABLE email_templates DROP COLUMN sms_body; DROP TABLE assets; ALTER TABLE users DROP COLUMN signature_html;
+    DROP TABLE appointments; DROP TABLE calendly_accounts; DELETE FROM automations WHERE trigger LIKE 'appointment.%';
     PRAGMA user_version = 1;`);
   db.migrate();
   assert.equal(db.one('PRAGMA user_version').user_version, require('../src/db/migrations').length);
@@ -166,4 +167,5 @@ test('upgrading an existing install adds SMS to the default automations', () => 
   assert.ok(withSms.includes('New deal: welcome SMS'));
   assert.ok(db.one("SELECT sms_body FROM email_templates WHERE name = 'Rate reduction'").sms_body);
   assert.ok(db.one("SELECT sms_body FROM email_templates WHERE name = 'Annual loan review'").sms_body);
+  assert.equal(db.one("SELECT COUNT(*) AS n FROM automations WHERE trigger LIKE 'appointment.%'").n, 2, 'calendar automations added');
 });

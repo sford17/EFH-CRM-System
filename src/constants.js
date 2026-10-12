@@ -57,6 +57,8 @@ const EVENT_TRIGGERS = [
   { key: 'deal.stage_changed', label: 'Deal stage changed' },
   { key: 'task.completed', label: 'Task completed' },
   { key: 'email.received', label: 'Email received from a contact' },
+  { key: 'appointment.booked', label: 'Appointment booked (Calendly)' },
+  { key: 'appointment.cancelled', label: 'Appointment cancelled (Calendly)' },
 ];
 const SCHEDULED_TRIGGERS = [
   { key: 'schedule.fixed_rate_expiry', label: 'Fixed rate expiring (days_before)' },
@@ -68,6 +70,7 @@ const SCHEDULED_TRIGGERS = [
   { key: 'schedule.review_due', label: 'Contact review date reached' },
   { key: 'schedule.stale_deal', label: 'Open deal inactive (days_inactive)' },
   { key: 'schedule.stale_lead', label: 'Lead not contacted (days_inactive)' },
+  { key: 'schedule.appointment_upcoming', label: 'Appointment coming up (days_before)' },
 ];
 const ACTION_TYPES = [
   'create_task', 'send_email', 'send_sms', 'add_note', 'add_tag', 'remove_tag',

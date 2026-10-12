@@ -3,6 +3,7 @@ const path = require('node:path');
 const express = require('express');
 const auth = require('./auth');
 const { STAGES, DOCUMENT_CHECKLIST } = require('./constants');
+const { HttpError } = require('./util');
 
 function createApp() {
   const app = express();
@@ -56,6 +57,9 @@ function createApp() {
   app.use('/api/outlook', outlookRoutes.router);
   app.use('/api/emails', outlookRoutes.emails);
   app.use('/api/sms', require('./routes/sms'));
+  const calendar = require('./routes/calendar');
+  app.use('/api/calendly', calendar.calendlyRouter);
+  app.use('/api/appointments', calendar.appointments);
   app.use('/api/branding', brandingRoutes.router);
   app.use('/api/signature', brandingRoutes.signature);
   app.use('/api/email-preview', brandingRoutes.preview);
@@ -78,7 +82,9 @@ function createApp() {
       else if (/NOT NULL/i.test(message)) message = `Missing required field: ${message.split('.').pop()}`;
     }
     if (err.type === 'entity.parse.failed') { status = 400; message = 'Invalid JSON body'; }
-    if (status >= 500) {
+    // Unexpected errors are logged and hidden; deliberate ones (HttpError,
+    // e.g. "Calendly rejected the token") keep their message.
+    if (status >= 500 && !(err instanceof HttpError)) {
       console.error(err);
       message = 'Something went wrong';
     }

@@ -28,6 +28,13 @@ function lvr(deal) {
   return Math.round((deal.loan_amount / deal.property_value) * 10000) / 100;
 }
 
+// The broker's Calendly link, pre-filled for this contact when there is one.
+function bookingLinkFor(userId, contact) {
+  const account = db.one('SELECT scheduling_url FROM calendly_accounts WHERE user_id = ? AND connected = 1', userId);
+  if (!account?.scheduling_url) return '';
+  return require('./calendly').bookingLink(account.scheduling_url, contact);
+}
+
 // Assembles the merge-field context for a contact and/or deal.
 function buildContext({ contactId, dealId, userId, latestDeal = false } = {}) {
   let deal = null;
@@ -64,7 +71,11 @@ function buildContext({ contactId, dealId, userId, latestDeal = false } = {}) {
     contact,
     deal,
     broker: broker
-      ? { ...broker, first_name: String(broker.name || '').split(' ')[0] }
+      ? {
+        ...broker,
+        first_name: String(broker.name || '').split(' ')[0],
+        booking_link: bookingLinkFor(broker.id, contact),
+      }
       : { name: db.getSetting('business_name', 'Your broker'), first_name: db.getSetting('business_name', 'Your broker'), email: '', phone: '' },
     business: {
       name: db.getSetting('business_name', 'EFH Mortgage Broking'),

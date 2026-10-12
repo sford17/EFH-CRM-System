@@ -66,11 +66,19 @@ router.get('/dashboard', (req, res) => {
      FROM activities a LEFT JOIN contacts c ON c.id = a.contact_id LEFT JOIN users u ON u.id = a.user_id
      ORDER BY a.id DESC LIMIT 15`,
   );
+  const appointments = db.all(
+    `SELECT a.id, a.title, a.start_at, a.end_at, a.join_url, a.location, a.invitee_name, a.contact_id,
+            c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name
+     FROM appointments a LEFT JOIN contacts c ON c.id = a.contact_id
+     WHERE a.status = 'active' AND a.user_id = ? AND a.start_at >= ? AND a.start_at < ?
+     ORDER BY a.start_at LIMIT 12`,
+    req.user.id, new Date(Date.now() - 3600000).toISOString(), new Date(Date.now() + 8 * 86400000).toISOString(),
+  );
   const target = Number(db.getSetting('monthly_settlement_target', 0)) || 0;
   res.json({
     pipeline, settled_month: settledMonth, by_stage: byStage, new_leads_month: newLeads,
     commission_month: commissionMonth, my_tasks: myTasks, overdue_tasks: overdue, key_dates: keyDates,
-    recent_activity: recentActivity, settlement_target: target,
+    recent_activity: recentActivity, settlement_target: target, appointments,
   });
 });
 

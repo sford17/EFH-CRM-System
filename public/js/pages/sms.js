@@ -19,9 +19,9 @@ export function counted(textarea) {
   return info;
 }
 
-export async function smsDialog({ contactId, dealId, mobile, name }) {
+export async function smsDialog({ contactId, dealId, mobile, name, body: initial = '' }) {
   const status = await api('/sms/status');
-  const body = h('textarea', { rows: 5, maxlength: 918, 'aria-label': 'Message', placeholder: `Hi ${name || ''}, …` });
+  const body = h('textarea', { rows: 5, maxlength: 918, 'aria-label': 'Message', placeholder: `Hi ${name || ''}, …` }, initial);
   const send = h('button', { type: 'button' }, 'Send SMS');
   const from = status.my_from || status.default_from;
   const d = modal(`Text ${name || mobile}`, [

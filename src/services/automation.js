@@ -46,12 +46,20 @@ function resolveAssignee(spec, ctx) {
   return ctx.deal?.owner_id || ctx.contact?.owner_id || null;
 }
 
+// Due date for created tasks: N days from today, or from a date in the
+// context (e.g. due_on: 'event.date' for the day of an appointment).
+function dueDate(a, ctx) {
+  const base = a.due_on ? lookup(ctx, a.due_on) : null;
+  const from = /^\d{4}-\d{2}-\d{2}/.test(base || '') ? String(base).slice(0, 10) : today();
+  return addDays(from, Number(a.due_in_days || 0));
+}
+
 const ACTIONS = {
   create_task(a, ctx, auto) {
     const id = db.insert('tasks', {
       title: render(a.title || 'Follow up', ctx),
       description: a.description ? render(a.description, ctx) : null,
-      due_date: addDays(today(), Number(a.due_in_days || 0)),
+      due_date: dueDate(a, ctx),
       priority: a.priority || 'normal',
       contact_id: ctx.contact?.id ?? null,
       deal_id: ctx.deal?.id ?? null,
@@ -269,6 +277,11 @@ const FINDERS = {
       date, days, cutoff,
     );
   },
+  'schedule.appointment_upcoming': (cfg, date) => db.all(
+    `SELECT id AS appointmentId, contact_id AS contactId, deal_id AS dealId, start_at AS k FROM appointments
+     WHERE status = 'active' AND contact_id IS NOT NULL AND start_at >= ? AND start_at < ?`,
+    new Date().toISOString(), `${addDays(date, (cfg.days_before ?? 1) + 1)}T00:00:00.000Z`,
+  ).filter((r) => today(new Date(r.k)) <= addDays(date, cfg.days_before ?? 1)),
   'schedule.stale_lead': (cfg, date) => db.all(
     `SELECT id AS contactId, COALESCE(last_contacted_at, created_at) AS k FROM contacts
      WHERE status = 'lead' AND substr(COALESCE(last_contacted_at, created_at), 1, 10) <= ?`,
@@ -284,9 +297,14 @@ function runScheduled(date = today()) {
     const finder = FINDERS[auto.trigger];
     if (!finder) continue;
     for (const row of finder(auto.trigger_config, date)) {
-      const entity = row.dealId ? `deal:${row.dealId}` : `contact:${row.contactId}`;
+      const entity = row.appointmentId ? `appointment:${row.appointmentId}` : row.dealId ? `deal:${row.dealId}` : `contact:${row.contactId}`;
       const runKey = `${auto.id}:${entity}:${row.k}`;
-      const r = runAutomation(auto, { dealId: row.dealId, contactId: row.contactId, runKey, event: { date } });
+      let event = { date };
+      if (row.appointmentId) {
+        const calendly = require('./calendly'); // lazy: calendly → automation
+        event = { ...event, ...calendly.eventContext(db.one('SELECT * FROM appointments WHERE id = ?', row.appointmentId)) };
+      }
+      const r = runAutomation(auto, { dealId: row.dealId, contactId: row.contactId, runKey, event });
       if (r) results.push({ automation: auto.name, entity, ...r });
     }
   }

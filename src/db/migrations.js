@@ -4,6 +4,7 @@
 // in place when a new version of the CRM starts. An entry is either SQL or a
 // function receiving the db helpers.
 const { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_TEMPLATE } = require('./sms-defaults');
+const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 
 module.exports = [
   // 1. Outlook email sync
@@ -141,6 +142,63 @@ module.exports = [
     for (const t of db.all('SELECT id, body FROM email_templates')) {
       if (t.body.endsWith(oldSignoff)) {
         db.update('email_templates', t.id, { body: `${t.body.slice(0, -oldSignoff.length)}\n\nKind regards,` });
+      }
+    }
+  },
+
+  // 4. Calendly appointments
+  (db) => {
+    db.get().exec(`
+      CREATE TABLE calendly_accounts (
+        id             INTEGER PRIMARY KEY,
+        user_id        INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        token          TEXT,  -- encrypted personal access token
+        user_uri       TEXT,
+        name           TEXT,
+        email          TEXT,
+        scheduling_url TEXT,
+        connected      INTEGER NOT NULL DEFAULT 1,
+        last_sync_at   TEXT,
+        sync_error     TEXT,
+        connected_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+
+      CREATE TABLE appointments (
+        id                  INTEGER PRIMARY KEY,
+        source              TEXT NOT NULL DEFAULT 'calendly',
+        external_uri        TEXT UNIQUE,
+        user_id             INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        title               TEXT NOT NULL,
+        start_at            TEXT NOT NULL,
+        end_at              TEXT,
+        status              TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','canceled')),
+        location_type       TEXT,
+        location            TEXT,
+        join_url            TEXT,
+        invitee_name        TEXT,
+        invitee_email       TEXT,
+        invitee_phone       TEXT,
+        contact_id          INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+        deal_id             INTEGER REFERENCES deals(id) ON DELETE SET NULL,
+        cancel_url          TEXT,
+        reschedule_url      TEXT,
+        notes               TEXT,
+        cancel_reason       TEXT,
+        rescheduled         INTEGER NOT NULL DEFAULT 0,
+        external_updated_at TEXT,
+        created_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        updated_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      CREATE INDEX idx_appointments_start ON appointments(start_at);
+      CREATE INDEX idx_appointments_contact ON appointments(contact_id);
+    `);
+    if (db.getSetting('automations_seeded')) {
+      for (const a of CALENDAR_AUTOMATIONS) {
+        if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
+        db.insert('automations', {
+          name: a.name, description: a.description || null, trigger: a.trigger,
+          conditions: JSON.stringify(a.conditions || []), actions: JSON.stringify(a.actions),
+        });
       }
     }
   },

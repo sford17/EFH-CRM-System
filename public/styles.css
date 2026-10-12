@@ -391,3 +391,17 @@ code.copy { background: var(--surface-2); border: 1px solid var(--border); borde
 .signature-editor:empty::before { content: attr(data-placeholder); color: #8a929e; }
 .signature-editor img { max-width: 100%; }
 iframe.email-frame { width: 100%; height: 560px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+
+/* Calendar */
+.appt-list { list-style: none; margin: 0; padding: 0; }
+.appt { display: grid; grid-template-columns: 90px 1fr auto; gap: .75rem; align-items: start; padding: .6rem 0; border-bottom: 1px solid var(--border); }
+.appt:last-child { border-bottom: 0; }
+.appt.cancelled .appt-main strong, .appt.cancelled .appt-time { text-decoration: line-through; color: var(--muted); }
+.appt-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.appt-actions { display: flex; gap: .4rem; }
+.appt-list.compact .appt { grid-template-columns: 80px 1fr auto; padding: .45rem 0; }
+.link-row { display: flex; gap: .5rem; align-items: center; }
+.link-row input { flex: 1; }
+.link-output { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .82rem; }
+@media (max-width: 860px) { .appt { grid-template-columns: 70px 1fr; } .appt-actions { grid-column: 2; } }
+.card.mt { margin-top: 1rem; }

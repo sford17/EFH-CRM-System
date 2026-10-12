@@ -51,14 +51,15 @@ export async function openEmail(id) {
 }
 
 // New email to a contact, optionally starting from a template.
-export async function composeDialog({ contactId, dealId, to }) {
+export async function composeDialog({ contactId, dealId, to, subject = '', body = '' }) {
   const [{ rows: templates }, status] = await Promise.all([api('/templates'), api('/outlook/status')]);
   const fields = [
     { name: 'to_email', label: 'To', type: 'email', required: true, full: true },
     { name: 'subject', label: 'Subject', required: true, full: true },
     { name: 'body', label: 'Message', type: 'textarea', rows: 12, required: true, full: true },
   ];
-  const form = h('form.grid-form', fields.map((f) => field(f, f.name === 'to_email' ? to : undefined)));
+  const initial = { to_email: to, subject, body };
+  const form = h('form.grid-form', fields.map((f) => field(f, initial[f.name] || undefined)));
   const templateSel = h('select', { 'aria-label': 'Start from a template' },
     h('option', { value: '' }, 'Start from a template (optional)…'),
     templates.map((t) => h('option', { value: t.id }, t.name)));

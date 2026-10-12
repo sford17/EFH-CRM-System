@@ -8,6 +8,7 @@ import {
 } from './forms.js';
 import { emailsCard, composeDialog } from './email.js';
 import { smsCard, smsDialog } from './sms.js';
+import { contactAppointmentsCard, bookingLinkDialog } from './calendar.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -92,6 +93,7 @@ export async function contactPage(id) {
         c.email ? h('button.secondary', { type: 'button', onclick: () => composeDialog({ contactId: c.id, to: c.email }) }, 'Email') : null,
         c.mobile ? h('a.button.secondary', { href: `tel:${c.mobile.replace(/\s/g, '')}` }, 'Call') : null,
         c.mobile ? h('button.secondary', { type: 'button', onclick: () => smsDialog({ contactId: c.id, mobile: c.mobile, name: c.first_name }) }, 'SMS') : null,
+        h('button.secondary', { type: 'button', onclick: () => bookingLinkDialog({ contact: c }) }, 'Booking link'),
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ contactId: c.id }) }, 'Send template'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
         h('button.danger.ghost', { type: 'button', onclick: remove }, 'Delete'))),
@@ -123,7 +125,8 @@ export async function contactPage(id) {
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ contact_id: c.id }) }, '+ Task')),
           taskTable(c.tasks)),
         emailsCard({ mail: c.mail, outbox: c.emails, contactId: c.id, to: c.email }),
-        smsCard({ sms: c.sms, contactId: c.id, mobile: c.mobile, name: c.first_name })),
+        smsCard({ sms: c.sms, contactId: c.id, mobile: c.mobile, name: c.first_name }),
+        contactAppointmentsCard(c)),
       h('div.col-main',
         h('section.card', h('h2', 'Activity'), timeline(c.activities, { contactId: c.id })))));
 }

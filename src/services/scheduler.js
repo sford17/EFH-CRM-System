@@ -3,6 +3,7 @@ const automation = require('./automation');
 const mailer = require('./mailer');
 const outlook = require('./outlook');
 const sms = require('./sms');
+const calendly = require('./calendly');
 
 let timer;
 
@@ -14,6 +15,8 @@ async function tick(log = console) {
     if (sent) log.info(`[scheduler] processed ${sent} outbox email(s)`);
     const texts = await sms.processSms();
     if (texts) log.info(`[scheduler] processed ${texts} SMS`);
+    const bookings = await calendly.syncAll(log);
+    if (bookings) log.info(`[scheduler] ${bookings} new Calendly booking change(s)`);
     const synced = await outlook.syncAll(log);
     if (synced) log.info(`[scheduler] filed ${synced} Outlook email(s) against contacts`);
   } catch (err) {

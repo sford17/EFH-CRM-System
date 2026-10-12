@@ -10,12 +10,14 @@ import { partnersPage, lendersPage, settingsPage } from './pages/admin.js';
 import { reportsPage } from './pages/reports.js';
 import { calculatorsPage } from './pages/calculators.js';
 import { inboxPage } from './pages/email.js';
+import { calendarPage } from './pages/calendar.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
   ['#/pipeline', 'Pipeline', '▤'],
   ['#/contacts', 'Contacts', '☺'],
   ['#/deals', 'Deals', '$'],
+  ['#/calendar', 'Calendar', '▦'],
   ['#/tasks', 'Tasks', '✓'],
   ['#/inbox', 'Client emails', '✉'],
   ['#/automations', 'Automations', '⚡'],
@@ -38,6 +40,7 @@ const ROUTES = [
   [/^\/deals\/(\d+)$/, dealPage],
   [/^\/tasks$/, tasksPage],
   [/^\/inbox$/, inboxPage],
+  [/^\/calendar$/, calendarPage],
   [/^\/automations$/, automationsPage],
   [/^\/automations\/(\d+|new)$/, automationPage],
   [/^\/templates$/, templatesPage],

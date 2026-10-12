@@ -15,6 +15,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 18 ready-made automations, fully editable in the UI |
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
+| **Calendar (Calendly)** | Calendly bookings appear on a Calendar page, the dashboard and each client's record. Bookings are matched to clients (newcomers become leads), cancellations get a follow-up task, and a **Booking link** button copies, emails or texts a pre-filled Calendly link |
 | **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Emails are sent as formatted HTML with your logo, brand colour and each sender's own signature, with images embedded |
 | **Email templates** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
@@ -77,6 +78,15 @@ Notes:
 - The signature is added when an email is sent, so templates end with just "Kind regards,". Replies sent from the CRM get your signature above the quoted conversation.
 - Logos and signature images are embedded in the email itself, so clients see them without clicking "download pictures", even when the CRM runs on your own computer.
 - **Preview** buttons (Settings, new email, Send template) show exactly how an email will look.
+
+## Calendly
+
+Each broker connects their own Calendly account in **Settings → Calendly**. In Calendly, go to *Integrations → API & Webhooks → Personal access tokens*, generate a token, and paste it into the CRM. This works on every Calendly plan, including the free one.
+
+- **Syncing:** the CRM checks Calendly every few minutes. It imports bookings from the last 30 days and all upcoming ones. Calendly webhooks would need a paid plan and a public web address, so the CRM checks on a schedule instead.
+- **Matching:** each booking is linked to a contact. A booking made from a link sent from the CRM is matched by its hidden reference, otherwise by email address. Someone new is added as a lead (`lead_source = calendly`), with their booking answers saved as background notes; this can be turned off in Settings. If the contact has one open deal, the booking is linked to that deal.
+- **Automations:** two default automations are included. *Appointment booked* alerts the broker and adds a prep task for the day of the meeting. *Appointment cancelled* creates a high-priority follow-up task (reschedules don't count as cancellations). There are also **Appointment booked**, **Appointment cancelled** and **Appointment coming up** triggers for your own automations, with merge fields `{{event.title}}`, `{{event.when}}`, `{{event.location}}` and `{{event.join_url}}`.
+- **Booking links:** the **Booking link** button on a contact lists your meeting types. You can copy the link, or email or text it. The link is pre-filled with the client's name and email. `{{broker.booking_link}}` adds the same pre-filled link to any email template, SMS or automation.
 
 ## Sending SMS
 

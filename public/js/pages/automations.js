@@ -165,7 +165,7 @@ export async function automationPage(id) {
   const configBox = h('div');
   const renderConfig = () => {
     const t = trigger.value;
-    const needsBefore = /fixed_rate_expiry|pre_approval_expiry|finance_due|settlement_upcoming/.test(t);
+    const needsBefore = /fixed_rate_expiry|pre_approval_expiry|finance_due|settlement_upcoming|appointment_upcoming/.test(t);
     const needsInactive = /stale_/.test(t);
     configBox.replaceChildren(...[
       needsBefore ? h('label.field', h('span', 'Days before the date'), h('input', { id: 'au-days', type: 'number', min: 0, value: a.trigger_config.days_before ?? 30 })) : null,
@@ -211,7 +211,7 @@ export async function automationPage(id) {
       conds,
       h('button.secondary.small', { type: 'button', onclick: () => conds.append(conditionRow()) }, '+ Add condition')),
     h('section.card', h('h2', '3. Then'),
-      h('p.muted.small', 'Merge fields: {{contact.first_name}}, {{contact.full_name}}, {{deal.title}}, {{deal.loan_amount|money}}, {{deal.settlement_date|date}}, {{deal.lender_name}}, {{deal.stage_label}}, {{broker.name}}'),
+      h('p.muted.small', 'Merge fields: {{contact.first_name}}, {{contact.full_name}}, {{deal.title}}, {{deal.loan_amount|money}}, {{deal.settlement_date|date}}, {{deal.lender_name}}, {{deal.stage_label}}, {{broker.name}}, {{broker.booking_link}}. For appointment triggers: {{event.title}}, {{event.when}}, {{event.location}}, {{event.join_url}}'),
       actions,
       h('button.secondary.small', { type: 'button', onclick: () => actions.append(actionRow()) }, '+ Add action')),
     isNew ? null : h('section.card', h('h2', 'Run history'), table([

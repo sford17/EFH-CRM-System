@@ -3,6 +3,7 @@ import { refresh } from './forms.js';
 import { outlookSettingsCard } from './email.js';
 import { smsSettingsCard } from './sms.js';
 import { brandingCard, signatureCard } from './branding.js';
+import { calendlySettingsCard } from './calendar.js';
 
 const PARTNER_TYPES = ['real_estate', 'accountant', 'financial_planner', 'solicitor', 'builder', 'past_client', 'other'];
 
@@ -133,6 +134,7 @@ export async function settingsPage() {
     await signatureCard(),
     await outlookSettingsCard(),
     await smsSettingsCard(),
+    await calendlySettingsCard(),
     h('section.card', h('h2', 'Business'), bizForm),
     h('section.card',
       h('div.card-head', h('h2', 'Team'), isAdmin ? h('button.small', { type: 'button', onclick: () => editUser() }, '+ Add user') : null),
