@@ -15,7 +15,7 @@ const OP_LABELS = {
 const ACTION_LABELS = {
   create_task: 'Create a task', send_email: 'Send an email', send_sms: 'Send an SMS', add_note: 'Add a note to the timeline', add_tag: 'Add a tag',
   remove_tag: 'Remove a tag', set_contact_status: 'Set contact status', set_deal_stage: 'Move deal to stage',
-  notify: 'Notify the owner', create_document_checklist: 'Add standard document checklist', generate_commissions: 'Generate commission entries',
+  notify: 'Notify the owner', email_broker: 'Email me (the broker) a reminder', create_document_checklist: 'Add standard document checklist', generate_commissions: 'Generate commission entries',
 };
 
 let meta;
@@ -29,6 +29,7 @@ function summarise(a) {
   const parts = a.actions.map((x) => {
     if (x.type === 'send_email') return `email "${templates.find((t) => t.id === Number(x.template_id))?.name || '?'}"${x.delay_days ? ` after ${x.delay_days}d` : ''}`;
     if (x.type === 'create_task') return `task "${x.title}"`;
+    if (x.type === 'email_broker') return 'email reminder to broker';
     if (x.type === 'send_sms') return `SMS${x.to === 'referral_partner' ? ' to referral partner' : ''}${x.marketing ? ' (marketing)' : ''}`;
     return ACTION_LABELS[x.type]?.toLowerCase() || x.type;
   });
@@ -101,6 +102,13 @@ function actionFieldDefs(type) {
       ['delay_days', 'Delay (days)', 'number'],
       ['marketing', 'Type', 'select', [['', 'Service update (always sent)'], ['true', 'Marketing (needs consent, adds opt-out)']]],
     ];
+    case 'email_broker': return [
+      ['user', 'Email', 'select', [['owner', 'The client\'s broker (record owner)'], ...userOptions()]],
+      ['subject', 'Subject (blank for the standard annual review wording)', 'text'],
+      ['message', 'Message (blank for the standard wording; merge fields allowed, e.g. {{contact.full_name}}, {{event.review_date|date}}, {{event.when}})', 'textarea'],
+      ['details', 'Include', 'select', [['', 'Client snapshot, position summary, lending structure and a link'], ['none', 'Just the message and a link']]],
+      ['delay_days', 'Delay (days)', 'number'],
+    ];
     case 'add_note': return [['body', 'Note', 'text']];
     case 'add_tag': case 'remove_tag': return [['tag', 'Tag', 'text']];
     case 'set_contact_status': return [['status', 'Status', 'select', opts(CONTACT_STATUSES)]];
@@ -120,7 +128,7 @@ function actionRow(a = { type: 'create_task' }) {
         : kind === 'textarea'
           ? h('textarea', { name, rows: 3 }, v)
           : h('input', { name, type: kind, value: v, min: kind === 'number' ? 0 : undefined });
-      if (kind === 'textarea') return h('label.field.span-all', h('span', text), input, counted(input));
+      if (kind === 'textarea') return h('label.field.span-all', h('span', text), input, typeSel.value === 'send_sms' ? counted(input) : null);
       return h('label.field', h('span', text), input);
     }));
   };
@@ -166,7 +174,7 @@ export async function automationPage(id) {
   const configBox = h('div');
   const renderConfig = () => {
     const t = trigger.value;
-    const needsBefore = /fixed_rate_expiry|pre_approval_expiry|finance_due|settlement_upcoming|appointment_upcoming/.test(t);
+    const needsBefore = /_expiry|finance_due|settlement_upcoming|appointment_upcoming|annual_review/.test(t);
     const needsInactive = /stale_/.test(t);
     configBox.replaceChildren(...[
       needsBefore ? h('label.field', h('span', 'Days before the date'), h('input', { id: 'au-days', type: 'number', min: 0, value: a.trigger_config.days_before ?? 30 })) : null,

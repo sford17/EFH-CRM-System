@@ -85,7 +85,7 @@ router.get('/:id', (req, res) => {
      WHERE a.contact_id = ? ORDER BY a.created_at DESC, a.id DESC LIMIT 200`,
     id,
   );
-  contact.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE contact_id = ? AND COALESCE(sent_via,'') != 'outlook' ORDER BY id DESC LIMIT 50", id);
+  contact.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE contact_id = ? AND COALESCE(sent_via,'') != 'outlook' AND internal = 0 ORDER BY id DESC LIMIT 50", id);
   contact.mail = listEmails({ contactIds: [id], limit: 50 });
   contact.appointments = db.all(
     `SELECT a.*, u.name AS owner_name FROM appointments a LEFT JOIN users u ON u.id = a.user_id

@@ -15,7 +15,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Agent & solicitor** | Record the real estate agent, solicitor/conveyancer and buyer's agent (plus accountant, builder or planner) on each deal, straight from the New deal form. They're kept in a directory so you pick them again next time, can be emailed from the deal, appear in merge fields, and can be kept updated automatically |
 | **Document checklists** | Standard checklist built automatically by loan purpose (plus self-employed docs), with status tracking and a one-click "email the client what's outstanding" |
 | **Tasks** | Personal and team tasks, overdue/today/upcoming views, tasks auto-created by automations |
-| **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 25 ready-made automations, fully editable in the UI |
+| **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 27 ready-made automations, fully editable in the UI |
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
 | **Mortgage tracker** | A tab on each contact covering their properties, valuation history by method (full, desktop, kerbside, AVM, contract price…), loans and the properties securing them, and other assets. Shows LVR, equity, usable equity and net position, plus a lending structure diagram that flags cross-collateralisation and LVRs over 80% |
@@ -100,6 +100,30 @@ Tick **Shares finances** for a couple (it's ticked automatically for spouses and
 - **Lending reviews:** a review is prepared for the household (for example "Mia & Tom Jones", which also appears in the PDF and Word file names). Untick a name to address it to one person only.
 
 To separate a couple's finances again, edit the relationship and untick *Shares finances*, or click **Unlink**. Both contacts and all their records are kept.
+
+## Annual review reminders (emailed to you)
+
+Fourteen days before a client's annual review, the client's broker gets an email:
+
+> **Annual review due in 14 days: Mia Jones**
+> Mia Jones's annual review is due in 14 days (27 October 2026). Here's a quick snapshot to help you prepare.
+
+The email includes:
+
+- Contact details for the client and their partner.
+- When their last lending review was done.
+- Fixed-rate and interest-only periods ending in the next 12 months.
+- Any open deals.
+- The client's position summary and lending structure diagram.
+- An **Open in the CRM** button.
+
+A bell notification appears in the CRM too.
+
+- **When is a review due?** On the client's *Next review date* (set automatically 12 months after you email them a lending review, or set it yourself on the contact). If there's no date, the anniversary of their most recent settlement is used. Clients and past clients are included; couples who share finances get one reminder between them.
+- **Change it** in **Automations → Annual review coming up: email me**. You can set how many days ahead, change the subject or message, send it to a particular team member, or switch off the snapshot.
+- **Email me (the broker) a reminder** is also available as an action in any automation, e.g. a reminder before a fixed rate expires.
+- These reminders go to the broker's own email address from Outlook (or SMTP). They aren't filed on the client's timeline or emails, and they show as *🔔 reminder to you* in the Outbox.
+- **Links in the email** use **Settings → Business → CRM web address**. Leave it blank if you only use the CRM on this computer (it defaults to http://localhost:3000). If you've put the CRM on a server, enter that address instead.
 
 ## Thanking referral partners
 

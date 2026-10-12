@@ -114,11 +114,12 @@ function loadLoan({ loanId, dealId, contactId }) {
 }
 
 // Lazily loads what the graphics in one email need.
-function dataSource({ contactId = null, dealId = null, loanId = null, sample = false } = {}) {
+function dataSource({ contactId = null, dealId = null, loanId = null, sample = false, internal = false } = {}) {
   const cache = {};
   const once = (k, fn) => (k in cache ? cache[k] : (cache[k] = fn()));
   if (sample) return SAMPLE;
   return {
+    internal,
     deal: () => once('deal', () => loadDeal(dealId)),
     documents: () => once('docs', () => (dealId ? db.all('SELECT name, status FROM documents WHERE deal_id = ? ORDER BY category, name', dealId) : [])),
     summary: () => once('summary', () => {
@@ -345,9 +346,25 @@ ${elapsed !== null ? `<div style="margin-top:10px;">${bar([[elapsed, c.primary]]
 
 // Renders one tag. Returns { html, text }, or null when there's nothing to
 // show (e.g. a deal graphic on an email that isn't about a deal).
+// Headings are written to the client ("Your loan"); emails to the broker
+// (reminders) use neutral wording instead.
+const BROKER_WORDING = [
+  ['Your loan progress', 'Loan progress'], ['Your loan', 'Loan'], ['Your documents', 'Documents'],
+  ['Your position at a glance', 'Position at a glance'], ['How your lending is structured', 'Lending structure'],
+  ['Your properties', 'Properties'], ['Your property equity', 'Property equity'], ['Your equity', 'Equity'],
+  ['Your fixed rate ends on', 'The fixed rate ends on'], ['Your fixed rate', 'Fixed rate'], ['Received – thank you', 'Received'],
+];
+
 function render(tag, src, colours) {
   try {
-    return RENDER[tag.key](src, colours, tag.args) || null;
+    const out = RENDER[tag.key](src, colours, tag.args) || null;
+    if (out && src.internal) {
+      for (const [from, to] of BROKER_WORDING) {
+        out.html = out.html.split(`>${from}`).join(`>${to}`);
+        out.text = out.text.split(from).join(to);
+      }
+    }
+    return out;
   } catch (err) {
     return null;
   }

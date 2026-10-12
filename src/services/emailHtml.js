@@ -185,13 +185,13 @@ function footerHtml(brand, colours) {
 // `context` ({ contactId, dealId, loanId }, or { sample: true } for template
 // previews) supplies the data for any graphics in the body. `reply` leaves
 // out the branded frame so it sits naturally above the quoted thread.
-function buildEmail({ body, senderUserId = null, reply = false, preview = false, context = null }) {
+function buildEmail({ body, senderUserId = null, reply = false, preview = false, context = null, internal = false }) {
   const brand = branding.getBrand();
   const colours = branding.emailColours();
-  const signature = signatureFor(senderUserId);
-  const rendered = renderBody(body, colours, context, preview);
-  const content = `${rendered.html}\n<div class="signature" style="margin-top:4px;">${signature}</div>`;
-  const text = `${rendered.text.trim()}\n\n${htmlToText(signature)}`.trim();
+  const signature = internal ? '' : signatureFor(senderUserId); // no signature on reminders to yourself
+  const rendered = renderBody(body, colours, context && { ...context, internal }, preview);
+  const content = signature ? `${rendered.html}\n<div class="signature" style="margin-top:4px;">${signature}</div>` : rendered.html;
+  const text = signature ? `${rendered.text.trim()}\n\n${htmlToText(signature)}`.trim() : rendered.text.trim();
 
   // Lenders named in the email get their logo shown (not on replies).
   const lenderLogoList = reply ? [] : lenderLogos.mentionedIn(body).map((l) => ({ l, a: branding.getAsset(l.logo_asset_id) }));

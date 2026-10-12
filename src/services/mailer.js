@@ -21,7 +21,7 @@ function getTransport() {
   return transport;
 }
 
-function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId = null, lenderId = null, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
+function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId = null, lenderId = null, internal = false, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
   if (!to) throw new Error('Recipient has no email address');
   return db.insert('outbox', {
     sender_user_id: senderUserId,
@@ -33,6 +33,7 @@ function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId
     deal_id: dealId,
     loan_id: loanId,
     lender_id: lenderId,
+    internal: internal ? 1 : 0,
     template_id: templateId,
     automation_id: automationId,
     send_after: sendAfter || nowIso(),
@@ -115,12 +116,15 @@ async function processDue() {
     try {
       const senderId = senderFor(mail);
       const account = senderId ? outlook.accountForUser(senderId) : null;
-      const email = buildEmail({ body: mail.body, senderUserId: senderId, context: { contactId: mail.contact_id, dealId: mail.deal_id, loanId: mail.loan_id } });
+      // Internal reminders (to the broker) go without a signature and aren't
+      // filed on the client's timeline.
+      const internal = Boolean(mail.internal);
+      const email = buildEmail({ body: mail.body, senderUserId: senderId, internal, context: { contactId: mail.contact_id, dealId: mail.deal_id, loanId: mail.loan_id } });
       const files = mail.attachments ? JSON.parse(mail.attachments).map((a) => ({ ...a, data: Buffer.from(a.data, 'base64') })) : [];
       if (account) {
         const sent = await outlook.sendMail(account, { to: mail.to_email, subject: mail.subject, email, files });
-        db.update('outbox', mail.id, { status: 'sent', sent_via: 'outlook', sent_at: nowIso(), error: null });
-        outlook.recordEmail(account, {
+        db.update('outbox', mail.id, { status: 'sent', sent_via: internal ? 'outlook_internal' : 'outlook', sent_at: nowIso(), error: null });
+        if (!internal) outlook.recordEmail(account, {
           graphId: sent.graphId, conversationId: sent.conversationId, direction: 'out',
           fromEmail: account.email, fromName: account.display_name, to: sent.to, cc: [],
           subject: mail.subject, body: email.plain, preview: null, hasAttachments: files.length > 0, webLink: sent.webLink, sentAt: nowIso(),
@@ -134,10 +138,10 @@ async function processDue() {
           ],
         });
         db.update('outbox', mail.id, { status: 'sent', sent_via: 'smtp', sent_at: nowIso(), error: null });
-        logActivity(mail, 'Email sent');
+        if (!internal) logActivity(mail, 'Email sent');
       } else {
         db.update('outbox', mail.id, { status: 'logged', sent_at: nowIso(), error: null });
-        logActivity(mail, 'Email logged (no Outlook or SMTP connected)');
+        if (!internal) logActivity(mail, 'Email logged (no Outlook or SMTP connected)');
       }
     } catch (err) {
       db.update('outbox', mail.id, { status: 'failed', error: String(err.message || err) });

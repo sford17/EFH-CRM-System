@@ -135,6 +135,12 @@ const ACTIONS = {
     changeDealStage(ctx.deal.id, a.stage, null);
     return `deal stage → ${a.stage}`;
   },
+  // A reminder email to the broker (not filed on the client's timeline).
+  email_broker(a, ctx, auto) {
+    const sendAfter = a.delay_days ? new Date(Date.now() + Number(a.delay_days) * 86400000).toISOString() : undefined;
+    const { id, reason, to } = require('./reminders').emailBroker(a, ctx, { automationId: auto.id, sendAfter });
+    return id ? `reminder email #${id} to ${to} queued` : `reminder email skipped: ${reason}`;
+  },
   notify(a, ctx) {
     const userId = resolveAssignee(a.user, ctx);
     const link = ctx.deal ? `#/deals/${ctx.deal.id}` : ctx.contact ? `#/contacts/${ctx.contact.id}` : null;
@@ -304,6 +310,7 @@ const FINDERS = {
      WHERE status = 'active' AND contact_id IS NOT NULL AND start_at >= ? AND start_at < ?`,
     new Date().toISOString(), `${addDays(date, (cfg.days_before ?? 1) + 1)}T00:00:00.000Z`,
   ).filter((r) => today(new Date(r.k)) <= addDays(date, cfg.days_before ?? 1)),
+  'schedule.annual_review': (cfg, date) => require('./reminders').annualReviewsDue(cfg, date),
   'schedule.stale_lead': (cfg, date) => db.all(
     `SELECT id AS contactId, COALESCE(last_contacted_at, created_at) AS k FROM contacts
      WHERE status = 'lead' AND substr(COALESCE(last_contacted_at, created_at), 1, 10) <= ?`,
@@ -357,7 +364,7 @@ function runScheduled(date = today()) {
     for (const row of finder(auto.trigger_config, date)) {
       const entity = row.loanId ? `loan:${row.loanId}` : row.appointmentId ? `appointment:${row.appointmentId}` : row.dealId ? `deal:${row.dealId}` : `contact:${row.contactId}`;
       const runKey = `${auto.id}:${entity}:${row.k}`;
-      let event = { date };
+      let event = { date, ...(row.event || {}) };
       if (row.appointmentId) {
         const calendly = require('./calendly'); // lazy: calendly → automation
         event = { ...event, ...calendly.eventContext(db.one('SELECT * FROM appointments WHERE id = ?', row.appointmentId)) };

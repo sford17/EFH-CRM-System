@@ -69,13 +69,14 @@ const SCHEDULED_TRIGGERS = [
   { key: 'schedule.settlement_anniversary', label: 'Settlement anniversary' },
   { key: 'schedule.birthday', label: 'Contact birthday' },
   { key: 'schedule.review_due', label: 'Contact review date reached' },
+  { key: 'schedule.annual_review', label: 'Annual review coming up (days_before)' },
   { key: 'schedule.stale_deal', label: 'Open deal inactive (days_inactive)' },
   { key: 'schedule.stale_lead', label: 'Lead not contacted (days_inactive)' },
   { key: 'schedule.appointment_upcoming', label: 'Appointment coming up (days_before)' },
 ];
 const ACTION_TYPES = [
   'create_task', 'send_email', 'send_sms', 'add_note', 'add_tag', 'remove_tag',
-  'set_contact_status', 'set_deal_stage', 'notify', 'create_document_checklist', 'generate_commissions',
+  'set_contact_status', 'set_deal_stage', 'notify', 'email_broker', 'create_document_checklist', 'generate_commissions',
 ];
 
 module.exports = {

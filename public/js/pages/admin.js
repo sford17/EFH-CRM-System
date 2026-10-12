@@ -122,6 +122,7 @@ export async function settingsPage() {
     { name: 'business_email', label: 'Email (also the "from" address)', type: 'email' },
     { name: 'business_website', label: 'Website' },
     { name: 'monthly_settlement_target', label: 'Monthly settlement target ($)', type: 'number' },
+    { name: 'app_url', label: 'CRM web address (for links in reminder emails)', placeholder: `${location.origin}` },
   ];
   const bizForm = h('form.grid-form', bizFields.map((f) => field(f, settings[f.name])), isAdmin ? h('div.actions.full', h('button', { type: 'submit' }, 'Save')) : null);
   if (!isAdmin) for (const el of bizForm.elements) el.disabled = true;

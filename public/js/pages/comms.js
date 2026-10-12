@@ -63,7 +63,7 @@ export async function outboxPage() {
       { label: 'Created', value: (m) => dateTime(m.created_at) },
       { label: 'To', value: (m) => (m.contact_id ? h('a', { href: `#/contacts/${m.contact_id}` }, m.contact_name || m.to_email) : m.to_email) },
       { label: 'Subject', value: (m) => m.subject },
-      { label: 'Source', value: (m) => m.automation_name ? h('span', { title: m.automation_name }, '⚡ automation') : 'manual' },
+      { label: 'Source', value: (m) => (m.internal ? h('span', { title: m.automation_name || '' }, '🔔 reminder to you') : m.automation_name ? h('span', { title: m.automation_name }, '⚡ automation') : 'manual') },
       { label: 'Status', value: (m) => h('div', badge(m.status, { failed: 'danger', queued: 'warn', sent: 'ok', logged: 'info' }[m.status]), m.status === 'queued' ? h('div.muted.small', `after ${dateTime(m.send_after)}`) : null) },
       {
         label: '', value: (m) => (m.status === 'queued'

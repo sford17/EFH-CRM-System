@@ -8,6 +8,19 @@ const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 const { IO_EXPIRY_AUTOMATION, FIXED_RATE_TEXT_UPDATES } = require('./tracker-defaults');
 const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
 
+// Existing installs: the "annual review coming up: email me" automation.
+function addReviewReminderDefaults(db) {
+  if (!db.getSetting('automations_seeded')) return;
+  const { REVIEW_REMINDER_AUTOMATIONS } = require('./review-defaults');
+  for (const a of REVIEW_REMINDER_AUTOMATIONS) {
+    if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
+    db.insert('automations', {
+      name: a.name, description: a.description, trigger: a.trigger, trigger_config: JSON.stringify(a.trigger_config),
+      conditions: '[]', actions: JSON.stringify(a.actions),
+    });
+  }
+}
+
 // Existing installs: the "thank the referral partner" automation.
 function addReferralDefaults(db) {
   if (!db.getSetting('automations_seeded')) return;
@@ -575,6 +588,14 @@ MIGRATIONS.push(
   },
 );
 
+MIGRATIONS.push(
+  // 14. Reminder emails to the broker (e.g. annual review coming up).
+  (db) => {
+    db.get().exec('ALTER TABLE outbox ADD COLUMN internal INTEGER NOT NULL DEFAULT 0;');
+    addReviewReminderDefaults(db);
+  },
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;
@@ -583,3 +604,4 @@ module.exports.addTrackerDefaults = addTrackerDefaults;
 module.exports.addPartyDefaults = addPartyDefaults;
 module.exports.addGraphicsDefaults = addGraphicsDefaults;
 module.exports.addReferralDefaults = addReferralDefaults;
+module.exports.addReviewReminderDefaults = addReviewReminderDefaults;

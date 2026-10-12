@@ -84,7 +84,7 @@ router.get('/:id', (req, res) => {
     'SELECT h.*, u.name AS user_name FROM deal_stage_history h LEFT JOIN users u ON u.id = h.changed_by WHERE h.deal_id = ? ORDER BY h.id',
     id,
   );
-  deal.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE deal_id = ? AND COALESCE(sent_via,'') != 'outlook' ORDER BY id DESC", id);
+  deal.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE deal_id = ? AND COALESCE(sent_via,'') != 'outlook' AND internal = 0 ORDER BY id DESC", id);
   deal.sms = db.all(
     `SELECT s.id, s.body, s.status, s.error, s.from_number, s.send_after, s.sent_at, p.name AS partner_name
      FROM sms_messages s LEFT JOIN referral_partners p ON p.id = s.partner_id WHERE s.deal_id = ? ORDER BY s.id DESC LIMIT 50`,

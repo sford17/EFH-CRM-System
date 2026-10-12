@@ -6,6 +6,7 @@ const { IO_EXPIRY_AUTOMATION } = require('./tracker-defaults');
 const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
 const { applyTemplateGraphics } = require('./graphics-defaults');
 const { REFERRAL_AUTOMATIONS } = require('./referral-defaults');
+const { REVIEW_REMINDER_AUTOMATIONS } = require('./review-defaults');
 
 // Indicative commission rates; edit them on the Lenders page to match your
 // aggregator's schedule.
@@ -193,7 +194,7 @@ for (const a of AUTOMATIONS) {
   if (STAGE_SMS[a.name]) a.actions.push({ type: 'send_sms', message: STAGE_SMS[a.name] });
   if (a.name === BIRTHDAY_SMS.automation) a.actions.push({ type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });
 }
-AUTOMATIONS.push(...SMS_AUTOMATIONS, ...CALENDAR_AUTOMATIONS, ...REFERRAL_AUTOMATIONS, ...PARTY_AUTOMATIONS.map((a) => ({ ...a, enabled: 0 })));
+AUTOMATIONS.push(...SMS_AUTOMATIONS, ...CALENDAR_AUTOMATIONS, ...REFERRAL_AUTOMATIONS, ...REVIEW_REMINDER_AUTOMATIONS, ...PARTY_AUTOMATIONS.map((a) => ({ ...a, enabled: 0 })));
 
 function seedDefaults() {
   db.transaction(() => {

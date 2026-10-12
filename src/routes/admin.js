@@ -38,7 +38,7 @@ users.patch('/:id', auth.requireRole('admin'), (req, res) => {
 });
 
 // ---- Settings -----------------------------------------------------------------
-const SETTING_KEYS = ['business_name', 'business_phone', 'business_email', 'business_website', 'acl_number', 'monthly_settlement_target'];
+const SETTING_KEYS = ['business_name', 'business_phone', 'business_email', 'business_website', 'acl_number', 'monthly_settlement_target', 'app_url'];
 const settings = express.Router();
 
 settings.get('/', (req, res) => {
@@ -46,6 +46,9 @@ settings.get('/', (req, res) => {
 });
 
 settings.put('/', auth.requireRole('admin'), (req, res) => {
+  if (req.body?.app_url && !/^https?:\/\/[^\s/]+(:\d+)?(\/\S*)?$/i.test(String(req.body.app_url).trim())) {
+    throw new HttpError(400, 'The CRM web address should look like http://localhost:3000 or https://crm.example.com.au');
+  }
   for (const k of SETTING_KEYS) if (req.body && k in req.body) db.setSetting(k, String(req.body[k] ?? ''));
   res.json(Object.fromEntries(SETTING_KEYS.map((k) => [k, db.getSetting(k, '')])));
 });
