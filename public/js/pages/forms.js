@@ -134,7 +134,9 @@ export function timeline(activities, { contactId, dealId }) {
             type: 'button',
             onclick: async () => { await attempt(() => api(`/activities/${a.id}`, { method: 'DELETE' }), 'Deleted'); refresh(); },
           }, 'Delete') : null),
-        h('div.act-body', a.body))))
+        a.email_id
+          ? h('button.link.act-body', { type: 'button', onclick: () => import('./email.js').then((m) => m.openEmail(a.email_id)) }, a.body)
+          : h('div.act-body', a.body))))
       : h('p.empty', 'No activity yet.'));
 }
 

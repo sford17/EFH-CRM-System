@@ -3,15 +3,33 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
+const MIGRATIONS = require('./migrations');
+
 let db;
+let dbFile;
 
 function open(file = process.env.DB_FILE || path.join(__dirname, '..', '..', 'data', 'crm.db')) {
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
+  dbFile = file;
   db = new DatabaseSync(file);
   db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;');
   db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
+  migrate();
   return db;
 }
+
+function migrate() {
+  const version = db.prepare('PRAGMA user_version').get().user_version;
+  for (let i = version; i < MIGRATIONS.length; i++) {
+    transaction(() => {
+      db.exec(MIGRATIONS[i]);
+      db.exec(`PRAGMA user_version = ${i + 1}`);
+    });
+  }
+}
+
+// Path of the open database file, or ':memory:'.
+const file = () => dbFile;
 
 function get() {
   if (!db) open();
@@ -70,4 +88,4 @@ function setSetting(key, value) {
   run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', key, value);
 }
 
-module.exports = { open, get, close, all, one, run, insert, update, transaction, getSetting, setSetting };
+module.exports = { open, get, close, file, all, one, run, insert, update, transaction, getSetting, setSetting };

@@ -1,6 +1,7 @@
 'use strict';
 const db = require('../db');
 const { render, buildContext } = require('./templating');
+const outlook = require('./outlook');
 const { nowIso } = require('../util');
 
 let transport;
@@ -18,9 +19,10 @@ function getTransport() {
   return transport;
 }
 
-function queueEmail({ to, subject, body, contactId = null, dealId = null, templateId = null, automationId = null, sendAfter = null }) {
+function queueEmail({ to, subject, body, contactId = null, dealId = null, templateId = null, automationId = null, sendAfter = null, senderUserId = null }) {
   if (!to) throw new Error('Recipient has no email address');
   return db.insert('outbox', {
+    sender_user_id: senderUserId,
     to_email: to,
     subject,
     body,
@@ -52,33 +54,66 @@ function queueTemplate(templateId, { contactId, dealId, automationId, sendAfter,
     templateId,
     automationId,
     sendAfter,
+    senderUserId: userId || ctx.broker?.id || null,
   });
   return { id, reason: null };
 }
 
-// Sends everything due in the outbox. Without SMTP configured, emails are
+// The team member an email goes out as: whoever queued it, otherwise the
+// owner of the deal or contact.
+function senderFor(mail) {
+  if (mail.sender_user_id) return mail.sender_user_id;
+  const dealOwner = mail.deal_id ? db.one('SELECT owner_id FROM deals WHERE id = ?', mail.deal_id)?.owner_id : null;
+  if (dealOwner) return dealOwner;
+  return mail.contact_id ? db.one('SELECT owner_id FROM contacts WHERE id = ?', mail.contact_id)?.owner_id ?? null : null;
+}
+
+function logActivity(mail, text) {
+  if (!mail.contact_id) return;
+  db.insert('activities', { contact_id: mail.contact_id, deal_id: mail.deal_id, type: 'email', body: `${text}: ${mail.subject}` });
+}
+
+// Sends everything due in the outbox, in order of preference: through the
+// sender's connected Outlook mailbox, through SMTP, or (with neither set up)
 // marked "logged" so the workflow can be exercised without sending anything.
-async function processOutbox() {
+async function processDue() {
   const due = db.all("SELECT * FROM outbox WHERE status = 'queued' AND send_after <= ? ORDER BY id LIMIT 50", nowIso());
   const t = getTransport();
   const from = process.env.SMTP_FROM || db.getSetting('business_email') || 'crm@localhost';
   for (const mail of due) {
     try {
-      if (t) await t.sendMail({ from, to: mail.to_email, subject: mail.subject, text: mail.body });
-      db.update('outbox', mail.id, { status: t ? 'sent' : 'logged', sent_at: nowIso(), error: null });
-      if (mail.contact_id) {
-        db.insert('activities', {
-          contact_id: mail.contact_id,
-          deal_id: mail.deal_id,
-          type: 'email',
-          body: `Email ${t ? 'sent' : 'logged (SMTP not configured)'}: ${mail.subject}`,
-        });
+      const senderId = senderFor(mail);
+      const account = senderId ? outlook.accountForUser(senderId) : null;
+      if (account) {
+        const sent = await outlook.sendMail(account, { to: mail.to_email, subject: mail.subject, body: mail.body });
+        db.update('outbox', mail.id, { status: 'sent', sent_via: 'outlook', sent_at: nowIso(), error: null });
+        outlook.recordEmail(account, {
+          graphId: sent.graphId, conversationId: sent.conversationId, direction: 'out',
+          fromEmail: account.email, fromName: account.display_name, to: sent.to, cc: [],
+          subject: mail.subject, body: mail.body, preview: null, hasAttachments: false, webLink: sent.webLink, sentAt: nowIso(),
+        }, { contactIds: [mail.contact_id], dealId: mail.deal_id });
+      } else if (t) {
+        await t.sendMail({ from, to: mail.to_email, subject: mail.subject, text: mail.body });
+        db.update('outbox', mail.id, { status: 'sent', sent_via: 'smtp', sent_at: nowIso(), error: null });
+        logActivity(mail, 'Email sent');
+      } else {
+        db.update('outbox', mail.id, { status: 'logged', sent_at: nowIso(), error: null });
+        logActivity(mail, 'Email logged (no Outlook or SMTP connected)');
       }
     } catch (err) {
       db.update('outbox', mail.id, { status: 'failed', error: String(err.message || err) });
     }
   }
   return due.length;
+}
+
+// Runs are serialised so the scheduler and a manual send can't both pick up
+// (and double-send) the same queued email.
+let chain = Promise.resolve();
+function processOutbox() {
+  const run = chain.then(processDue, processDue);
+  chain = run.catch(() => {});
+  return run;
 }
 
 module.exports = { queueEmail, queueTemplate, processOutbox };

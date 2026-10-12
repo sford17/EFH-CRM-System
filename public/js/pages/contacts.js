@@ -3,9 +3,10 @@ import {
   opts, label, userOptions, toast,
 } from '../core.js';
 import {
-  contactFields, newContact, newDeal, newTask, taskTable, timeline, emailList, sendTemplateDialog, refresh,
+  contactFields, newContact, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh,
   CONTACT_STATUSES, LEAD_SOURCES,
 } from './forms.js';
+import { emailsCard, composeDialog } from './email.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -87,7 +88,7 @@ export async function contactPage(id) {
       h('div', h('h1', fullName(c), ' ', badge(c.status, statusKind[c.status])),
         h('div.muted', [c.email, c.mobile].filter(Boolean).join(' · '))),
       h('div.actions',
-        c.email ? h('a.button.secondary', { href: `mailto:${c.email}` }, 'Email') : null,
+        c.email ? h('button.secondary', { type: 'button', onclick: () => composeDialog({ contactId: c.id, to: c.email }) }, 'Email') : null,
         c.mobile ? h('a.button.secondary', { href: `tel:${c.mobile.replace(/\s/g, '')}` }, 'Call') : null,
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ contactId: c.id }) }, 'Send template'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
@@ -118,7 +119,7 @@ export async function contactPage(id) {
         h('section.card',
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ contact_id: c.id }) }, '+ Task')),
           taskTable(c.tasks)),
-        h('section.card', h('h2', 'Emails'), emailList(c.emails))),
+        emailsCard({ mail: c.mail, outbox: c.emails, contactId: c.id, to: c.email })),
       h('div.col-main',
         h('section.card', h('h2', 'Activity'), timeline(c.activities, { contactId: c.id })))));
 }

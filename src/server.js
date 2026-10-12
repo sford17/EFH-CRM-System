@@ -10,6 +10,7 @@ seedDefaults();
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '127.0.0.1';
 createApp().listen(port, host, () => {
-  console.log(`EFH CRM running at http://${host}:${port}`);
+  const shown = host === '127.0.0.1' ? 'localhost' : host;
+  console.log(`EFH CRM running at http://${shown}:${port}`);
   if (process.env.SCHEDULER !== 'off') scheduler.start();
 });

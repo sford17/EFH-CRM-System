@@ -4,6 +4,7 @@ const db = require('../db');
 const automation = require('../services/automation');
 const documents = require('../services/documents');
 const mailer = require('../services/mailer');
+const { listEmails } = require('./outlook');
 const commissions = require('../services/commissions');
 const { lvr } = require('../services/templating');
 const { STAGES, STAGE_KEYS } = require('../constants');
@@ -82,7 +83,8 @@ router.get('/:id', (req, res) => {
     'SELECT h.*, u.name AS user_name FROM deal_stage_history h LEFT JOIN users u ON u.id = h.changed_by WHERE h.deal_id = ? ORDER BY h.id',
     id,
   );
-  deal.emails = db.all('SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE deal_id = ? ORDER BY id DESC', id);
+  deal.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE deal_id = ? AND COALESCE(sent_via,'') != 'outlook' ORDER BY id DESC", id);
+  deal.mail = listEmails({ contactIds: [deal.contact_id, deal.co_borrower_id].filter(Boolean), limit: 50 });
   res.json(deal);
 });
 
@@ -156,7 +158,7 @@ router.post('/:id/documents', (req, res) => {
 });
 
 // Emails the borrower the list of outstanding documents and marks them requested.
-router.post('/:id/documents/request', (req, res) => {
+router.post('/:id/documents/request', async (req, res) => {
   const id = intParam(req.params.id);
   notFound(db.one('SELECT 1 FROM deals WHERE id = ?', id), 'Deal');
   if (!documents.outstanding(id).length) throw new HttpError(400, 'There are no outstanding documents to request');
@@ -165,7 +167,8 @@ router.post('/:id/documents/request', (req, res) => {
   const { id: outboxId, reason } = mailer.queueTemplate(template.id, { dealId: id, userId: req.user.id });
   if (!outboxId) throw new HttpError(400, reason);
   db.run("UPDATE documents SET status = 'requested', updated_at = ? WHERE deal_id = ? AND status = 'required'", nowIso(), id);
-  res.json({ outbox_id: outboxId });
+  await mailer.processOutbox();
+  res.json(db.one('SELECT id, status, sent_via, error FROM outbox WHERE id = ?', outboxId));
 });
 
 module.exports = router;

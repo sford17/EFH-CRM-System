@@ -38,14 +38,15 @@ templates.post('/:id/preview', (req, res) => {
   res.json({ subject: render(t.subject, ctx), body: render(t.body, ctx), to: ctx.contact?.email || null });
 });
 
-templates.post('/:id/send', (req, res) => {
+templates.post('/:id/send', async (req, res) => {
   const id = intParam(req.params.id);
   if (!req.body?.contact_id && !req.body?.deal_id) throw new HttpError(400, 'Choose a contact or deal to send to');
   const { id: outboxId, reason } = mailer.queueTemplate(id, {
     contactId: req.body.contact_id, dealId: req.body.deal_id, userId: req.user.id,
   });
   if (!outboxId) throw new HttpError(400, reason);
-  res.status(201).json({ outbox_id: outboxId });
+  await mailer.processOutbox();
+  res.status(201).json(db.one('SELECT id, status, sent_via, error FROM outbox WHERE id = ?', outboxId));
 });
 
 const outbox = express.Router();
@@ -64,14 +65,17 @@ outbox.get('/', (req, res) => {
   });
 });
 
-// Ad-hoc email to a contact.
-outbox.post('/', (req, res) => {
+// Ad-hoc email to a contact, sent straight away.
+outbox.post('/', async (req, res) => {
   const row = pick(req.body, ['contact_id', 'deal_id', 'subject', 'body', 'to_email']);
   requireFields(row, ['subject', 'body']);
   const contact = row.contact_id ? db.one('SELECT email FROM contacts WHERE id = ?', row.contact_id) : null;
+  if (!row.to_email && !contact?.email) throw new HttpError(400, 'This contact has no email address');
   const id = mailer.queueEmail({
     to: row.to_email || contact?.email, subject: row.subject, body: row.body, contactId: row.contact_id, dealId: row.deal_id,
+    senderUserId: req.user.id,
   });
+  await mailer.processOutbox();
   res.status(201).json(db.one('SELECT * FROM outbox WHERE id = ?', id));
 });
 

@@ -9,6 +9,7 @@ import { commissionsPage } from './pages/commissions.js';
 import { partnersPage, lendersPage, settingsPage } from './pages/admin.js';
 import { reportsPage } from './pages/reports.js';
 import { calculatorsPage } from './pages/calculators.js';
+import { inboxPage } from './pages/email.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
@@ -16,8 +17,9 @@ const NAV = [
   ['#/contacts', 'Contacts', '☺'],
   ['#/deals', 'Deals', '$'],
   ['#/tasks', 'Tasks', '✓'],
+  ['#/inbox', 'Client emails', '✉'],
   ['#/automations', 'Automations', '⚡'],
-  ['#/templates', 'Email templates', '✉'],
+  ['#/templates', 'Email templates', '✎'],
   ['#/outbox', 'Outbox', '⇪'],
   ['#/commissions', 'Commissions', '¢'],
   ['#/partners', 'Referral partners', '⇄'],
@@ -35,6 +37,7 @@ const ROUTES = [
   [/^\/deals$/, dealsPage],
   [/^\/deals\/(\d+)$/, dealPage],
   [/^\/tasks$/, tasksPage],
+  [/^\/inbox$/, inboxPage],
   [/^\/automations$/, automationsPage],
   [/^\/automations\/(\d+|new)$/, automationPage],
   [/^\/templates$/, templatesPage],

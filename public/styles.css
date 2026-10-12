@@ -334,3 +334,31 @@ ul.errors { color: var(--danger); font-size: .85rem; }
   .doc-list li { grid-template-columns: 1fr 120px auto; }
 }
 .page-header .actions select, .page-header .actions input { width: auto; }
+
+/* Email */
+.mail-list { list-style: none; margin: 0; padding: 0; }
+.mail-list li { border-bottom: 1px solid var(--border); }
+.mail-list li:last-child { border-bottom: 0; }
+.mail-row { width: 100%; background: none; border: 0; color: var(--text); font-weight: 400; padding: .5rem .25rem; display: grid; grid-template-columns: auto 1fr auto; gap: .6rem; text-align: left; align-items: start; white-space: normal; border-radius: 6px; }
+.mail-row:hover { background: var(--surface-2); }
+.mail-main { min-width: 0; }
+.mail-main .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-subject { font-weight: 600; }
+.mail-date { white-space: nowrap; }
+.mail-dir { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: .8rem; font-weight: 700; }
+.mail-dir.in { background: var(--accent-soft); color: var(--accent); }
+.mail-dir.out { background: var(--ok-soft); color: var(--ok); }
+.mail-meta { margin: 0; display: grid; gap: .2rem; font-size: .88rem; }
+.mail-meta div { display: grid; grid-template-columns: 70px 1fr; gap: .5rem; }
+.mail-meta dt { color: var(--muted); }
+.mail-meta dd { margin: 0; overflow-wrap: anywhere; }
+.reply-box { display: flex; flex-direction: column; gap: .5rem; border-top: 1px solid var(--border); padding-top: .75rem; }
+.outbox-details { margin-top: .6rem; }
+.act-body.link { display: block; text-align: left; white-space: normal; color: var(--accent); font-weight: 400; }
+.alert.info { background: var(--accent-soft); color: var(--text); }
+.outlook-status { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .8rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); margin-bottom: .75rem; }
+.outlook-status.ok { border-color: var(--ok); background: var(--ok-soft); }
+.outlook-setup { margin-top: .5rem; }
+.outlook-setup summary { cursor: pointer; margin-bottom: .5rem; }
+.setup-steps { padding-left: 1.2rem; display: grid; gap: .45rem; margin: .5rem 0 1rem; }
+code.copy { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: .05rem .35rem; user-select: all; overflow-wrap: anywhere; }

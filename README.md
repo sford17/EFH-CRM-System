@@ -13,7 +13,8 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Document checklists** | Standard checklist built automatically by loan purpose (plus self-employed docs), with status tracking and a one-click "email the client what's outstanding" |
 | **Tasks** | Personal and team tasks, overdue/today/upcoming views, tasks auto-created by automations |
 | **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 18 ready-made automations, fully editable in the UI |
-| **Email** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery |
+| **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
+| **Email templates** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Referral partners** | Agents, accountants, planners and others, with referral counts, settled volume and fee splits |
 | **Lenders** | Commission rates, clawback periods, BDM contacts, settled volume |
@@ -28,7 +29,7 @@ Requires **Node.js 22.13 or newer** (it uses Node's built-in SQLite, so there is
 ```bash
 npm install
 npm run seed     # optional: loads demo data (sign in as admin@efh.local / changeme123)
-npm start        # http://127.0.0.1:3000
+npm start        # http://localhost:3000
 ```
 
 Without the demo seed, the first visit asks you to create the administrator account. The 12 major lenders, the email templates and the default automations are added automatically on first start.
@@ -44,6 +45,28 @@ Settings come from environment variables; see [`.env.example`](.env.example). Th
 - **`HOST` / `COOKIE_SECURE` / `TRUST_PROXY`**: for running on a server behind HTTPS.
 
 Business details (name, phone, email, ACL number, monthly settlement target) are set in the app under **Settings**.
+
+## Connecting Outlook
+
+The CRM connects to Outlook through Microsoft Graph, Microsoft's official API. It never sees your password, and the access tokens it stores are encrypted.
+
+1. **One-time admin setup, about 10 minutes.** Go to **Settings → Outlook email** in the CRM, open *One-time setup* and follow the steps. You'll register the CRM as an app in [Microsoft Entra](https://entra.microsoft.com), using the redirect address shown on that page, then paste the app's IDs and client secret back into the CRM.
+2. **Each team member connects their own mailbox.** They click **Connect Outlook** in Settings and sign in with Microsoft.
+
+What happens next:
+
+- The CRM checks Inbox and Sent Items every few minutes. The first check imports the last 30 days, which you can change with `MAIL_SYNC_DAYS`.
+- Every email to or from a contact's email address is stored against that contact and appears on their timeline. If the contact has one open deal, the email is also linked to that deal. Emails with people who aren't contacts are ignored.
+- New client emails notify the mailbox owner and can trigger automations ("Email received from a contact").
+- Emails written in the CRM, sent from templates, or sent by automations go out from the sender's Outlook and appear in their Sent Items. The sender is the person who wrote it, otherwise the deal or contact owner. Without a connected mailbox, the CRM falls back to SMTP, or just logs the email.
+- **Client emails** in the menu lists all filed emails. Open any email to read it or reply in the same Outlook conversation.
+
+Notes:
+
+- Use **http://localhost:3000** (not 127.0.0.1) when connecting, because Microsoft only accepts `localhost` redirect addresses. When hosted, use your real HTTPS address and add it as a redirect URI in Entra too.
+- Client secrets expire, after at most 24 months. Create a new one in Entra before then and paste it into Settings.
+- Attachments stay in Outlook. Use **Open in Outlook** on an email to view them.
+- Back up `data/secret.key` together with `data/crm.db`. Without the key, Outlook has to be reconnected.
 
 ## How automations work
 
@@ -97,9 +120,10 @@ src/
   app.js               Express app, security headers, routing, error handling
   auth.js              password hashing (scrypt), sessions, role checks
   constants.js         pipeline stages, document checklists, triggers & actions
-  db/                  schema, connection helpers, default + demo seed data
+  db/                  schema, migrations, connection helpers, default + demo seed data
+  secrets.js           encryption for stored tokens and secrets
   routes/              REST API (contacts, deals, tasks, automations, comms, admin, insights)
-  services/            automation engine, scheduler, mailer, templating, commissions, calculators
+  services/            automation engine, scheduler, mailer, Outlook (Microsoft Graph), templating, commissions, calculators
 public/                single-page web app (no build step)
 test/                  API tests (node:test)
 ```
@@ -110,7 +134,12 @@ test/                  API tests (node:test)
 - Write requests must be JSON, which blocks cross-site form posts. The app sends a strict Content-Security-Policy.
 - Assistants cannot manage users or business settings.
 - CSV exports neutralise spreadsheet formulas. Document links must be http(s).
-- Back up `data/crm.db` regularly. It holds personal and financial information, so store backups securely.
+- Outlook tokens and the Microsoft client secret are encrypted (AES-256-GCM) with a key kept in `data/secret.key`, or in `ENCRYPTION_KEY` if set.
+- Back up the `data` folder regularly. It holds personal and financial information, so store backups securely.
+
+## Updating to a new version
+
+Your data lives in the `data` folder: `crm.db` and `secret.key`. To update, download the new version, copy your old `data` folder into it, then run `npm install` and `npm start`. Database changes are applied automatically on start.
 
 ## Disclaimer
 

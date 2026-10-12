@@ -56,6 +56,7 @@ const EVENT_TRIGGERS = [
   { key: 'deal.created', label: 'Deal created' },
   { key: 'deal.stage_changed', label: 'Deal stage changed' },
   { key: 'task.completed', label: 'Task completed' },
+  { key: 'email.received', label: 'Email received from a contact' },
 ];
 const SCHEDULED_TRIGGERS = [
   { key: 'schedule.fixed_rate_expiry', label: 'Fixed rate expiring (days_before)' },

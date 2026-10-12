@@ -3,6 +3,7 @@ const express = require('express');
 const db = require('../db');
 const csv = require('../csv');
 const automation = require('../services/automation');
+const { listEmails } = require('./outlook');
 const { nowIso, HttpError, parseTags } = require('../util');
 const { pick, requireFields, notFound, intParam, like } = require('./helpers');
 
@@ -97,7 +98,8 @@ router.get('/:id', (req, res) => {
      WHERE a.contact_id = ? ORDER BY a.created_at DESC, a.id DESC LIMIT 200`,
     id,
   );
-  contact.emails = db.all('SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE contact_id = ? ORDER BY id DESC LIMIT 50', id);
+  contact.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE contact_id = ? AND COALESCE(sent_via,'') != 'outlook' ORDER BY id DESC LIMIT 50", id);
+  contact.mail = listEmails({ contactIds: [id], limit: 50 });
   res.json(contact);
 });
 

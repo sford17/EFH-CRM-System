@@ -33,6 +33,8 @@ function createApp() {
 
   app.get('/api/health', (req, res) => res.json({ ok: true }));
   app.use('/api/auth', require('./routes/auth'));
+  const outlookRoutes = require('./routes/outlook');
+  app.use('/api/outlook', outlookRoutes.publicRouter);
 
   app.use('/api', auth.requireAuth);
   app.get('/api/meta', (req, res) => res.json({ stages: STAGES, document_checklist: DOCUMENT_CHECKLIST }));
@@ -48,6 +50,8 @@ function createApp() {
   app.use('/api/settings', admin.settings);
   app.use('/api/lenders', admin.lenders);
   app.use('/api/partners', admin.partners);
+  app.use('/api/outlook', outlookRoutes.router);
+  app.use('/api/emails', outlookRoutes.emails);
   app.use('/api', require('./routes/insights'));
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
