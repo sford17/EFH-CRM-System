@@ -1,6 +1,7 @@
 // Client Lending Review editor: commentary on the left, live document preview
 // on the right; download as PDF / Word or email to the client.
 import { api, h, attempt, modal, confirmDialog, toast, date, dateTime, badge, field, readForm, pageHeader } from '../core.js';
+import { addresseePicker } from './household.js';
 
 const SECTIONS = [
   ['loan_review', 'Loan review', 'A summary of where the client\'s lending stands today.'],
@@ -65,6 +66,14 @@ export async function reviewPage(id) {
       h('div.muted.small', hint, ' Start lines with "-" or "•" for bullet points.'),
       ta);
   });
+  // Address the document to one or both of a couple.
+  const picker = addresseePicker(r.household, r.addressees.map((a) => a.id), async (ids) => {
+    try {
+      r = { ...r, ...(await api(`/reviews/${id}`, { method: 'PATCH', body: { addressee_ids: ids } })) };
+      r.addressees = r.household.filter((m) => ids.includes(m.id));
+      reload();
+    } catch (err) { toast(err.message, 'error'); }
+  });
   const collect = () => ({ ...readForm(metaForm, meta), ...Object.fromEntries(Object.entries(areas).map(([k, ta]) => [k, ta.value])) });
   for (const el of [...metaForm.querySelectorAll('input'), ...Object.values(areas)]) el.addEventListener('input', () => save(collect));
 
@@ -80,13 +89,15 @@ export async function reviewPage(id) {
   };
   const emailIt = () => {
     const fields = [
-      { name: 'to', label: 'To', type: 'email', required: true, full: true },
+      { name: 'to', label: 'To (separate several addresses with commas)', required: true, full: true },
       { name: 'subject', label: 'Subject', required: true, full: true },
       { name: 'body', label: 'Message', type: 'textarea', rows: 9, required: true, full: true },
     ];
-    const first = r.contact.first_name;
+    const people = r.addressees.length ? r.addressees : [r.contact];
+    const firsts = people.map((p) => p.first_name);
+    const first = firsts.length > 1 ? `${firsts.slice(0, -1).join(', ')} and ${firsts[firsts.length - 1]}` : firsts[0];
     const form = h('form.grid-form', fields.map((f) => field(f, {
-      to: r.contact.email,
+      to: people.map((p) => p.email).filter(Boolean).join(', '),
       subject: `Your ${r.title} – ${date(r.review_date)}`,
       body: `Hi ${first},\n\nPlease find attached your ${r.title.toLowerCase()}. It summarises your current loans and properties, along with a few things worth considering and what I'll be doing next.\n\nHappy to talk through any of it – just reply or give me a call.\n\nKind regards,`,
     }[f.name])), h('p.muted.small.full', '📎 The review is attached as a PDF. Your email signature is added automatically.'),
@@ -113,12 +124,12 @@ export async function reviewPage(id) {
       h('a.button.secondary', { href: `/api/reviews/${id}/docx`, download: '' }, 'Word'),
       h('a.button.secondary', { href: `/api/reviews/${id}/pdf`, download: '' }, 'PDF'),
       h('button', { type: 'button', onclick: emailIt }, 'Email to client')),
-    h('p.muted', `For ${r.contact.full_name}. Figures as at ${dateTime(r.snapshot_taken_at)} `,
+    h('p.muted', `For ${r.prepared_for || r.contact.full_name}. Figures as at ${dateTime(r.snapshot_taken_at)} `,
       h('button.link', { type: 'button', onclick: refreshFigures }, '(refresh from the mortgage tracker)'),
       r.status === 'sent' ? ` · emailed to ${r.sent_to} ${dateTime(r.sent_at)}` : ''),
     h('div.review-layout',
       h('div.review-editor',
-        h('section.card', metaForm, h('div.review-status', status)),
+        h('section.card', metaForm, picker, h('div.review-status', status)),
         h('section.card', editors),
         h('div.actions', h('button.danger.ghost', { type: 'button', onclick: remove }, 'Delete review'))),
       h('div.review-preview', frame)));

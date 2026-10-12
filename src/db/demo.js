@@ -38,8 +38,12 @@ function seedDemo() {
       jack: contact({ first_name: 'Jack', last_name: 'Williams', email: 'jack@example.com', mobile: '0466 666 666', status: 'client', lead_source: 'referral', referral_partner_id: reAgent, suburb: 'Glenelg', state: 'SA' }),
       grace: contact({ first_name: 'Grace', last_name: 'Martin', email: 'grace@example.com', mobile: '0477 777 777', status: 'past_client', lead_source: 'website', suburb: 'Subiaco', state: 'WA', next_review_date: addDays(t0, -1) }),
       ethan: contact({ first_name: 'Ethan', last_name: 'Clarke', email: 'ethan@example.com', mobile: '0488 888 888', status: 'lost', lead_source: 'website', suburb: 'Belconnen', state: 'ACT', tags: 'nurture' }),
+      tom: contact({ first_name: 'Tom', last_name: 'Jones', email: 'tom@example.com', mobile: '0455 555 556', status: 'client', lead_source: 'repeat', suburb: 'Newtown', state: 'NSW', employment_type: 'payg', annual_income: 132000 }),
       zoe: contact({ first_name: 'Zoe', last_name: 'Clarke', email: 'zoe@example.com', mobile: '0499 999 999', status: 'prospect', lead_source: 'walk_in', suburb: 'Belconnen', state: 'ACT' }),
     };
+
+    // Mia and Tom are married and share their finances.
+    db.insert('contact_relationships', { contact_id: c.mia, related_id: c.tom, relationship: 'spouse', shared_finances: 1 });
 
     const deal = (row, history = []) => {
       const id = db.insert('deals', { owner_id: admin, ...row });
@@ -60,7 +64,7 @@ function seedDemo() {
     deal({ title: 'Mia Jones – investment #2', contact_id: c.mia, loan_purpose: 'investment', property_value: 720000, loan_amount: 576000, lender_id: lender('ANZ'), interest_rate: 6.04, stage: 'settlement_booked', settlement_date: addDays(t0, 2) }, ['lead', 'fact_find', 'application_lodged', 'conditional_approval', 'unconditional_approval']);
 
     const settled = [
-      { title: 'Mia Jones – home loan', contact_id: c.mia, loan_purpose: 'purchase', property_address: '8 King St, Newtown NSW 2042', property_value: 950000, loan_amount: 760000, lender_id: lender('Westpac'), interest_rate: 5.69, rate_type: 'fixed', fixed_expiry_date: addDays(t0, 75), settlement_date: addMonths(t0, -34) },
+      { title: 'Mia & Tom Jones – home loan', contact_id: c.mia, co_borrower_id: c.tom, loan_purpose: 'purchase', property_address: '8 King St, Newtown NSW 2042', property_value: 950000, loan_amount: 760000, lender_id: lender('Westpac'), interest_rate: 5.69, rate_type: 'fixed', fixed_expiry_date: addDays(t0, 75), settlement_date: addMonths(t0, -34) },
       { title: 'Jack Williams – purchase Glenelg', contact_id: c.jack, loan_purpose: 'purchase', property_address: '27 Seaview Tce, Glenelg SA 5045', property_value: 1100000, loan_amount: 880000, lender_id: lender('Bankwest'), interest_rate: 5.84, settlement_date: addMonths(t0, -12), referral_partner_id: reAgent },
       { title: 'Grace Martin – refinance', contact_id: c.grace, loan_purpose: 'refinance', property_address: '5 Rokeby Rd, Subiaco WA 6008', property_value: 780000, loan_amount: 450000, lender_id: lender('Suncorp'), interest_rate: 5.95, rate_type: 'split', fixed_expiry_date: addMonths(t0, 8), settlement_date: addMonths(t0, -5) },
     ];
@@ -80,7 +84,7 @@ function seedDemo() {
     val(miaHome, 14, 1050000, 'full', 'Herron Todd White');
     val(miaHome, 7, 1120000, 'desktop', 'Westpac');
     val(miaHome, 1, 1185000, 'avm', 'CoreLogic');
-    db.update('properties', miaHome, { property_type: 'house', bedrooms: 3 });
+    db.update('properties', miaHome, { property_type: 'house', bedrooms: 3, co_owner_id: c.tom });
     const miaUnit = db.insert('properties', {
       contact_id: c.mia, address: '12/45 Enmore Rd, Newtown NSW 2042', property_type: 'unit', usage: 'investment', bedrooms: 2,
       purchase_date: addMonths(t0, -52), purchase_price: 560000, rental_income_weekly: 620,
@@ -99,6 +103,7 @@ function seedDemo() {
       balance_date: t0, interest_rate: 20.99, arranged_by_us: 0,
     });
     db.insert('client_assets', { contact_id: c.mia, asset_type: 'superannuation', institution: 'AustralianSuper', value: 212000, value_date: t0 });
+    db.insert('client_assets', { contact_id: c.tom, asset_type: 'superannuation', institution: 'HESTA', value: 168000, value_date: t0 });
     db.insert('client_assets', { contact_id: c.mia, asset_type: 'savings', institution: 'ING', description: 'Emergency fund', value: 35000, value_date: t0 });
 
     deal({ title: 'Ethan Clarke – purchase', contact_id: c.ethan, loan_purpose: 'purchase', property_value: 700000, loan_amount: 630000, stage: 'lost', lost_reason: 'Went direct to bank' }, ['lead', 'fact_find']);

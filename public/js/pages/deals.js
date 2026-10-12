@@ -2,7 +2,7 @@ import {
   api, h, table, badge, date, money, money2, pct, pageHeader, formModal, attempt, confirmDialog, state, stageLabel,
   label, userOptions, todayStr, relDays, opts, dateTime, lenderTag, lenderLogo,
 } from '../core.js';
-import { dealFields, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
+import { dealFields, coBorrowerField, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard } from './email.js';
 import { smsCard } from './sms.js';
 
@@ -161,7 +161,7 @@ function commissionsCard(deal) {
 
 export async function dealPage(id) {
   const deal = await api(`/deals/${id}`);
-  const edit = () => formModal(`Edit ${deal.title}`, dealFields(), deal, async (v) => {
+  const edit = async () => formModal(`Edit ${deal.title}`, [(await coBorrowerField(deal.contact_id, deal.co_borrower_id)).field, ...dealFields()], deal, async (v) => {
     await attempt(() => api(`/deals/${id}`, { method: 'PATCH', body: v }), 'Saved');
     refresh();
   });

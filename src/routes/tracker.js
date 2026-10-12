@@ -2,6 +2,7 @@
 const express = require('express');
 const db = require('../db');
 const tracker = require('../services/tracker');
+const { householdIds } = require('../services/household');
 const { nowIso, HttpError, today } = require('../util');
 const { pick, requireFields, notFound, intParam } = require('./helpers');
 
@@ -103,7 +104,8 @@ function setSecurities(loanId, ids, contactId) {
   if (!Array.isArray(ids)) return;
   db.run('DELETE FROM loan_securities WHERE loan_id = ?', loanId);
   for (const pid of ids.map(Number).filter(Boolean)) {
-    const p = db.one('SELECT id FROM properties WHERE id = ? AND (contact_id = ? OR co_owner_id = ?)', pid, contactId, contactId);
+    const hh = householdIds(contactId);
+    const p = db.one(`SELECT id FROM properties WHERE id = ? AND (contact_id IN (${hh.map(() => '?').join(',')}) OR co_owner_id IN (${hh.map(() => '?').join(',')}))`, pid, ...hh, ...hh);
     if (!p) throw new HttpError(400, 'A security property belongs to a different client');
     db.run('INSERT INTO loan_securities (loan_id, property_id) VALUES (?, ?)', loanId, pid);
   }

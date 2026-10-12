@@ -3,6 +3,7 @@ import {
   api, h, modal, attempt, toast, dateTime, pageHeader, table, field, readForm, state,
 } from '../core.js';
 import { previewEmail } from './branding.js';
+import { addresseePicker, householdOf } from './household.js';
 
 const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 const arrow = (dir) => h(`span.mail-dir.${dir}`, { title: dir === 'in' ? 'Received' : 'Sent' }, dir === 'in' ? '↙' : '↗');
@@ -52,9 +53,10 @@ export async function openEmail(id) {
 
 // New email to a contact, optionally starting from a template.
 export async function composeDialog({ contactId, dealId, to, subject = '', body = '' }) {
-  const [{ rows: templates }, status] = await Promise.all([api('/templates'), api('/outlook/status')]);
+  const [{ rows: templates }, status, members] = await Promise.all([api('/templates'), api('/outlook/status'), householdOf(contactId)]);
+  let addressees = [Number(contactId)].filter(Boolean);
   const fields = [
-    { name: 'to_email', label: 'To', type: 'email', required: true, full: true },
+    { name: 'to_email', label: 'To (separate several addresses with commas)', required: true, full: true },
     { name: 'subject', label: 'Subject', required: true, full: true },
     { name: 'body', label: 'Message', type: 'textarea', rows: 12, required: true, full: true },
   ];
@@ -63,11 +65,19 @@ export async function composeDialog({ contactId, dealId, to, subject = '', body 
   const templateSel = h('select', { 'aria-label': 'Start from a template' },
     h('option', { value: '' }, 'Start from a template (optional)…'),
     templates.map((t) => h('option', { value: t.id }, t.name)));
-  templateSel.addEventListener('change', async () => {
+  const mainId = () => (addressees.includes(Number(contactId)) ? contactId : addressees[0]);
+  const fillTemplate = async () => {
     if (!templateSel.value) return;
-    const p = await api(`/templates/${templateSel.value}/preview`, { method: 'POST', body: { contact_id: contactId, deal_id: dealId } });
+    const p = await api(`/templates/${templateSel.value}/preview`, { method: 'POST', body: { contact_id: mainId(), deal_id: dealId, addressee_ids: addressees } });
     form.elements.subject.value = p.subject;
     form.elements.body.value = p.body;
+  };
+  templateSel.addEventListener('change', fillTemplate);
+  // Writing to a couple: tick who it's to, and the To line and greeting follow.
+  const picker = addresseePicker(members, addressees, (ids) => {
+    addressees = ids;
+    form.elements.to_email.value = members.filter((m) => ids.includes(m.id)).map((m) => m.email).filter(Boolean).join(', ');
+    fillTemplate();
   });
   const via = status.account?.connected
     ? h('p.muted.small', `Sends from your Outlook (${status.account.email}) and appears in your Sent Items. Your signature is added automatically.`)
@@ -78,13 +88,13 @@ export async function composeDialog({ contactId, dealId, to, subject = '', body 
     onclick: () => previewEmail({ subject: form.elements.subject.value, body: form.elements.body.value || ' ' }),
   }, 'Preview');
   form.append(h('div.actions.full', preview, send));
-  const d = modal('New email', [templateSel, form, via], { wide: true });
+  const d = modal('New email', [picker, templateSel, form, via], { wide: true });
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     send.disabled = true;
     try {
       const v = readForm(form, fields);
-      const r = await attempt(() => api('/outbox', { method: 'POST', body: { ...v, contact_id: contactId || null, deal_id: dealId || null } }));
+      const r = await attempt(() => api('/outbox', { method: 'POST', body: { ...v, contact_id: mainId() || null, deal_id: dealId || null } }));
       if (r.status === 'failed') toast(`Not sent: ${r.error}`, 'error');
       else toast(r.sent_via === 'outlook' ? 'Sent from Outlook' : r.status === 'sent' ? 'Sent' : 'Logged (email not connected)');
       d.close();

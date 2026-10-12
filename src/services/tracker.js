@@ -83,12 +83,14 @@ function createFromDeal(dealId, { importId = null } = {}) {
 
 const methodLabel = (key) => VALUATION_METHODS.find((m) => m.key === key)?.label || key;
 
-function propertiesFor(contactId) {
+const inList = (ids) => ids.map(() => '?').join(',');
+
+function propertiesFor(ids) {
   const props = db.all(
-    `SELECT p.*, o.first_name || ' ' || COALESCE(o.last_name,'') AS co_owner_name
-     FROM properties p LEFT JOIN contacts o ON o.id = p.co_owner_id
-     WHERE p.contact_id = ? OR p.co_owner_id = ? ORDER BY p.status = 'sold', p.id`,
-    contactId, contactId,
+    `SELECT p.*, o.first_name || ' ' || COALESCE(o.last_name,'') AS co_owner_name, w.first_name || ' ' || COALESCE(w.last_name,'') AS owner_name
+     FROM properties p LEFT JOIN contacts o ON o.id = p.co_owner_id LEFT JOIN contacts w ON w.id = p.contact_id
+     WHERE p.contact_id IN (${inList(ids)}) OR p.co_owner_id IN (${inList(ids)}) ORDER BY p.status = 'sold', p.id`,
+    ...ids, ...ids,
   );
   for (const p of props) {
     p.valuations = db.all(
@@ -113,14 +115,15 @@ function propertiesFor(contactId) {
   return props;
 }
 
-function loansFor(contactId) {
+function loansFor(ids) {
   const loans = db.all(
     `SELECT n.*, COALESCE(l.name, n.lender_name, 'Unknown lender') AS lender_display, l.logo_asset_id AS lender_logo_id,
-            b.first_name || ' ' || COALESCE(b.last_name,'') AS co_borrower_name
+            b.first_name || ' ' || COALESCE(b.last_name,'') AS co_borrower_name, m.first_name || ' ' || COALESCE(m.last_name,'') AS borrower_name
      FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id LEFT JOIN contacts b ON b.id = n.co_borrower_id
-     WHERE n.contact_id = ? OR n.co_borrower_id = ?
+     LEFT JOIN contacts m ON m.id = n.contact_id
+     WHERE n.contact_id IN (${inList(ids)}) OR n.co_borrower_id IN (${inList(ids)})
      ORDER BY n.status != 'active', lender_display, n.id`,
-    contactId, contactId,
+    ...ids, ...ids,
   );
   for (const n of loans) {
     n.security_ids = db.all('SELECT property_id FROM loan_securities WHERE loan_id = ?', n.id).map((r) => r.property_id);
@@ -130,7 +133,11 @@ function loansFor(contactId) {
   return loans;
 }
 
-const assetsFor = (contactId) => db.all('SELECT * FROM client_assets WHERE contact_id = ? ORDER BY asset_type, id', contactId);
+const assetsFor = (ids) => db.all(
+  `SELECT a.*, c.first_name AS owner_first_name FROM client_assets a JOIN contacts c ON c.id = a.contact_id
+   WHERE a.contact_id IN (${inList(ids)}) ORDER BY a.asset_type, a.id`,
+  ...ids,
+);
 
 // Spreads each loan's balance over the properties securing it (by value), so
 // each property gets an LVR even when loans are cross-collateralised.
@@ -203,13 +210,20 @@ function structure(properties, loans) {
   };
 }
 
+// The whole household's position: contacts who share finances see one
+// combined tracker.
 function summary(contactId) {
-  const properties = propertiesFor(contactId);
-  const loans = loansFor(contactId);
-  const assets = assetsFor(contactId);
+  const household = require('./household');
+  const members = household.household(contactId);
+  const ids = members.map((m) => m.id);
+  const properties = propertiesFor(ids);
+  const loans = loansFor(ids);
+  const assets = assetsFor(ids);
   const s = structure(properties, loans);
   const otherAssets = assets.reduce((sum, a) => sum + (a.value || 0), 0);
   return {
+    household: members.map((m) => ({ id: m.id, first_name: m.first_name, last_name: m.last_name, email: m.email })),
+    household_name: household.jointName(members),
     properties,
     loans,
     assets,

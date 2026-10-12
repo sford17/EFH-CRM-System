@@ -34,9 +34,9 @@ templates.delete('/:id', (req, res) => {
 
 templates.post('/:id/preview', (req, res) => {
   const t = notFound(db.one('SELECT * FROM email_templates WHERE id = ?', intParam(req.params.id)), 'Template');
-  const ctx = buildContext({ contactId: req.body?.contact_id, dealId: req.body?.deal_id, userId: req.user.id, latestDeal: true });
+  const ctx = buildContext({ contactId: req.body?.contact_id, dealId: req.body?.deal_id, userId: req.user.id, latestDeal: true, addresseeIds: req.body?.addressee_ids });
   res.json({
-    subject: render(t.subject, ctx), body: render(t.body, ctx), to: ctx.contact?.email || null,
+    subject: render(t.subject, ctx), body: render(t.body, ctx), to: ctx.addressees.map((c) => c.email).filter(Boolean).join(', ') || null,
     sms: t.sms_body ? render(t.sms_body, ctx) : null, mobile: ctx.contact?.mobile || null,
   });
 });
@@ -45,7 +45,7 @@ templates.post('/:id/send', async (req, res) => {
   const id = intParam(req.params.id);
   if (!req.body?.contact_id && !req.body?.deal_id) throw new HttpError(400, 'Choose a contact or deal to send to');
   const { id: outboxId, reason } = mailer.queueTemplate(id, {
-    contactId: req.body.contact_id, dealId: req.body.deal_id, userId: req.user.id,
+    contactId: req.body.contact_id, dealId: req.body.deal_id, userId: req.user.id, addresseeIds: req.body.addressee_ids,
   });
   if (!outboxId) throw new HttpError(400, reason);
   await mailer.processOutbox();

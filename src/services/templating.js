@@ -36,7 +36,7 @@ function bookingLinkFor(userId, contact) {
 }
 
 // Assembles the merge-field context for a contact and/or deal.
-function buildContext({ contactId, dealId, userId, loanId, latestDeal = false } = {}) {
+function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, addresseeIds = null } = {}) {
   let loan = null;
   if (loanId) {
     loan = db.one(
@@ -72,7 +72,7 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false } 
        ORDER BY stage = 'lost', updated_at DESC LIMIT 1`,
       contactId, contactId,
     );
-    if (latest) return buildContext({ contactId, dealId: latest.id, userId, loanId, latestDeal: true });
+    if (latest) return buildContext({ contactId, dealId: latest.id, userId, loanId, latestDeal: true, addresseeIds });
   }
   const contact = contactId ? db.one('SELECT * FROM contacts WHERE id = ?', contactId) : null;
   // Sent by hand from a contact or deal: pick the loan the email is most
@@ -90,10 +90,28 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false } 
     }
   }
   if (contact) contact.full_name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
+  // Addressed to more than one person (e.g. a couple): names read "Mia and
+  // Tom" in templates, and the email goes to everyone listed.
+  let addressees = contact ? [contact] : [];
+  const household = require('./household');
+  if (!Array.isArray(addresseeIds)) addresseeIds = null;
+  // Only the contact's household or the co-borrower on this deal/loan.
+  const allowed = new Set(contact && addresseeIds?.length
+    ? [...household.householdIds(contact.id), deal?.co_borrower_id, deal?.contact_id, loan?.co_borrower_id, loan?.contact_id].filter(Boolean)
+    : []);
+  const extra = [...new Set((addresseeIds || []).map(Number))].filter((id) => id !== contact?.id && allowed.has(id));
+  if (contact && extra.length) {
+    const others = extra.map((id) => db.one('SELECT * FROM contacts WHERE id = ?', id)).filter(Boolean);
+    addressees = [contact, ...others];
+    contact.single_first_name = contact.first_name;
+    contact.first_name = household.joinWords(addressees.map((c) => c.first_name));
+    contact.full_name = household.jointName(addressees);
+  }
   const brokerId = userId || deal?.owner_id || contact?.owner_id;
   const broker = brokerId ? db.one('SELECT id, name, email, phone FROM users WHERE id = ?', brokerId) : null;
   return {
     contact,
+    addressees,
     deal,
     loan,
     broker: broker

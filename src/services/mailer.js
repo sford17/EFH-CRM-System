@@ -39,11 +39,11 @@ function queueEmail({ to, subject, body, contactId = null, dealId = null, templa
 
 // Renders a template against a contact/deal and queues it. Returns the outbox id,
 // or null with a reason when the email should not go out.
-function queueTemplate(templateId, { contactId, dealId, loanId, automationId, sendAfter, to, userId } = {}) {
+function queueTemplate(templateId, { contactId, dealId, loanId, automationId, sendAfter, to, userId, addresseeIds } = {}) {
   const template = db.one('SELECT * FROM email_templates WHERE id = ?', templateId);
   if (!template) return { id: null, reason: `Template ${templateId} not found` };
-  const ctx = buildContext({ contactId, dealId, loanId, userId, latestDeal: true });
-  const recipient = to || ctx.contact?.email;
+  const ctx = buildContext({ contactId, dealId, loanId, userId, latestDeal: true, addresseeIds });
+  const recipient = to || [...new Set(ctx.addressees.map((c) => c.email).filter(Boolean))].join(', ');
   if (!recipient) return { id: null, reason: 'Contact has no email address' };
   if (template.category === 'marketing' && ctx.contact && !ctx.contact.marketing_opt_in) {
     return { id: null, reason: 'Contact has opted out of marketing' };

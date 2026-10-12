@@ -19,6 +19,17 @@ let methodFilter = '';
 export async function trackerTab(contact) {
   const data = await api(`/tracker/contacts/${contact.id}`);
   const { totals, structure, properties, loans, assets, valuation_methods: methods } = data;
+  // Couples who share finances see one combined tracker; each property, loan
+  // and asset still records whose name it is in.
+  const members = data.household;
+  const joint = members.length > 1;
+  const partnerId = members.find((m) => m.id !== contact.id)?.id ?? null;
+  const memberOptions = members.map((m) => [m.id, [m.first_name, m.last_name].filter(Boolean).join(' ')]);
+  const whoFields = (main, mainLabel, co, coLabel, isNew) => (joint ? [
+    isNew ? { name: main, label: mainLabel, type: 'select', required: true, options: memberOptions, default: contact.id } : null,
+    co ? { name: co, label: coLabel, type: 'select', options: memberOptions, default: isNew ? partnerId : undefined } : null,
+  ].filter(Boolean) : []);
+  const whoText = (names) => names.map((n) => (n || '').trim()).filter(Boolean).join(' & ');
   const tile = (l, v, sub) => h('div.tile', h('div.tile-label', l), h('div.tile-value', v), sub ? h('div.tile-sub', sub) : null);
   const lvrKind = (lvr) => (lvr === null ? '' : lvr > 90 ? 'danger' : lvr > 80 ? 'warn' : 'ok');
 
@@ -170,16 +181,16 @@ export async function trackerTab(contact) {
     ];
   }
   const addProperty = () => {
-    const fields = [...propertyFields(),
+    const fields = [...whoFields('contact_id', 'Owner', 'co_owner_id', 'Co-owner', true), ...propertyFields(),
       { name: 'v_amount', label: 'Current value ($, optional)', type: 'number' },
       { name: 'v_method', label: 'Where the value came from', type: 'select', options: methods.map((m) => [m.key, m.label]), default: 'client_estimate' }];
     formModal('Add property', fields, {}, async (v) => {
       const { v_amount: amount, v_method: method, ...rest } = v;
-      await attempt(() => api('/tracker/properties', { method: 'POST', body: { ...rest, contact_id: contact.id, valuation: amount ? { amount, method } : undefined } }), 'Property added');
+      await attempt(() => api('/tracker/properties', { method: 'POST', body: { contact_id: contact.id, ...rest, valuation: amount ? { amount, method } : undefined } }), 'Property added');
       refresh();
     });
   };
-  const editProperty = (p) => formModal(`Edit ${shortAddress(p.address)}`, propertyFields(), p, async (v) => {
+  const editProperty = (p) => formModal(`Edit ${shortAddress(p.address)}`, [...whoFields('contact_id', 'Owner', 'co_owner_id', 'Co-owner', false), ...propertyFields()], p, async (v) => {
     await attempt(() => api(`/tracker/properties/${p.id}`, { method: 'PATCH', body: v }), 'Saved');
     refresh();
   });
@@ -218,7 +229,7 @@ export async function trackerTab(contact) {
           h('div.prop-head',
             h('div', h('h3', p.address, ' ', p.status !== 'owned' ? badge(p.status, p.status === 'sold' ? '' : 'info') : null),
               h('div.muted.small', [label(p.property_type), label(p.usage), p.bedrooms ? `${p.bedrooms} bed` : null,
-                p.co_owner_name ? `co-owned with ${p.co_owner_name}` : null].filter(Boolean).join(' · '))),
+                joint ? `owned by ${whoText([p.owner_name, p.co_owner_name])}` : p.co_owner_name ? `co-owned with ${p.co_owner_name}` : null].filter(Boolean).join(' · '))),
             h('div.actions',
               h('button.small', { type: 'button', onclick: () => addValuation(p) }, '+ Valuation'),
               h('button.secondary.small', { type: 'button', onclick: () => editProperty(p) }, 'Edit'),
@@ -251,6 +262,7 @@ export async function trackerTab(contact) {
   // ---- Loans ---------------------------------------------------------------------------------
   function loanDialog(loan, props) {
     const fields = [
+      ...whoFields('contact_id', 'Borrower', 'co_borrower_id', 'Co-borrower', !loan),
       { name: 'lender_id', label: 'Lender', type: 'select', options: lenderOptions },
       { name: 'lender_name', label: 'Or lender name (if not in your list)' },
       { name: 'loan_type', label: 'Loan type', type: 'select', options: LOAN_TYPES.map((t) => [t, loanType(t)]), required: true, default: 'home_loan' },
@@ -292,7 +304,7 @@ export async function trackerTab(contact) {
       e.preventDefault();
       const body = { ...readForm(form, fields), security_ids: [...securities.querySelectorAll('input:checked')].map((i) => Number(i.value)) };
       try {
-        await attempt(() => api(loan ? `/tracker/loans/${loan.id}` : '/tracker/loans', { method: loan ? 'PATCH' : 'POST', body: loan ? body : { ...body, contact_id: contact.id } }), loan ? 'Saved' : 'Loan added');
+        await attempt(() => api(loan ? `/tracker/loans/${loan.id}` : '/tracker/loans', { method: loan ? 'PATCH' : 'POST', body: loan ? body : { contact_id: contact.id, ...body } }), loan ? 'Saved' : 'Loan added');
         d.close();
         refresh();
       } catch { /* toast already shown */ }
@@ -308,7 +320,7 @@ export async function trackerTab(contact) {
         h('thead', h('tr', ['Lender', 'Type', 'Balance', 'Rate', 'Repayments', 'Secured by', 'Status'].map((t) => h('th', t)))),
         h('tbody', list.map((n) => h(`tr.clickable${n.status !== 'active' ? '.inactive' : ''}`, { onclick: () => loanDialog(n, props) },
           h('td', h('span.lender-tag', lenderLogo(n.lender_logo_id, n.lender_display), h('strong', n.lender_display)), n.account_number ? h('div.muted.small', n.account_number) : null, !n.arranged_by_us ? h('div.muted.small', 'not arranged by us') : null),
-          h('td', loanType(n.loan_type), n.co_borrower_name ? h('div.muted.small', `with ${n.co_borrower_name}`) : null),
+          h('td', loanType(n.loan_type), joint ? h('div.muted.small', whoText([n.borrower_name, n.co_borrower_name])) : n.co_borrower_name ? h('div.muted.small', `with ${n.co_borrower_name}`) : null),
           h('td.num', money(n.balance ?? n.limit_amount), n.limit_amount && n.balance !== null && n.balance !== n.limit_amount ? h('div.muted.small', `limit ${compactMoney(n.limit_amount)}`) : null,
             n.balance_date ? h('div.muted.small', `as at ${date(n.balance_date)}`) : null, n.offset_balance ? h('div.muted.small', `offset ${compactMoney(n.offset_balance)}`) : null),
           h('td', n.interest_rate ? pct(n.interest_rate) : '—', h('div.muted.small', n.rate_type === 'fixed' || n.rate_type === 'split'
@@ -322,7 +334,8 @@ export async function trackerTab(contact) {
 
   // ---- Other assets -------------------------------------------------------------------------------
   function assetsCard(c, list) {
-    const fields = [
+    const fields = (isNew) => [
+      ...whoFields('contact_id', 'Owner', null, null, isNew),
       { name: 'asset_type', label: 'Type', type: 'select', options: opts(ASSET_TYPES), required: true, default: 'savings' },
       { name: 'description', label: 'Description' },
       { name: 'institution', label: 'Held with (bank, fund…)' },
@@ -330,8 +343,8 @@ export async function trackerTab(contact) {
       { name: 'value_date', label: 'Value as at', type: 'date', default: todayStr() },
       { name: 'notes', label: 'Notes', type: 'textarea', full: true, rows: 2 },
     ];
-    const edit = (a) => formModal(a ? 'Edit asset' : 'Add asset', fields, a || {}, async (v) => {
-      await attempt(() => api(a ? `/tracker/assets/${a.id}` : '/tracker/assets', { method: a ? 'PATCH' : 'POST', body: a ? v : { ...v, contact_id: contact.id } }), 'Saved');
+    const edit = (a) => formModal(a ? 'Edit asset' : 'Add asset', fields(!a), a || {}, async (v) => {
+      await attempt(() => api(a ? `/tracker/assets/${a.id}` : '/tracker/assets', { method: a ? 'PATCH' : 'POST', body: a ? v : { contact_id: contact.id, ...v } }), 'Saved');
       refresh();
     }, { wide: false });
     const remove = async (a) => {
@@ -345,12 +358,15 @@ export async function trackerTab(contact) {
       list.length ? h('div.table-wrap', h('table',
         h('thead', h('tr', ['Type', 'Description', 'Held with', 'Value', 'As at', ''].map((t) => h('th', t)))),
         h('tbody', list.map((a) => h('tr.clickable', { onclick: () => edit(a) },
-          h('td', label(a.asset_type)), h('td', a.description || '—'), h('td', a.institution || '—'),
+          h('td', label(a.asset_type), joint ? h('div.muted.small', a.owner_first_name) : null), h('td', a.description || '—'), h('td', a.institution || '—'),
           h('td.num', money(a.value)), h('td', date(a.value_date)),
           h('td', h('button.link.small', { type: 'button', onclick: (e) => { e.stopPropagation(); remove(a); } }, 'Delete'))))))) : h('p.empty', 'Savings, super, shares, vehicles and other assets go here.'));
   }
 
   return h('div.tracker',
+    joint ? h('div.alert.info.household-note', h('strong', `Combined finances for ${data.household_name}. `),
+      'Everything below is shared with ', memberOptions.filter(([id]) => id !== contact.id).map(([id, name], i) => [i ? ', ' : '', h('a', { href: `#/contacts/${id}?tab=tracker` }, name)]),
+      '\'s profile, so it only needs entering once.') : null,
     h('div.tiles',
       tile('Property value', compactMoney(totals.property_value), `${structure.properties.length} propert${structure.properties.length === 1 ? 'y' : 'ies'}`),
       tile('Total lending', compactMoney(totals.total_debt), totals.unsecured_debt ? `incl. ${compactMoney(totals.unsecured_debt)} unsecured` : `${loans.filter((n) => n.status === 'active').length} active loans`),

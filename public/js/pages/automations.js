@@ -93,7 +93,7 @@ function actionFieldDefs(type) {
     case 'send_email': return [
       ['template_id', 'Template', 'select', templateOpts],
       ['delay_days', 'Delay (days)', 'number'],
-      ['to', 'Send to', 'select', [['contact', 'Contact'], ['broker', 'Broker (internal)']]],
+      ['to', 'Send to', 'select', [['contact', 'Client (both borrowers on joint loans)'], ['main_contact', 'Main client only'], ['broker', 'Broker (internal)']]],
     ];
     case 'send_sms': return [
       ['message', 'Text message (merge fields allowed, e.g. {{contact.first_name}}, {{broker.first_name}})', 'textarea'],

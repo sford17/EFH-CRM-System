@@ -8,6 +8,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | --- | --- |
 | **Dashboard** | Open pipeline, settlements against a monthly target, commission, overdue tasks, upcoming finance/settlement/expiry dates, recent activity |
 | **Contacts** | Leads → prospects → clients, with owner, lead source, referral partner, tags, income and employment details, marketing opt-in, review date. Full activity timeline (calls, emails, meetings, notes). CSV export |
+| **Related contacts & households** | Link partners, family, guarantors and advisers. Couples who share finances see one combined mortgage tracker on both profiles, keep a shared address, become joint borrowers on new deals by default, and can have emails, templates and lending reviews addressed to one or both of them |
 | **Spreadsheet import** | Import existing clients and their loans from Excel (.xlsx) or CSV. Columns are matched automatically, with a preview, duplicate handling and one-click undo. Imported clients aren't sent welcome or stage messages |
 | **Pipeline** | Kanban board across New Lead → Fact Find → Pre-Approval → Application Lodged → Conditional → Unconditional → Settlement Booked → Settled / Lost. Drag and drop, or use the stage menu |
 | **Deals** | Loan amount, property value, auto-calculated LVR, lender, product, rate, fixed-rate expiry, pre-approval expiry, finance and settlement dates, co-borrower, stage history |
@@ -82,6 +83,21 @@ On a contact, click **Lending review** (or **+ New review** under *Lending revie
 - **Commentary:** there are four sections: *Loan Review*, *Actions to Consider*, *Broker to Action* (shown to the client as "What we'll do") and *Next Steps*. They start with suggestions drawn from the figures, covering fixed-rate and interest-only expiries, cross-collateralisation, LVRs over 80%, rates worth repricing, expensive unsecured debt, usable equity, savings without an offset, and valuations older than 12 months. Edit them freely, and use "-" or "•" for bullet points. The preview updates as you type.
 - **Download** as **PDF** or **Word** (.docx, editable).
 - **Email to client** sends the PDF as an attachment from your Outlook, with your signature added. The review is marked *Sent*, a timeline entry is added, and the client's next review date is set 12 months out if they don't already have a future one.
+
+## Related contacts & households
+
+On a contact's overview, use **+ Link contact** in the *Related contacts* card to link an existing contact, or create their partner on the spot. A new partner gets the same surname, status, owner, lead source and address. Relationships include spouse, de facto, partner, parent/child, sibling, business partner, guarantor, accountant and solicitor.
+
+Tick **Shares finances** for a couple (it's ticked automatically for spouses and partners). Contacts who share finances form a *household*:
+
+- **One mortgage tracker:** their properties, loans and assets appear on both profiles, so they only need entering once. Each item still records whose name it's in, with owner/co-owner and borrower/co-borrower choices.
+- **Shared address:** when one of them moves, the other moves too, if they were at the same address. When you link them, a blank address is filled from the partner's.
+- **Joint deals:** a new deal makes the partner the co-borrower automatically, and you can change it in the deal form. Joint deals show on both contacts.
+- **Emails to one or both:** *Send template*, *Email* and *Lending review* each have an **Address to** choice. With both ticked, the email goes to both addresses and `{{contact.first_name}}` reads "Mia and Tom". Templates and reviews default to both; a one-off email defaults to the person you're on.
+- **Automations:** stage-change and reminder emails on a joint deal or loan go to both borrowers. To send to just the main client, choose *Main client only* under *Send to* in the automation.
+- **Lending reviews:** a review is prepared for the household (for example "Mia & Tom Jones", which also appears in the PDF and Word file names). Untick a name to address it to one person only.
+
+To separate a couple's finances again, edit the relationship and untick *Shares finances*, or click **Unlink**. Both contacts and all their records are kept.
 
 ## Importing existing clients
 

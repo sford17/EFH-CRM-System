@@ -11,6 +11,7 @@ import { smsCard, smsDialog } from './sms.js';
 import { contactAppointmentsCard, bookingLinkDialog } from './calendar.js';
 import { trackerTab } from './tracker.js';
 import { reviewsCard, startReview } from './review.js';
+import { relatedCard } from './household.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -109,11 +110,13 @@ export async function contactPage(id) {
           c.sms_opt_out ? info('SMS', h('span.text-danger', 'Opted out of all SMS')) : null,
           info('Tags', c.tags ? c.tags.split(',').map((t) => h('span.tag', t)) : null)),
         c.background ? h('div.background', h('h3', 'Background'), h('p.pre', c.background)) : null),
+        relatedCard(c),
         h('section.card',
           h('div.card-head', h('h2', 'Deals'), h('button.small', { type: 'button', onclick: () => newDeal(c.id) }, '+ Deal')),
           c.deals.length
             ? h('ul.plain', c.deals.map((d) => h('li', h('a', { href: `#/deals/${d.id}` }, d.title),
-              h('div.muted', `${stageLabel(d.stage)} · ${money(d.loan_amount)}`, d.lender_name ? [' · ', lenderTag(d.lender_logo_id, d.lender_name)] : null))))
+              h('div.muted', `${stageLabel(d.stage)} · ${money(d.loan_amount)}`, d.lender_name ? [' · ', lenderTag(d.lender_logo_id, d.lender_name)] : null),
+              c.household.length > 1 ? h('div.muted.small', [d.contact_name, d.co_borrower_name].filter(Boolean).map((n) => n.trim()).join(' & ')) : null)))
             : h('p.empty', 'No deals yet.')),
         h('section.card',
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ contact_id: c.id }) }, '+ Task')),

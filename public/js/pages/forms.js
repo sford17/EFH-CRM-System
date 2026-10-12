@@ -3,6 +3,7 @@ import {
   api, h, opts, userOptions, lenderOptions, partnerOptions, stageOptions, formModal, attempt, toast, state,
   date, dateTime, link, label, modal, field, readForm, fullName,
 } from '../core.js';
+import { addresseePicker, householdOf } from './household.js';
 
 export const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 export const CONTACT_STATUSES = ['lead', 'prospect', 'client', 'past_client', 'lost'];
@@ -76,9 +77,25 @@ export function newContact(values = {}) {
   });
 }
 
+// Co-borrower choices: the borrower's related contacts, partner first.
+export async function coBorrowerField(contactId, current = null) {
+  const { rows, related } = await api(`/contacts/${contactId}/household`);
+  const options = related.map((r) => [r.contact.id, `${r.contact.full_name} (${label(r.relationship)})`]);
+  const partner = rows.find((m) => m.id !== Number(contactId));
+  if (current && !options.some(([id]) => id === Number(current))) options.push([current, 'Current co-borrower']);
+  return {
+    field: { name: 'co_borrower_id', label: 'Co-borrower', type: 'select', options, full: true },
+    partnerId: partner?.id ?? null,
+  };
+}
+
 export async function newDeal(contactId, values = {}) {
   const fields = dealFields();
-  if (!contactId) {
+  if (contactId) {
+    const co = await coBorrowerField(contactId);
+    fields.unshift(co.field);
+    values = { co_borrower_id: co.partnerId, ...values };
+  } else {
     const { rows } = await api('/contacts?limit=500');
     fields.unshift({ name: 'contact_id', label: 'Borrower', type: 'select', required: true, full: true, options: rows.map((c) => [c.id, fullName(c)]) });
   }
@@ -148,30 +165,39 @@ export function emailList(emails) {
 }
 
 // Pick a template, preview it with merge fields filled in, then queue it.
+// For a couple it can be addressed to one or both of them.
 export async function sendTemplateDialog({ contactId, dealId }) {
-  const { rows } = await api('/templates');
+  const [{ rows }, members] = await Promise.all([api('/templates'), householdOf(contactId)]);
+  let addressees = defaultAddressees(members, contactId);
+  // The first person ticked is the main addressee ("Hi Tom" if only Tom).
+  const body = () => ({ contact_id: addressees.includes(Number(contactId)) ? contactId : addressees[0], deal_id: dealId, addressee_ids: addressees });
   const select = h('select', { 'aria-label': 'Template' }, h('option', { value: '' }, 'Choose a template…'), rows.map((t) => h('option', { value: t.id }, `${t.name} (${label(t.category || 'general')})`)));
   const preview = h('div.email-preview', h('p.muted', 'Choose a template to preview it.'));
   const sendBtn = h('button', { type: 'button', disabled: true }, 'Send email');
   const previewBtn = h('button.secondary', {
     type: 'button',
     disabled: true,
-    onclick: async () => (await import('./branding.js')).previewEmail({ template_id: select.value, contact_id: contactId, deal_id: dealId }),
+    onclick: async () => (await import('./branding.js')).previewEmail({ template_id: select.value, ...body() }),
   }, 'Preview as email');
-  select.addEventListener('change', async () => {
+  const showPreview = async () => {
     sendBtn.disabled = !select.value;
     previewBtn.disabled = !select.value;
     if (!select.value) return;
-    const p = await api(`/templates/${select.value}/preview`, { method: 'POST', body: { contact_id: contactId, deal_id: dealId } });
+    const p = await api(`/templates/${select.value}/preview`, { method: 'POST', body: body() });
     preview.replaceChildren(h('div.muted', `To: ${p.to || '(no email address)'}`), h('h3', p.subject), h('pre', p.body),
       p.sms ? h('div.sms-companion', h('strong.small', `Also texts ${p.mobile || '(no mobile – SMS will be skipped)'}:`), h('div.sms-bubble', p.sms)) : null);
-  });
+  };
+  select.addEventListener('change', showPreview);
+  const picker = addresseePicker(members, addressees, (ids) => { addressees = ids; showPreview(); });
   sendBtn.addEventListener('click', async () => {
-    await attempt(() => api(`/templates/${select.value}/send`, { method: 'POST', body: { contact_id: contactId, deal_id: dealId } }), 'Email sent');
+    await attempt(() => api(`/templates/${select.value}/send`, { method: 'POST', body: body() }), 'Email sent');
     dialog.close();
     refresh();
   });
-  const dialog = modal('Send email', [select, preview, h('div.actions', previewBtn, sendBtn)], { wide: true });
+  const dialog = modal('Send email', [picker, select, preview, h('div.actions', previewBtn, sendBtn)], { wide: true });
 }
+
+// A couple who share finances get joint emails by default.
+export const defaultAddressees = (members, contactId) => (members.length > 1 ? members.map((m) => m.id) : [Number(contactId)].filter(Boolean));
 
 export { refresh, link };

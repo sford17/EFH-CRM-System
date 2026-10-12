@@ -403,6 +403,26 @@ MIGRATIONS.push(
   },
 );
 
+MIGRATIONS.push(
+  // 9. Related contacts / households; review addressees
+  `
+  CREATE TABLE contact_relationships (
+    id              INTEGER PRIMARY KEY,
+    contact_id      INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    related_id      INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    relationship    TEXT NOT NULL DEFAULT 'spouse' CHECK (relationship IN
+                    ('spouse','de_facto','partner','parent','child','sibling','relative','business_partner','guarantor','accountant','solicitor','other')),
+    shared_finances INTEGER NOT NULL DEFAULT 0,
+    notes           TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    UNIQUE (contact_id, related_id),
+    CHECK (contact_id != related_id)
+  );
+  CREATE INDEX idx_relationships_related ON contact_relationships(related_id);
+  ALTER TABLE reviews ADD COLUMN addressee_ids TEXT; -- JSON array of contact ids
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

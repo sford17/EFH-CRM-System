@@ -8,6 +8,7 @@ const { pick, requireFields, notFound, intParam } = require('./helpers');
 
 const router = express.Router();
 const TEXT_FIELDS = ['title', 'review_date', 'loan_review', 'actions_to_consider', 'broker_to_action', 'next_steps'];
+const household = require('../services/household');
 
 const load = (id) => notFound(db.one('SELECT * FROM reviews WHERE id = ?', intParam(id)), 'Review');
 const withoutSnapshot = ({ snapshot, ...r }) => r;
@@ -36,6 +37,8 @@ router.post('/', (req, res) => {
     title: 'Client Lending Review',
     review_date: date,
     snapshot: JSON.stringify(snap),
+    // Couples sharing finances get one review addressed to both.
+    addressee_ids: JSON.stringify(snap.household.map((m) => m.id)),
     created_by: req.user.id,
     ...review.suggestions(snap, date),
   });
@@ -46,12 +49,21 @@ router.post('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const r = load(req.params.id);
   const snap = JSON.parse(r.snapshot);
-  res.json({ ...withoutSnapshot(r), snapshot_taken_at: snap.taken_at, contact: snap.contact, totals: snap.totals, suggestions: review.suggestions(snap, r.review_date) });
+  res.json({
+    ...withoutSnapshot(r), snapshot_taken_at: snap.taken_at, contact: snap.contact, totals: snap.totals, suggestions: review.suggestions(snap, r.review_date),
+    household: household.household(r.contact_id), addressees: review.addressees(r), prepared_for: household.jointName(review.addressees(r)),
+  });
 });
 
 router.patch('/:id', (req, res) => {
   const r = load(req.params.id);
   const row = pick(req.body, TEXT_FIELDS);
+  if (req.body?.addressee_ids !== undefined) {
+    const allowed = new Set(household.householdIds(r.contact_id));
+    const ids = [...new Set((Array.isArray(req.body.addressee_ids) ? req.body.addressee_ids : []).map(Number))].filter((x) => allowed.has(x));
+    if (!ids.length) throw new HttpError(400, 'Address the review to at least one person');
+    row.addressee_ids = JSON.stringify(ids);
+  }
   if (row.title === null) throw new HttpError(400, 'Give the review a title');
   if (row.review_date === null) throw new HttpError(400, 'Choose a review date');
   db.update('reviews', r.id, { ...row, updated_at: nowIso() });
@@ -113,11 +125,13 @@ router.post('/:id/email', async (req, res) => {
   const sent = db.one('SELECT id, status, sent_via, error FROM outbox WHERE id = ?', outboxId);
   if (sent.status === 'failed') throw new HttpError(502, `The email couldn't be sent: ${sent.error}`);
   db.update('reviews', r.id, { status: 'sent', sent_at: nowIso(), sent_to: body.to, updated_at: nowIso() });
-  db.insert('activities', { contact_id: r.contact_id, user_id: req.user.id, type: 'system', body: `Lending review emailed to ${body.to}` });
-  // Pencil in the next annual review.
-  const contact = db.one('SELECT next_review_date FROM contacts WHERE id = ?', r.contact_id);
-  if (!contact.next_review_date || contact.next_review_date <= today()) {
-    db.update('contacts', r.contact_id, { next_review_date: addMonths(r.review_date, 12) });
+  // Logged on everyone it was addressed to, and their next annual review pencilled in.
+  for (const person of review.addressees(r)) {
+    db.insert('activities', { contact_id: person.id, user_id: req.user.id, type: 'system', body: `Lending review emailed to ${body.to}` });
+    const contact = db.one('SELECT next_review_date FROM contacts WHERE id = ?', person.id);
+    if (!contact.next_review_date || contact.next_review_date <= today()) {
+      db.update('contacts', person.id, { next_review_date: addMonths(r.review_date, 12) });
+    }
   }
   res.json({ ...sent, contact: snap.contact.full_name });
 });

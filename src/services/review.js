@@ -23,11 +23,9 @@ function snapshot(contactId, userId) {
   const broker = db.one('SELECT name, email, phone FROM users WHERE id = ?', userId) || {};
   const data = tracker.summary(contactId);
   const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
-  const coBorrowers = [...new Set(data.loans.map((n) => n.co_borrower_name).filter(Boolean).map((s) => s.trim()))].filter((n) => n !== fullName);
   return {
     taken_at: new Date().toISOString(),
     contact: { ...contact, full_name: fullName },
-    co_borrowers: coBorrowers,
     broker,
     business: {
       name: db.getSetting('business_name', ''),
@@ -122,7 +120,7 @@ function model(review) {
   const t = s.totals;
   const active = s.loans.filter((n) => n.status === 'active');
   const propName = new Map(s.properties.map((p) => [p.id, shortAddr(p.address)]));
-  const names = [s.contact.full_name, ...s.co_borrowers].join(' & ');
+  const names = require('./household').jointName(addressees(review)) || s.contact.full_name;
   const blocks = [];
 
   blocks.push({ type: 'tiles', items: [
@@ -544,10 +542,17 @@ async function renderDocx(m) {
   return D.Packer.toBuffer(doc);
 }
 
+// Who the review is prepared for (current names; defaults to the contact).
+function addressees(review) {
+  const ids = review.addressee_ids ? JSON.parse(review.addressee_ids) : [review.contact_id];
+  const people = ids.map((id) => db.one('SELECT id, first_name, last_name, email FROM contacts WHERE id = ?', id)).filter(Boolean);
+  return people.length ? people : [db.one('SELECT id, first_name, last_name, email FROM contacts WHERE id = ?', review.contact_id)].filter(Boolean);
+}
+
 function fileName(review, ext) {
   const s = JSON.parse(review.snapshot);
-  const safe = `${review.title} - ${s.contact.full_name} - ${review.review_date}`.replace(/[^\w .,&()-]+/g, '').replace(/\s+/g, ' ').trim();
+  const safe = `${review.title} - ${require('./household').jointName(addressees(review)) || s.contact.full_name} - ${review.review_date}`.replace(/[^\w .,&()-]+/g, '').replace(/\s+/g, ' ').trim();
   return `${safe}.${ext}`;
 }
 
-module.exports = { snapshot, suggestions, model, renderHtml, renderPdf, renderDocx, structureSvg, textParts, fileName };
+module.exports = { snapshot, suggestions, model, renderHtml, renderPdf, renderDocx, structureSvg, textParts, fileName, addressees };

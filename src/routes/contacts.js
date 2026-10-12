@@ -4,6 +4,7 @@ const db = require('../db');
 const csv = require('../csv');
 const automation = require('../services/automation');
 const { listEmails } = require('./outlook');
+const household = require('../services/household');
 const { nowIso, HttpError, parseTags } = require('../util');
 const { pick, requireFields, notFound, intParam, like } = require('./helpers');
 
@@ -63,10 +64,16 @@ router.get('/:id', (req, res) => {
      LEFT JOIN users u ON u.id = c.owner_id LEFT JOIN referral_partners p ON p.id = c.referral_partner_id WHERE c.id = ?`,
     id,
   ), 'Contact');
+  contact.relationships = household.relatedTo(id);
+  contact.household = household.household(id);
+  const hh = contact.household.map((m) => m.id);
+  const hhList = hh.map(() => '?').join(',');
   contact.deals = db.all(
-    `SELECT d.*, l.name AS lender_name, l.logo_asset_id AS lender_logo_id FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id
-     WHERE d.contact_id = ? OR d.co_borrower_id = ? ORDER BY d.created_at DESC`,
-    id, id,
+    `SELECT d.*, l.name AS lender_name, l.logo_asset_id AS lender_logo_id,
+            c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name, cb.first_name || ' ' || COALESCE(cb.last_name,'') AS co_borrower_name
+     FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id JOIN contacts c ON c.id = d.contact_id LEFT JOIN contacts cb ON cb.id = d.co_borrower_id
+     WHERE d.contact_id IN (${hhList}) OR d.co_borrower_id IN (${hhList}) ORDER BY d.created_at DESC`,
+    ...hh, ...hh,
   );
   contact.tasks = db.all(
     `SELECT t.*, u.name AS assigned_name FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to
@@ -109,6 +116,7 @@ router.patch('/:id', (req, res) => {
   const row = normalise(pick(req.body, FIELDS));
   if (row.first_name === null) throw new HttpError(400, 'first_name cannot be empty');
   db.update('contacts', id, { ...row, updated_at: nowIso() });
+  household.syncAddress(id, before, row);
   if (row.status && row.status !== before.status) {
     db.insert('activities', { contact_id: id, user_id: req.user.id, type: 'system', body: `Status changed: ${before.status} → ${row.status}` });
     automation.emit('contact.status_changed', { contactId: id, from_status: before.status, to_status: row.status });
@@ -132,6 +140,46 @@ router.post('/:id/activities', (req, res) => {
   const actId = db.insert('activities', { ...row, type: row.type || 'note', contact_id: id, user_id: req.user.id });
   if (CONTACT_TYPES.includes(row.type)) db.update('contacts', id, { last_contacted_at: nowIso(), updated_at: nowIso() });
   res.status(201).json(db.one('SELECT * FROM activities WHERE id = ?', actId));
+});
+
+// ---- Related contacts ---------------------------------------------------------
+// Body: { related_id } to link an existing contact, or { new_contact: {...} }
+// to create the partner on the spot (surname and address pre-filled).
+router.post('/:id/relationships', (req, res) => {
+  const id = intParam(req.params.id);
+  const me = notFound(db.one('SELECT * FROM contacts WHERE id = ?', id), 'Contact');
+  const { relId, relatedId } = db.transaction(() => {
+    let relatedId = Number(req.body?.related_id) || null;
+    if (!relatedId && req.body?.new_contact) {
+      const nc = normalise(pick(req.body.new_contact, FIELDS));
+      requireFields(nc, ['first_name']);
+      relatedId = db.insert('contacts', {
+        last_name: me.last_name, status: me.status, owner_id: me.owner_id, referral_partner_id: me.referral_partner_id, lead_source: me.lead_source,
+        address: me.address, suburb: me.suburb, state: me.state, postcode: me.postcode, ...nc,
+      });
+      db.insert('activities', { contact_id: relatedId, user_id: req.user.id, type: 'system', body: `Contact created as ${me.first_name}'s ${String(req.body.relationship || 'partner').replace('_', ' ')}` });
+    }
+    if (!relatedId) throw new HttpError(400, 'Choose a contact to link');
+    const relId = household.link(id, relatedId, pick(req.body, ['relationship', 'shared_finances', 'copy_address', 'notes']));
+    return { relId, relatedId };
+  });
+  res.status(201).json({ id: relId, related_id: relatedId, relationships: household.relatedTo(id) });
+});
+
+// Who a document or email for this contact can be addressed to.
+router.get('/:id/household', (req, res) => {
+  const id = intParam(req.params.id);
+  notFound(db.one('SELECT id FROM contacts WHERE id = ?', id), 'Contact');
+  res.json({ rows: household.household(id), related: household.relatedTo(id) });
+});
+
+router.patch('/relationships/:relId', (req, res) => {
+  res.json(household.update(intParam(req.params.relId), pick(req.body, ['relationship', 'shared_finances', 'notes'])));
+});
+
+router.delete('/relationships/:relId', (req, res) => {
+  household.unlink(intParam(req.params.relId));
+  res.json({ ok: true });
 });
 
 module.exports = router;

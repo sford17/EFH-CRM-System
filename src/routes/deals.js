@@ -96,6 +96,7 @@ router.post('/', (req, res) => {
   const stage = req.body.stage && STAGE_KEYS.includes(req.body.stage) ? req.body.stage : 'lead';
   if (!row.title) row.title = `${contact.first_name} ${contact.last_name || ''} – ${(row.loan_purpose || 'purchase').replace('_', ' ')}`.replace(/\s+/g, ' ');
   if (row.owner_id === undefined) row.owner_id = contact.owner_id || req.user.id;
+  if (row.co_borrower_id === undefined) row.co_borrower_id = require('../services/household').partnerOf(contact.id)?.id ?? null;
   if (row.referral_partner_id === undefined && contact.referral_partner_id) row.referral_partner_id = contact.referral_partner_id;
   const id = db.insert('deals', { ...row, stage });
   db.insert('deal_stage_history', { deal_id: id, from_stage: null, to_stage: stage, changed_by: req.user.id });

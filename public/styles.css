@@ -498,3 +498,18 @@ img.lender-logo.md { height: 30px; max-width: 110px; padding: 2px 4px; border: 1
 .logo-cell { display: flex; flex-direction: column; gap: .25rem; align-items: flex-start; min-width: 110px; }
 .logo-empty { font-size: .75rem; color: var(--muted); border: 1px dashed var(--border); border-radius: 4px; padding: .3rem .5rem; }
 .ls-lender header .lender-tag strong { font-size: .9rem; }
+
+/* ---- Related contacts & addressing to a couple ---- */
+.grid-form[hidden] { display: none; }
+.related-list li { display: grid; gap: .15rem; }
+.related-list .badge { margin-left: .4rem; }
+.segmented { display: inline-flex; gap: 0; margin-bottom: .9rem; }
+.segmented button { border-radius: 0; }
+.segmented button:first-child { border-radius: 8px 0 0 8px; }
+.segmented button:last-child { border-radius: 0 8px 8px 0; margin-left: -1px; }
+.segmented button[aria-checked="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+fieldset.addressees { border: 1px solid var(--border); border-radius: 8px; padding: .45rem .75rem .6rem; margin: 0 0 .9rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+fieldset.addressees legend { font-size: .82rem; color: var(--text-2); font-weight: 500; padding: 0 .25rem; }
+.check-pill { display: inline-flex; align-items: center; gap: .4rem; padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; }
+.check-pill:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.household-note a { font-weight: 500; }
