@@ -270,7 +270,7 @@ router.post('/notifications/read', (req, res) => {
 });
 
 router.post('/calculators/:type', (req, res) => {
-  const fn = CALCULATORS[req.params.type];
+  const fn = Object.hasOwn(CALCULATORS, req.params.type) ? CALCULATORS[req.params.type] : null;
   if (!fn) throw new HttpError(404, 'Unknown calculator');
   try {
     res.json(fn(req.body || {}));
