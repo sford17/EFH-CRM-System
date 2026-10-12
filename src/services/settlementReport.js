@@ -12,13 +12,7 @@ const stageLabel = (k) => STAGES.find((s) => s.key === k)?.label || k;
 // Open deals far enough along to count as "expected" when they have no date yet.
 const LATE_STAGES = ['application_lodged', 'conditional_approval', 'unconditional_approval', 'settlement_booked'];
 
-// FY2027 = July 2026 to June 2027.
-function fyOf(date) {
-  const y = Number(date.slice(0, 4));
-  return Number(date.slice(5, 7)) >= 7 ? y + 1 : y;
-}
-const fyRange = (fy) => ({ from: `${fy - 1}-07`, to: `${fy}-06` });
-const fyLabel = (fy) => `FY${String(fy).slice(2)} (Jul ${fy - 1} – Jun ${fy})`;
+const { fyOf } = require('./periods');
 
 function monthsBetween(from, to) {
   const out = [];
@@ -82,17 +76,19 @@ function shape(d, now) {
 
 const sum = (rows, key) => round2(rows.reduce((s, r) => s + (r[key] || 0), 0));
 
-function report({ fy = null, ownerId = null } = {}) {
+// `period` comes from periods.resolve(): a financial year, calendar year or
+// custom date range.
+function report({ period = require('./periods').resolve({}), ownerId = null } = {}) {
   const now = today();
-  const year = Number(fy) || fyOf(now);
-  const { from, to } = fyRange(year);
+  const from = period.from.slice(0, 7);
+  const to = period.to.slice(0, 7);
   const ownerSql = ownerId ? ' AND d.owner_id = ?' : '';
   const ownerArgs = ownerId ? [ownerId] : [];
 
   const deals = db.all(
-    `${DEAL_SQL} WHERE d.settlement_date IS NOT NULL AND substr(d.settlement_date, 1, 7) BETWEEN ? AND ?
+    `${DEAL_SQL} WHERE d.settlement_date IS NOT NULL AND d.settlement_date BETWEEN ? AND ?
        AND d.stage != 'lost'${ownerSql} ORDER BY d.settlement_date, d.id`,
-    from, to, ...ownerArgs,
+    period.from, period.to, ...ownerArgs,
   ).map((d) => shape(d, now));
 
   let runningVolume = 0;
@@ -134,15 +130,8 @@ function report({ fy = null, ownerId = null } = {}) {
 
   const settledAll = deals.filter((d) => d.settled);
   const expectedAll = deals.filter((d) => !d.settled);
-  const years = db.all("SELECT DISTINCT settlement_date AS d FROM deals WHERE settlement_date IS NOT NULL AND stage != 'lost'").map((r) => fyOf(r.d));
-  const fyOptions = [...new Set([...years, fyOf(now), fyOf(now) + 1])].sort((a, b) => b - a).map((y) => ({ fy: y, label: fyLabel(y) }));
-
   return {
-    fy: year,
-    fy_label: fyLabel(year),
-    fy_options: fyOptions,
-    from,
-    to,
+    period,
     today: now,
     monthly_target: target || null,
     months,
@@ -158,7 +147,7 @@ function report({ fy = null, ownerId = null } = {}) {
       overdue_count: expectedAll.filter((d) => d.overdue).length,
       undated_count: undated.length,
       undated_volume: sum(undated, 'loan_amount'),
-      year_target: target ? target * 12 : null,
+      period_target: target ? target * months.length : null,
     },
   };
 }

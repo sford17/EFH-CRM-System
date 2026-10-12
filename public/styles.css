@@ -605,3 +605,8 @@ tr.subtotal td { font-weight: 600; border-top: 2px solid var(--border); }
 .signer-row { display: grid; grid-template-columns: auto 1fr 1.4fr auto; gap: .4rem; align-items: center; }
 .grid-2.tight { gap: .5rem; }
 @media (max-width: 600px) { .signer-row { grid-template-columns: auto 1fr; } .signer-row input[type=email] { grid-column: 2; } }
+
+/* ---- Report period picker ---- */
+.period-picker { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.date-range { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.period-label { margin-top: -.5rem; }

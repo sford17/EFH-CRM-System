@@ -133,15 +133,17 @@ Documents go out from the connected Adobe account. To send each broker's documen
 
 ## Running settlements report
 
-**Reports → Settlements** shows the financial year (July–June) month by month:
+**Choosing the period (both report tabs):** at the top of **Reports**, pick **Financial year** (July–June, the default), **Calendar year** (January–December) or **Custom dates** (any start and end date, up to 10 years). The period carries over when you switch between *Overview* and *Settlements*, and the CSV export uses it too.
 
-- **Totals:** settled so far, commission so far (and how much has been received), what's still expected, and the projected year against your target (*Monthly settlement target* in Settings → Business, × 12).
+**Reports → Settlements** shows the chosen period month by month:
+
+- **Totals:** settled so far, commission so far (and how much has been received), what's still expected, and the projected total against your target (*Monthly settlement target* in Settings → Business, × the number of months in the period).
 - **A chart** of each month's settled (solid) and expected (striped) volume. Hover a month for the figures, or open *Month-by-month table with running totals*.
 - **A section per month** listing each loan: settlement date, client (both borrowers on joint loans), lender, loan type (purpose and rate type), loan amount, commission and status. Settled loans come first, then expected ones with their current stage. Each month shows its totals and the running total for the year, and the current month is highlighted.
 - **Expected settlements** are open deals with a settlement date in that month. If that date has passed and the loan hasn't settled, it's flagged as **Overdue**. Lodged or approved deals without a settlement date are listed at the bottom, so add the date on the deal and they'll move into their month.
 - **Commission** is the upfront commission after any referral fee. For settled loans it comes from the commission ledger (✓ = received). For expected loans it's an estimate (≈) from the lender's upfront rate.
 
-Choose another financial year or a single broker at the top, and use **Export CSV** to open it in Excel.
+Choose a single broker at the top to see just their loans, and use **Export CSV** to open the report in Excel.
 
 ## Google reviews
 

@@ -1,7 +1,53 @@
 import { api, h, pageHeader, table, money, money2, label, state, date, userOptions, lenderTag, badge } from '../core.js';
 import { columns, barList, stackedColumns } from '../charts.js';
 
-const range = { from: '', to: '' };
+// One reporting period shared by both tabs: financial year, calendar year or custom dates.
+const period = { period: 'fy', fy: '', year: '', from: '', to: '' };
+let yearOptions = null;
+const periodQuery = () => {
+  const q = { period: period.period };
+  if (period.period === 'fy' && period.fy) q.fy = period.fy;
+  if (period.period === 'cy' && period.year) q.year = period.year;
+  if (period.period === 'custom') Object.assign(q, { from: period.from, to: period.to });
+  return q;
+};
+
+// Period type, then a year or two dates. `current` is the period the report used.
+async function periodPicker(current) {
+  yearOptions = yearOptions || await api('/reports/periods');
+  const go = () => window.dispatchEvent(new Event('crm:refresh'));
+  const type = h('select', { 'aria-label': 'Report period' },
+    [['fy', 'Financial year'], ['cy', 'Calendar year'], ['custom', 'Custom dates']].map(([v, l]) => h('option', { value: v, selected: current.type === v }, l)));
+  const yearSel = (key, list, chosen) => {
+    const el = h('select', { 'aria-label': key === 'fy' ? 'Financial year' : 'Year' },
+      list.map((o) => h('option', { value: o.value, selected: o.value === chosen }, o.label)));
+    el.addEventListener('change', () => { period[key] = el.value; go(); });
+    return el;
+  };
+  const from = h('input', { type: 'date', value: current.from, 'aria-label': 'From', title: 'From' });
+  const to = h('input', { type: 'date', value: current.to, 'aria-label': 'To', title: 'To' });
+  const applyDates = () => {
+    if (!from.value || !to.value) return;
+    if (from.value > to.value) { to.setCustomValidity('The end date must be after the start date'); to.reportValidity(); return; }
+    to.setCustomValidity('');
+    Object.assign(period, { period: 'custom', from: from.value, to: to.value });
+    go();
+  };
+  from.addEventListener('change', applyDates);
+  to.addEventListener('change', applyDates);
+  const detail = current.type === 'fy' ? yearSel('fy', yearOptions.fy, current.fy)
+    : current.type === 'cy' ? yearSel('year', yearOptions.cy, current.year)
+      : h('span.date-range', from, h('span.muted', 'to'), to);
+  type.addEventListener('change', () => {
+    period.period = type.value;
+    if (type.value === 'custom') {
+      // Start from the dates being shown, so switching keeps the same view until changed.
+      Object.assign(period, { from: current.from, to: current.to });
+    }
+    go();
+  });
+  return h('div.period-picker', type, detail);
+}
 const monthName = (m) => new Date(`${m}-01T00:00:00`).toLocaleString('en-AU', { month: 'short', year: '2-digit' });
 
 const tabs = (active) => h('nav.tabs.report-tabs', { 'aria-label': 'Report sections' },
@@ -10,23 +56,18 @@ const tabs = (active) => h('nav.tabs.report-tabs', { 'aria-label': 'Report secti
 
 export async function reportsPage() {
   if (window.routeQuery?.get('tab') === 'settlements') return settlementsReport();
-  const qs = new URLSearchParams(Object.entries(range).filter(([, v]) => v)).toString();
-  const r = await api(`/reports?${qs}`);
-  const dateInput = (key, text) => {
-    const el = h('input', { type: 'date', value: range[key] || r[key], 'aria-label': text, title: text });
-    el.addEventListener('change', () => { range[key] = el.value; window.dispatchEvent(new Event('crm:refresh')); });
-    return el;
-  };
+  const r = await api(`/reports?${new URLSearchParams(periodQuery())}`);
   const totalSettled = r.settlements_by_month.reduce((s, m) => s + m.volume, 0);
   const totalCount = r.settlements_by_month.reduce((s, m) => s + m.count, 0);
   const funnelStages = state.meta.stages.filter((s) => s.key !== 'lost');
   const funnel = funnelStages.map((s) => ({ label: s.label, value: r.conversion.find((c) => c.stage === s.key)?.deals || 0 }));
 
   return h('div',
-    pageHeader('Reports', dateInput('from', 'From'), h('span.muted', 'to'), dateInput('to', 'To')),
+    pageHeader('Reports', await periodPicker(r.period)),
     tabs('overview'),
+    h('p.muted.period-label', `Showing ${r.period.label}`),
     h('div.tiles',
-      h('div.tile', h('div.tile-label', 'Settled volume'), h('div.tile-value', money(totalSettled)), h('div.tile-sub', `${totalCount} loans`)),
+      h('div.tile', h('div.tile-label', 'Settled volume'), h('div.tile-value', money(totalSettled)), h('div.tile-sub', `${totalCount} loan${totalCount === 1 ? '' : 's'}`)),
       h('div.tile', h('div.tile-label', 'Average loan size'), h('div.tile-value', totalCount ? money(totalSettled / totalCount) : '—')),
       h('div.tile', h('div.tile-label', 'Average days to settle'), h('div.tile-value', r.avg_days_to_settle != null ? String(r.avg_days_to_settle) : '—')),
       h('div.tile', h('div.tile-label', 'Commission (all entries)'), h('div.tile-value', money(r.commission_by_month.reduce((s, m) => s + m.total, 0))))),
@@ -72,7 +113,7 @@ export async function reportsPage() {
 
 // ---- Running settlements ---------------------------------------------------------------
 
-const settleFilters = { fy: '', owner_id: '' };
+const settleFilters = { owner_id: '' };
 const monthLong = (m) => new Date(`${m}-01T00:00:00`).toLocaleString('en-AU', { month: 'long', year: 'numeric' });
 const COMMISSION_NOTE = { received: 'Received', expected: 'Not yet received', estimated: 'Estimate, from the lender\'s upfront rate' };
 
@@ -109,32 +150,31 @@ function dealTable(rows, { subtotal } = {}) {
 }
 
 async function settlementsReport() {
-  const qs = new URLSearchParams(Object.entries(settleFilters).filter(([, v]) => v)).toString();
-  const r = await api(`/reports/settlements?${qs}`);
+  const q = { ...periodQuery(), ...(settleFilters.owner_id ? { owner_id: settleFilters.owner_id } : {}) };
+  const r = await api(`/reports/settlements?${new URLSearchParams(q)}`);
   const t = r.totals;
   const set = (key) => (e) => { settleFilters[key] = e.target.value; window.dispatchEvent(new Event('crm:refresh')); };
-  const fySel = h('select', { 'aria-label': 'Financial year', onchange: set('fy') },
-    r.fy_options.map((o) => h('option', { value: o.fy, selected: o.fy === r.fy }, o.label)));
   const ownerSel = h('select', { 'aria-label': 'Broker', onchange: set('owner_id') },
     h('option', { value: '' }, 'All brokers'), userOptions().map(([v, l]) => h('option', { value: v, selected: String(v) === settleFilters.owner_id }, l)));
-  const csv = h('a.button.secondary', { href: `/api/reports/settlements.csv?${new URLSearchParams({ fy: r.fy, ...(settleFilters.owner_id ? { owner_id: settleFilters.owner_id } : {}) })}`, download: '' }, 'Export CSV');
+  const csv = h('a.button.secondary', { href: `/api/reports/settlements.csv?${new URLSearchParams(q)}`, download: '' }, 'Export CSV');
 
   const projected = t.settled_volume + t.expected_volume;
   const tile = (l, v, sub) => h('div.tile', h('div.tile-label', l), h('div.tile-value', v), sub ? h('div.tile-sub', sub) : null);
   const withDeals = r.months.filter((m) => m.settled.length || m.expected.length);
 
   return h('div',
-    pageHeader('Reports', fySel, ownerSel, csv),
+    pageHeader('Reports', await periodPicker(r.period), ownerSel, csv),
     tabs('settlements'),
     h('div.tiles',
       tile('Settled so far', money(t.settled_volume), `${t.settled_count} loan${t.settled_count === 1 ? '' : 's'}`),
       tile('Commission so far', money(t.settled_commission), `${money(t.commission_received)} received`),
       tile('Still expected', money(t.expected_volume), `${t.expected_count} loan${t.expected_count === 1 ? '' : 's'} · ≈ ${money(t.expected_commission)}${t.overdue_count ? ` · ${t.overdue_count} overdue` : ''}`),
-      tile(`Projected ${r.fy_label.split(' ')[0]}`, money(projected), t.year_target ? `${Math.round((projected / t.year_target) * 100)}% of ${money(t.year_target)} target` : `≈ ${money(t.settled_commission + t.expected_commission)} commission`)),
-    h('section.card', h('h2', `Settlements by month – ${r.fy_label}`),
+      tile(`Projected ${r.period.short}`, money(projected), t.period_target ? `${Math.round((projected / t.period_target) * 100)}% of ${money(t.period_target)} target` : `≈ ${money(t.settled_commission + t.expected_commission)} commission`)),
+    h('section.card', h('h2', `Settlements by month – ${r.period.label}`),
       h('p.muted.small', 'Settled loans, plus open deals with a settlement date in that month. Commission is upfront after referral fees; ≈ marks an estimate.'),
       stackedColumns(r.months.map((m) => ({
-        label: new Date(`${m.month}-01T00:00:00`).toLocaleString('en-AU', { month: 'short' }),
+        // Longer custom ranges repeat months, so add the year.
+        label: new Date(`${m.month}-01T00:00:00`).toLocaleString('en-AU', r.months.length > 12 ? { month: 'short', year: '2-digit' } : { month: 'short' }),
         parts: [m.totals.settled_volume, m.totals.expected_volume],
         highlight: m.current,
         tip: `${monthLong(m.month)}: settled ${money(m.totals.settled_volume)} (${m.totals.settled_count}), expected ${money(m.totals.expected_volume)} (${m.totals.expected_count})`,
@@ -159,7 +199,7 @@ async function settlementsReport() {
       dealTable([...m.settled, ...m.expected], {
         subtotal: { label: `Total for ${monthLong(m.month)}`, volume: m.totals.settled_volume + m.totals.expected_volume, commission: m.totals.settled_commission + m.totals.expected_commission },
       })))
-      : h('section.card', h('p.empty', `No settled or expected loans in ${r.fy_label} yet.`)),
+      : h('section.card', h('p.empty', `No settled or expected loans in ${r.period.label} yet.`)),
     r.undated.length ? h('section.card.settle-undated',
       h('div.card-head', h('h2', `In progress, no settlement date yet (${r.undated.length})`), h('span.settle-sub', h('span', 'Volume ', h('strong', money(t.undated_volume))))),
       h('p.muted.small', 'Lodged or approved deals without a settlement date. Add the date on the deal and they\'ll appear in their month above.'),

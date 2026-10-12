@@ -2,6 +2,7 @@
 const express = require('express');
 const db = require('../db');
 const commissionsSvc = require('../services/commissions');
+const periods = require('../services/periods');
 const { CALCULATORS } = require('../services/calculators');
 const { STAGES, OPEN_STAGES } = require('../constants');
 const { today, addDays, addMonths, nowIso, HttpError } = require('../util');
@@ -91,12 +92,13 @@ router.get('/dashboard', (req, res) => {
   });
 });
 
+router.get('/reports/periods', (req, res) => res.json(periods.yearOptions()));
+
 router.get('/reports', (req, res) => {
-  const t0 = today();
-  const from = /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || '') ? req.query.from : addMonths(`${t0.slice(0, 7)}-01`, -11);
-  const to = /^\d{4}-\d{2}-\d{2}$/.test(req.query.to || '') ? req.query.to : t0;
+  const period = periods.resolve(req.query);
+  const { from, to } = period;
   res.json({
-    from, to,
+    period, from, to,
     settlements_by_month: db.all(
       `SELECT substr(settlement_date,1,7) AS month, COUNT(*) AS count, SUM(loan_amount) AS volume
        FROM deals WHERE stage = 'settled' AND settlement_date BETWEEN ? AND ? GROUP BY month ORDER BY month`,
@@ -153,14 +155,16 @@ router.get('/reports', (req, res) => {
 
 // ---- Running settlements (settled + expected, by month, for a financial year) ----
 const settlementReport = require('../services/settlementReport');
-const settlementArgs = (q) => ({ fy: /^\d{4}$/.test(q.fy || '') ? Number(q.fy) : null, ownerId: Number(q.owner_id) || null });
+const settlementArgs = (q) => ({ period: periods.resolve(q), ownerId: Number(q.owner_id) || null });
 
 router.get('/reports/settlements', (req, res) => res.json(settlementReport.report(settlementArgs(req.query))));
 
 router.get('/reports/settlements.csv', (req, res) => {
   const r = settlementReport.report(settlementArgs(req.query));
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="settlements-FY${String(r.fy).slice(2)}.csv"`);
+  const p = r.period;
+  const tag = p.type === 'fy' ? `FY${String(p.fy).slice(2)}` : p.type === 'cy' ? String(p.year) : `${p.from}-to-${p.to}`;
+  res.setHeader('Content-Disposition', `attachment; filename="settlements-${tag}.csv"`);
   res.send(require('../csv').stringify(settlementReport.csvRows(r)));
 });
 
