@@ -60,3 +60,28 @@ export function columns(rows, { format = String, empty = 'No data yet.', height 
         return col;
       })));
 }
+
+// Stacked columns over time: rows of { label, parts: [value, value], tip }.
+// The first part is solid, the second striped (e.g. settled vs expected), so
+// the two read apart without relying on colour. `names` label the legend.
+export function stackedColumns(rows, { names, format = String, empty = 'No data yet.', height = 200 } = {}) {
+  const totals = rows.map((r) => r.parts.reduce((s, v) => s + (v || 0), 0));
+  const max = Math.max(...totals, 0);
+  if (!rows.length || max === 0) return h('p.empty', empty);
+  const ticks = [max, max / 2, 0];
+  const kinds = ['solid', 'striped'];
+  return h('div',
+    h('div.chart-legend', names.map((n, i) => h('span.legend-item', h(`span.legend-swatch.${kinds[i]}`), n))),
+    h('div.col-chart', { style: { height: `${height + 28}px` } },
+      h('div.col-axis', ticks.map((t) => h('span', compact(t)))),
+      h('div.col-plot', { style: { height: `${height}px` } },
+        h('div.col-grid', ticks.map(() => h('span'))),
+        rows.map((r, i) => {
+          const col = h(`div.col${r.highlight ? '.highlight' : ''}`,
+            h('div.col-stack', { style: { height: `${(totals[i] / max) * 100}%` } },
+              r.parts.map((v, k) => (v ? h(`div.col-seg.${kinds[k]}`, { style: { flexGrow: String(v) } }) : null))),
+            h('div.col-label', r.label));
+          bindTip(col, r.tip || `${r.label}: ${r.parts.map((v, k) => `${names[k]} ${format(v || 0)}`).join(', ')}`);
+          return col;
+        }))));
+}

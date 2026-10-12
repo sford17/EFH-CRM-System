@@ -27,7 +27,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
-| **Reports** | Settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
+| **Reports** | Running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
 | **Team** | Admin, broker and assistant roles, with notifications for automation alerts |
 
@@ -100,6 +100,18 @@ Tick **Shares finances** for a couple (it's ticked automatically for spouses and
 - **Lending reviews:** a review is prepared for the household (for example "Mia & Tom Jones", which also appears in the PDF and Word file names). Untick a name to address it to one person only.
 
 To separate a couple's finances again, edit the relationship and untick *Shares finances*, or click **Unlink**. Both contacts and all their records are kept.
+
+## Running settlements report
+
+**Reports → Settlements** shows the financial year (July–June) month by month:
+
+- **Totals:** settled so far, commission so far (and how much has been received), what's still expected, and the projected year against your target (*Monthly settlement target* in Settings → Business, × 12).
+- **A chart** of each month's settled (solid) and expected (striped) volume. Hover a month for the figures, or open *Month-by-month table with running totals*.
+- **A section per month** listing each loan: settlement date, client (both borrowers on joint loans), lender, loan type (purpose and rate type), loan amount, commission and status. Settled loans come first, then expected ones with their current stage. Each month shows its totals and the running total for the year, and the current month is highlighted.
+- **Expected settlements** are open deals with a settlement date in that month. If that date has passed and the loan hasn't settled, it's flagged as **Overdue**. Lodged or approved deals without a settlement date are listed at the bottom, so add the date on the deal and they'll move into their month.
+- **Commission** is the upfront commission after any referral fee. For settled loans it comes from the commission ledger (✓ = received). For expected loans it's an estimate (≈) from the lender's upfront rate.
+
+Choose another financial year or a single broker at the top, and use **Export CSV** to open it in Excel.
 
 ## Google reviews
 

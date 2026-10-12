@@ -151,6 +151,19 @@ router.get('/reports', (req, res) => {
   });
 });
 
+// ---- Running settlements (settled + expected, by month, for a financial year) ----
+const settlementReport = require('../services/settlementReport');
+const settlementArgs = (q) => ({ fy: /^\d{4}$/.test(q.fy || '') ? Number(q.fy) : null, ownerId: Number(q.owner_id) || null });
+
+router.get('/reports/settlements', (req, res) => res.json(settlementReport.report(settlementArgs(req.query))));
+
+router.get('/reports/settlements.csv', (req, res) => {
+  const r = settlementReport.report(settlementArgs(req.query));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="settlements-FY${String(r.fy).slice(2)}.csv"`);
+  res.send(require('../csv').stringify(settlementReport.csvRows(r)));
+});
+
 // ---- Commissions ---------------------------------------------------------------
 router.get('/commissions', (req, res) => {
   const where = [];
