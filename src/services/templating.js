@@ -112,6 +112,10 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
   // The agent, solicitor etc. on the deal: {{agent.name}}, {{solicitor.email}}…
   // and {{recipient.*}} when the email is going to one of them.
   const parties = deal ? require('./parties').forContext(deal.id) : {};
+  // Who referred the client (the deal's referral partner, else the contact's).
+  const referrerId = deal?.referral_partner_id || contact?.referral_partner_id || null;
+  const referrerRow = referrerId ? db.one('SELECT id, name, company, email, phone, mobile FROM referral_partners WHERE id = ?', referrerId) : null;
+  const referrer = referrerRow ? { ...referrerRow, first_name: String(referrerRow.name).split(/\s+/)[0] } : {};
   return {
     contact,
     addressees,
@@ -119,6 +123,7 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
     agent: parties.real_estate_agent || {},
     solicitor: parties.solicitor || {},
     buyers_agent: parties.buyers_agent || {},
+    referrer,
     recipient: (recipientRole && Object.hasOwn(parties, recipientRole) && parties[recipientRole]) || {},
     deal,
     loan,

@@ -8,6 +8,19 @@ const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 const { IO_EXPIRY_AUTOMATION, FIXED_RATE_TEXT_UPDATES } = require('./tracker-defaults');
 const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
 
+// Existing installs: the "thank the referral partner" automation.
+function addReferralDefaults(db) {
+  if (!db.getSetting('automations_seeded')) return;
+  const { REFERRAL_AUTOMATIONS } = require('./referral-defaults');
+  for (const a of REFERRAL_AUTOMATIONS) {
+    if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
+    db.insert('automations', {
+      name: a.name, description: a.description, trigger: a.trigger,
+      conditions: JSON.stringify(a.conditions), actions: JSON.stringify(a.actions),
+    });
+  }
+}
+
 // Existing installs: add graphics to standard templates the broker hasn't
 // edited, and move the default "branded" email look to the new colour banner.
 function addGraphicsDefaults(db) {
@@ -550,6 +563,18 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 13. Texts to referral partners (e.g. when a client they referred settles).
+  (db) => {
+    db.get().exec(`
+      ALTER TABLE referral_partners ADD COLUMN sms_updates INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE sms_messages ADD COLUMN partner_id INTEGER REFERENCES referral_partners(id) ON DELETE SET NULL;
+      CREATE INDEX idx_sms_partner ON sms_messages(partner_id);
+    `);
+    addReferralDefaults(db);
+  },
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;
@@ -557,3 +582,4 @@ module.exports.addCalendarDefaults = addCalendarDefaults;
 module.exports.addTrackerDefaults = addTrackerDefaults;
 module.exports.addPartyDefaults = addPartyDefaults;
 module.exports.addGraphicsDefaults = addGraphicsDefaults;
+module.exports.addReferralDefaults = addReferralDefaults;

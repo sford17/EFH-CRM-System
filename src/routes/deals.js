@@ -85,7 +85,11 @@ router.get('/:id', (req, res) => {
     id,
   );
   deal.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE deal_id = ? AND COALESCE(sent_via,'') != 'outlook' ORDER BY id DESC", id);
-  deal.sms = db.all('SELECT id, body, status, error, from_number, send_after, sent_at FROM sms_messages WHERE deal_id = ? ORDER BY id DESC LIMIT 50', id);
+  deal.sms = db.all(
+    `SELECT s.id, s.body, s.status, s.error, s.from_number, s.send_after, s.sent_at, p.name AS partner_name
+     FROM sms_messages s LEFT JOIN referral_partners p ON p.id = s.partner_id WHERE s.deal_id = ? ORDER BY s.id DESC LIMIT 50`,
+    id,
+  );
   deal.mail = listEmails({ contactIds: [deal.contact_id, deal.co_borrower_id].filter(Boolean), limit: 50 });
   deal.parties = parties.list(deal.id);
   // The broker's accreditation number with this lender, and who to email there.

@@ -101,6 +101,16 @@ Tick **Shares finances** for a couple (it's ticked automatically for spouses and
 
 To separate a couple's finances again, edit the relationship and untick *Shares finances*, or click **Unlink**. Both contacts and all their records are kept.
 
+## Thanking referral partners
+
+When a loan settles for a client that a referral partner sent you, the partner gets a text from your mobile, for example *"Hi Alex, great news - Liam Wilson's loan has settled. Thanks so much for the referral! Sam, EFH Mortgage Broking"*.
+
+- The partner is the deal's **Referral partner**, which is filled in from the client's *Referred by* when the deal is created. If the deal doesn't have one, the client's is used.
+- The partner needs a **mobile** number on the **Partners & agents** page. Untick *Text them when a client they referred settles* for anyone who'd rather not get these texts. The list shows whether texts are on and how many have been sent.
+- The text is noted on the client's timeline and the deal (*SMS to referral partner Alex Morgan (Harbourside Realty) sent…*), but isn't counted as one of the client's own texts.
+- Change the wording, add a delay, or switch it off in **Automations → Settled: thank the referral partner**. In any automation, *Send an SMS* can now go to the *Referral partner who referred the client*. Use `{{referrer.first_name}}`, `{{referrer.name}}` and `{{referrer.company}}` in messages and email templates.
+- If the text is skipped (no partner, no mobile, or texts switched off), the reason shows in the automation's run history.
+
 ## Lenders: accreditation & BDMs
 
 The **Lenders** page lists every lender with *your* accreditation number (and whether it's active, pending or due for renewal), the main BDM with their phone and an **✉ Email** button, open and settled deals, and commission rates. Use the search box to find a lender, BDM or accreditation number. Click a lender to open its page:
@@ -246,6 +256,7 @@ What is texted by default (all editable under **Automations** and **Email templa
 | Unconditional Approval | Formally approved, loan docs coming |
 | Settlement Booked | Settlement date confirmed |
 | Settled | Congratulations |
+| Settled, for a referred client | Thank-you text **to the referral partner** ("great news, … has settled") |
 | Birthday | Happy birthday *(marketing)* |
 | "Annual loan review" email sent | Time for your annual review *(marketing)* |
 | "Rate reduction" email sent | Rates have dropped *(marketing)* |

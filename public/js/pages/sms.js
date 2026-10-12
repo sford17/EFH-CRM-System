@@ -53,6 +53,7 @@ export function smsCard({ sms, contactId, dealId, mobile, name }) {
     !mobile ? h('p.empty', 'No mobile number on file.') : null,
     sms.length
       ? h('ul.plain.sms-list', sms.map((m) => h('li',
+        m.partner_name ? h('div.small.muted', `To referral partner ${m.partner_name}`) : null,
         h('div.sms-bubble', m.body),
         h('div.muted.small', badge(m.status, STATUS_KIND[m.status]), ' ', m.status === 'queued' ? `scheduled ${dateTime(m.send_after)}` : dateTime(m.sent_at || m.send_after),
           m.from_number ? ` · from ${m.from_number}` : '', m.error ? h('span.text-danger', ` · ${m.error}`) : null))))
@@ -65,7 +66,11 @@ export async function smsLog() {
   const act = (path, msg) => async () => { await attempt(() => api(path, { method: 'POST', body: {} }), msg); refresh(); };
   return h('section.card', h('h2', 'Text messages'), table([
     { label: 'Created', value: (m) => dateTime(m.created_at) },
-    { label: 'To', value: (m) => (m.contact_id ? h('a', { href: `#/contacts/${m.contact_id}` }, m.contact_name || m.to_number) : m.to_number) },
+    {
+      label: 'To',
+      value: (m) => (m.contact_id ? h('a', { href: `#/contacts/${m.contact_id}` }, m.contact_name || m.to_number)
+        : m.partner_name ? h('a', { href: '#/partners' }, `${m.partner_name} (referral partner)`) : m.to_number),
+    },
     { label: 'Message', value: (m) => h('div.small', m.body) },
     { label: 'Source', value: (m) => (m.automation_name ? h('span', { title: m.automation_name }, '⚡ automation') : m.template_name ? `with "${m.template_name}"` : 'manual') },
     { label: 'Status', value: (m) => h('div', badge(m.status, STATUS_KIND[m.status]), m.error ? h('div.small.text-danger', m.error) : null, m.from_number ? h('div.muted.small', `from ${m.from_number}`) : null) },

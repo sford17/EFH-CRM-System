@@ -51,8 +51,10 @@ router.get('/', (req, res) => {
   if (req.query.status) { where.push('s.status = ?'); params.push(req.query.status); }
   res.json({
     rows: db.all(
-      `SELECT s.*, c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name, a.name AS automation_name, t.name AS template_name
+      `SELECT s.*, c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name, a.name AS automation_name, t.name AS template_name,
+              p.name AS partner_name
        FROM sms_messages s LEFT JOIN contacts c ON c.id = s.contact_id LEFT JOIN automations a ON a.id = s.automation_id
+       LEFT JOIN referral_partners p ON p.id = s.partner_id
        LEFT JOIN email_templates t ON t.id = s.template_id
        ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY s.id DESC LIMIT 300`,
       ...params,

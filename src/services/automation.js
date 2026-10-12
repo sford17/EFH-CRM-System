@@ -83,6 +83,15 @@ const ACTIONS = {
   send_sms(a, ctx, auto) {
     if (!ctx.contact) return 'no contact';
     const sendAfter = a.delay_days ? new Date(Date.now() + Number(a.delay_days) * 86400000).toISOString() : undefined;
+    if (a.to === 'referral_partner') {
+      const { id, reason } = sms.queueForPartner({
+        partnerId: ctx.referrer?.id, dealId: ctx.deal?.id ?? null, body: render(a.message, ctx),
+        automationId: auto.id, senderUserId: ctx.broker?.id ?? null, sendAfter,
+      });
+      if (!id) return `SMS to referral partner skipped: ${reason}`;
+      if (!sendAfter) sms.processSoon();
+      return `SMS #${id} to referral partner queued`;
+    }
     const { id, reason } = sms.queueForContact({
       contactId: ctx.contact.id, dealId: ctx.deal?.id ?? null, body: render(a.message, ctx),
       marketing: Boolean(a.marketing), automationId: auto.id, senderUserId: ctx.broker?.id ?? null, sendAfter,

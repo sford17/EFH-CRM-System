@@ -68,11 +68,12 @@ function segments(text) {
   return len <= 70 ? 1 : Math.ceil(len / 67);
 }
 
-function queueSms({ to, body, contactId = null, dealId = null, templateId = null, automationId = null, senderUserId = null, sendAfter = null }) {
+function queueSms({ to, body, contactId = null, dealId = null, partnerId = null, templateId = null, automationId = null, senderUserId = null, sendAfter = null }) {
   return db.insert('sms_messages', {
     to_number: to,
     body,
     contact_id: contactId,
+    partner_id: partnerId,
     deal_id: dealId,
     template_id: templateId,
     automation_id: automationId,
@@ -106,6 +107,23 @@ function queueForContact({ contactId, dealId = null, body, marketing = false, te
   return { id, reason: null };
 }
 
+// Queues a text to a referral partner (e.g. "your client has settled"). It's
+// noted on the client's timeline via the deal, but isn't one of the client's
+// own texts. Partners with SMS updates switched off are skipped.
+function queueForPartner({ partnerId, dealId = null, body, automationId = null, senderUserId = null, sendAfter = null }) {
+  const partner = partnerId ? db.one('SELECT * FROM referral_partners WHERE id = ?', partnerId) : null;
+  if (!partner) return { id: null, reason: 'No referral partner' };
+  if (!partner.active) return { id: null, reason: `${partner.name} is marked inactive` };
+  if (!partner.sms_updates) return { id: null, reason: `${partner.name} has text updates switched off` };
+  const raw = partner.mobile || partner.phone;
+  const to = normaliseMobile(raw);
+  if (!to) return { id: null, reason: raw ? `${partner.name}'s number "${raw}" is not a mobile` : `${partner.name} has no mobile number` };
+  const text = String(body || '').trim();
+  if (!text) return { id: null, reason: 'Message is empty' };
+  const id = queueSms({ to, body: text, dealId, partnerId: partner.id, automationId, senderUserId, sendAfter });
+  return { id, reason: null };
+}
+
 function senderFor(msg) {
   let userId = msg.sender_user_id;
   if (!userId && msg.deal_id) userId = db.one('SELECT owner_id FROM deals WHERE id = ?', msg.deal_id)?.owner_id;
@@ -133,6 +151,15 @@ async function clicksendSend({ to, from, body, ref }) {
 }
 
 function logActivity(msg, text) {
+  if (msg.partner_id) {
+    // On the referred client's timeline: "SMS to referral partner Alex Morgan (Harbourside Realty) sent from …: …"
+    const deal = msg.deal_id ? db.one('SELECT contact_id FROM deals WHERE id = ?', msg.deal_id) : null;
+    const p = db.one('SELECT name, company FROM referral_partners WHERE id = ?', msg.partner_id);
+    if (!deal || !p) return;
+    const to = ` to referral partner ${p.name}${p.company ? ` (${p.company})` : ''}`;
+    db.insert('activities', { contact_id: deal.contact_id, deal_id: msg.deal_id, user_id: msg.sender_user_id, type: 'sms', body: `${text.replace(/^SMS /, `SMS${to} `)}: ${msg.body}` });
+    return;
+  }
   if (!msg.contact_id) return;
   db.insert('activities', { contact_id: msg.contact_id, deal_id: msg.deal_id, user_id: msg.sender_user_id, type: 'sms', body: `${text}: ${msg.body}` });
 }
@@ -175,6 +202,7 @@ function processSoon() {
 }
 
 module.exports = {
+  queueForPartner,
   normaliseMobile, normaliseSender, config, isConfigured, saveConfig, segments,
   queueSms, queueForContact, processSms, processSoon, OPT_OUT,
 };

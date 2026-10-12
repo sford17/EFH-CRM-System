@@ -25,7 +25,7 @@ function seedDemo() {
 
     const partner = (row) => db.insert('referral_partners', row);
     const reAgent = partner({ name: 'Alex Morgan', company: 'Harbourside Realty', type: 'real_estate', email: 'alex@harbourside.example', mobile: '0412 345 678', referral_fee_pct: 0 });
-    const accountant = partner({ name: 'Priya Shah', company: 'Shah & Co Accountants', type: 'accountant', email: 'priya@shahco.example', referral_fee_pct: 20 });
+    const accountant = partner({ name: 'Priya Shah', company: 'Shah & Co Accountants', type: 'accountant', email: 'priya@shahco.example', mobile: '0498 765 432', referral_fee_pct: 20 });
     const conveyancer = partner({ name: 'Tom Barker', company: 'Barker Conveyancing', type: 'conveyancer', email: 'tom@barker.example', phone: '07 3000 1234' });
     const qldAgent = partner({ name: 'Kylie Nguyen', company: 'Ipswich First National', type: 'real_estate', email: 'kylie@ipswichfn.example', mobile: '0423 456 789' });
     const buyersAgent = partner({ name: 'Ben Carter', company: 'Northern Beaches Buyers Agency', type: 'buyers_agent', email: 'ben@nbba.example', mobile: '0434 567 890' });
