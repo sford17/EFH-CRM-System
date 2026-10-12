@@ -550,3 +550,9 @@ fieldset.parties-fieldset legend { font-size: .82rem; color: var(--text-2); font
 .lender-email .field { display: grid; gap: .3rem; }
 .lender-email input[hidden], .lender-email select[hidden], .lender-email button[hidden] { display: none; }
 .label-row { display: flex; justify-content: space-between; align-items: center; }
+
+/* ---- Google review requests ---- */
+.google-review { display: grid; gap: .1rem; }
+fieldset.review-part { border: 1px solid var(--border); border-radius: 8px; padding: .5rem .8rem .8rem; margin: 0 0 .8rem; display: grid; gap: .5rem; }
+fieldset.review-part legend { padding: 0 .3rem; font-weight: 500; }
+.check-inline { display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; }

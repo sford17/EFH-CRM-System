@@ -92,11 +92,14 @@ const ACTIONS = {
       if (!sendAfter) sms.processSoon();
       return `SMS #${id} to referral partner queued`;
     }
+    const reviews = require('./googleReviews');
+    if (reviews.linkMissing(a.message)) return 'SMS skipped: add your Google review link in Settings → Business';
     const { id, reason } = sms.queueForContact({
       contactId: ctx.contact.id, dealId: ctx.deal?.id ?? null, body: render(a.message, ctx),
       marketing: Boolean(a.marketing), automationId: auto.id, senderUserId: ctx.broker?.id ?? null, sendAfter,
     });
     if (!id) return `SMS skipped: ${reason}`;
+    if (reviews.usesLink(a.message)) reviews.markRequested(ctx.contact.id);
     if (!sendAfter) sms.processSoon();
     return `SMS #${id} queued`;
   },

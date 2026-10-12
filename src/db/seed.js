@@ -7,6 +7,7 @@ const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
 const { applyTemplateGraphics } = require('./graphics-defaults');
 const { REFERRAL_AUTOMATIONS } = require('./referral-defaults');
 const { REVIEW_REMINDER_AUTOMATIONS } = require('./review-defaults');
+const { REVIEW_SUBJECT, REVIEW_BODY, REVIEW_SMS, REVIEW_AUTOMATION } = require('./google-review-defaults');
 
 // Indicative commission rates; edit them on the Lenders page to match your
 // aggregator's schedule.
@@ -41,8 +42,7 @@ const TEMPLATES = [
     `Hi {{contact.first_name}},\n\nSettlement for {{deal.property_address}} is booked for {{deal.settlement_date|date}}. Please make sure any funds to complete are in place and keep your phone handy on the day.${SIGNOFF}`],
   ['Settlement congratulations', 'settlement', 'Congratulations, {{contact.first_name}} – you have settled!',
     `Hi {{contact.first_name}},\n\nCongratulations – your loan has settled! It's been a pleasure helping you.\n\nYour first repayment will be scheduled by {{deal.lender_name}}. I'll check in over the coming months and review your loan each year to make sure it stays competitive.${SIGNOFF}`],
-  ['Review request', 'marketing', 'How did we do, {{contact.first_name}}?',
-    `Hi {{contact.first_name}},\n\nNow that you've settled in, I'd love to hear how you found the process. If you were happy, a quick Google review would mean a lot – and if you know anyone thinking about buying or refinancing, I'd be glad to help them too.${SIGNOFF}`],
+  ['Review request', 'marketing', REVIEW_SUBJECT, REVIEW_BODY],
   ['Fixed rate expiry review', 'retention', 'Your fixed rate ends on {{loan.fixed_expiry_date|date}}',
     `Hi {{contact.first_name}},\n\nYour fixed rate with {{loan.lender_name}} ends on {{loan.fixed_expiry_date|date}}. When it does, the loan will roll onto the lender's standard variable rate, which is often higher.\n\nLet's book a quick review so we can compare your options – re-fixing, going variable, or refinancing.${SIGNOFF}`],
   ['Annual loan review', 'retention', 'Time for your annual home loan health check',
@@ -118,7 +118,6 @@ const AUTOMATIONS = [
       { type: 'add_tag', tag: 'settled' },
       { type: 'generate_commissions' },
       { type: 'create_task', title: 'Post-settlement check-in call with {{contact.first_name}}', due_in_days: 30 },
-      { type: 'send_email', template: 'Review request', delay_days: 14 },
     ],
   },
   {
@@ -194,7 +193,7 @@ for (const a of AUTOMATIONS) {
   if (STAGE_SMS[a.name]) a.actions.push({ type: 'send_sms', message: STAGE_SMS[a.name] });
   if (a.name === BIRTHDAY_SMS.automation) a.actions.push({ type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });
 }
-AUTOMATIONS.push(...SMS_AUTOMATIONS, ...CALENDAR_AUTOMATIONS, ...REFERRAL_AUTOMATIONS, ...REVIEW_REMINDER_AUTOMATIONS, ...PARTY_AUTOMATIONS.map((a) => ({ ...a, enabled: 0 })));
+AUTOMATIONS.push(...SMS_AUTOMATIONS, ...CALENDAR_AUTOMATIONS, ...REFERRAL_AUTOMATIONS, REVIEW_AUTOMATION, ...REVIEW_REMINDER_AUTOMATIONS, ...PARTY_AUTOMATIONS.map((a) => ({ ...a, enabled: 0 })));
 
 function seedDefaults() {
   db.transaction(() => {
@@ -205,7 +204,7 @@ function seedDefaults() {
     }
     if (!db.one('SELECT 1 FROM email_templates LIMIT 1')) {
       for (const [name, category, subject, body] of TEMPLATES) {
-        db.insert('email_templates', { name, category, subject, body: applyTemplateGraphics(name, body), sms_body: TEMPLATE_SMS[name] || null });
+        db.insert('email_templates', { name, category, subject, body: applyTemplateGraphics(name, body), sms_body: TEMPLATE_SMS[name] || (name === 'Review request' ? REVIEW_SMS : null) });
       }
     }
     if (!db.getSetting('automations_seeded')) {

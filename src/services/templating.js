@@ -139,6 +139,7 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
       phone: db.getSetting('business_phone', ''),
       email: db.getSetting('business_email', ''),
       website: db.getSetting('business_website', ''),
+      google_review_link: db.getSetting('google_review_link', ''),
     },
     today: today(),
   };

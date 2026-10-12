@@ -12,6 +12,7 @@ import { contactAppointmentsCard, bookingLinkDialog } from './calendar.js';
 import { trackerTab } from './tracker.js';
 import { reviewsCard, startReview } from './review.js';
 import { relatedCard } from './household.js';
+import { googleReviewInfo, requestReviewDialog } from './googleReview.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -87,6 +88,7 @@ export async function contactPage(id) {
         h('button.secondary', { type: 'button', onclick: () => bookingLinkDialog({ contact: c }) }, 'Booking link'),
         h('button.secondary', { type: 'button', onclick: () => startReview(c.id) }, 'Lending review'),
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ contactId: c.id }) }, 'Send template'),
+        h('button.secondary', { type: 'button', onclick: () => requestReviewDialog({ contact: c }) }, '⭐ Review request'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
         h('button.danger.ghost', { type: 'button', onclick: remove }, 'Delete'))),
     h('nav.tabs', { 'aria-label': 'Contact sections' },
@@ -107,6 +109,7 @@ export async function contactPage(id) {
           info('Last contacted', c.last_contacted_at ? date(c.last_contacted_at) : 'Never'),
           info('Next review', c.next_review_date ? date(c.next_review_date) : null),
           info('Marketing', c.marketing_opt_in ? 'Opted in' : 'Opted out'),
+          info('Google review', googleReviewInfo(c)),
           c.sms_opt_out ? info('SMS', h('span.text-danger', 'Opted out of all SMS')) : null,
           info('Tags', c.tags ? c.tags.split(',').map((t) => h('span.tag', t)) : null)),
         c.background ? h('div.background', h('h3', 'Background'), h('p.pre', c.background)) : null),

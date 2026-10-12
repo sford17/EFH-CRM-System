@@ -38,7 +38,7 @@ users.patch('/:id', auth.requireRole('admin'), (req, res) => {
 });
 
 // ---- Settings -----------------------------------------------------------------
-const SETTING_KEYS = ['business_name', 'business_phone', 'business_email', 'business_website', 'acl_number', 'monthly_settlement_target', 'app_url'];
+const SETTING_KEYS = ['business_name', 'business_phone', 'business_email', 'business_website', 'acl_number', 'monthly_settlement_target', 'app_url', 'google_review_link'];
 const settings = express.Router();
 
 settings.get('/', (req, res) => {
@@ -46,6 +46,9 @@ settings.get('/', (req, res) => {
 });
 
 settings.put('/', auth.requireRole('admin'), (req, res) => {
+  if (req.body?.google_review_link && !/^https:\/\/\S+$/i.test(String(req.body.google_review_link).trim())) {
+    throw new HttpError(400, 'The Google review link should start with https:// (copy it from your Google Business Profile → "Ask for reviews")');
+  }
   if (req.body?.app_url && !/^https?:\/\/[^\s/]+(:\d+)?(\/\S*)?$/i.test(String(req.body.app_url).trim())) {
     throw new HttpError(400, 'The CRM web address should look like http://localhost:3000 or https://crm.example.com.au');
   }

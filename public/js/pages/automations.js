@@ -4,7 +4,7 @@ import { counted } from './sms.js';
 
 const CONDITION_FIELDS = [
   'event.to_stage', 'event.from_stage', 'event.to_status', 'contact.status', 'contact.lead_source', 'contact.tags',
-  'contact.employment_type', 'contact.state', 'contact.marketing_opt_in', 'contact.annual_income', 'deal.stage',
+  'contact.employment_type', 'contact.state', 'contact.marketing_opt_in', 'contact.annual_income', 'contact.google_reviewed_at', 'contact.review_requested_at', 'deal.stage',
   'deal.loan_purpose', 'deal.loan_amount', 'deal.lvr', 'deal.lender_name', 'deal.rate_type', 'deal.priority',
   'deal.referral_partner_id', 'task.title',
 ];

@@ -13,7 +13,7 @@ const router = express.Router();
 const FIELDS = [
   'first_name', 'last_name', 'email', 'mobile', 'phone', 'dob', 'address', 'suburb', 'state', 'postcode',
   'employment_type', 'employer', 'annual_income', 'marital_status', 'dependants', 'status', 'lead_source',
-  'referral_partner_id', 'owner_id', 'tags', 'marketing_opt_in', 'sms_opt_out', 'next_review_date', 'background',
+  'referral_partner_id', 'owner_id', 'tags', 'marketing_opt_in', 'sms_opt_out', 'next_review_date', 'google_reviewed_at', 'background',
 ];
 const CONTACT_TYPES = ['call', 'email', 'sms', 'meeting'];
 
@@ -141,6 +141,19 @@ router.post('/:id/activities', (req, res) => {
   if (CONTACT_TYPES.includes(row.type)) db.update('contacts', id, { last_contacted_at: nowIso(), updated_at: nowIso() });
   res.status(201).json(db.one('SELECT * FROM activities WHERE id = ?', actId));
 });
+
+// ---- Google review requests ------------------------------------------------------
+const reviews = require('../services/googleReviews');
+router.get('/:id/review-request', (req, res) => res.json(reviews.draft(intParam(req.params.id), req.user.id)));
+router.post('/:id/review-request', async (req, res) => {
+  const b = req.body || {};
+  res.status(201).json(await reviews.send(intParam(req.params.id), {
+    email: b.email ? { subject: b.email.subject, body: b.email.body } : null,
+    sms: b.sms ? { body: b.sms.body } : null,
+    dealId: Number(b.deal_id) || null,
+  }, req.user.id));
+});
+router.put('/:id/google-review', (req, res) => res.json(reviews.markReviewed(intParam(req.params.id), Boolean(req.body?.reviewed), req.user.id)));
 
 // ---- Related contacts ---------------------------------------------------------
 // Body: { related_id } to link an existing contact, or { new_contact: {...} }

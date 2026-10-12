@@ -58,6 +58,8 @@ function queueTemplate(templateId, { contactId, dealId, loanId, automationId, se
   if (template.category === 'marketing' && ctx.contact && !ctx.contact.marketing_opt_in) {
     return { id: null, reason: 'Contact has opted out of marketing' };
   }
+  const reviews = require('./googleReviews');
+  if (reviews.linkMissing(template.subject, template.body)) return { id: null, reason: 'Add your Google review link in Settings → Business' };
   const id = queueEmail({
     to: recipient,
     subject: render(template.subject, ctx),
@@ -70,10 +72,12 @@ function queueTemplate(templateId, { contactId, dealId, loanId, automationId, se
     sendAfter,
     senderUserId: userId || ctx.broker?.id || null,
   });
+  // Remember when the client was last asked for a Google review.
+  if (ctx.contact && !to && reviews.usesLink(template.body, template.sms_body)) reviews.markRequested(ctx.contact.id);
   // Templates can carry a companion text that goes out with the email
   // (to the client, so not when the email is for someone else).
   let smsId = null;
-  if (template.sms_body && ctx.contact && !to) {
+  if (template.sms_body && ctx.contact && !to && !reviews.linkMissing(template.sms_body)) {
     const r = sms.queueForContact({
       contactId: ctx.contact.id,
       dealId: ctx.deal?.id ?? null,

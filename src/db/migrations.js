@@ -8,6 +8,30 @@ const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 const { IO_EXPIRY_AUTOMATION, FIXED_RATE_TEXT_UPDATES } = require('./tracker-defaults');
 const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
 
+// Existing installs: the review request gets a Google review button and an
+// SMS (if the broker hasn't reworded it), and moves from the 14-day step of
+// the settlement automation to its own "ask for a Google review" automation.
+function addGoogleReviewDefaults(db) {
+  const g = require('./google-review-defaults');
+  const tpl = db.one("SELECT * FROM email_templates WHERE name = 'Review request'");
+  if (tpl && tpl.body === g.OLD_REVIEW_BODY) db.update('email_templates', tpl.id, { body: g.REVIEW_BODY });
+  if (tpl && !tpl.sms_body) db.update('email_templates', tpl.id, { sms_body: g.REVIEW_SMS });
+  if (!db.getSetting('automations_seeded') || !tpl) return;
+  const settled = db.one("SELECT id, actions FROM automations WHERE name = 'Settled: congratulate, convert to client & book commissions'");
+  if (settled) {
+    const actions = JSON.parse(settled.actions);
+    const kept = actions.filter((a) => !(a.type === 'send_email' && Number(a.template_id) === tpl.id && Number(a.delay_days) === 14));
+    if (kept.length !== actions.length) db.update('automations', settled.id, { actions: JSON.stringify(kept) });
+  }
+  if (!db.one('SELECT 1 FROM automations WHERE name = ?', g.REVIEW_AUTOMATION.name)) {
+    const a = g.REVIEW_AUTOMATION;
+    db.insert('automations', {
+      name: a.name, description: a.description, trigger: a.trigger, conditions: JSON.stringify(a.conditions),
+      actions: JSON.stringify(a.actions.map(({ template, ...rest }) => ({ ...rest, template_id: tpl.id }))),
+    });
+  }
+}
+
 // Existing installs: the "annual review coming up: email me" automation.
 function addReviewReminderDefaults(db) {
   if (!db.getSetting('automations_seeded')) return;
@@ -596,6 +620,17 @@ MIGRATIONS.push(
   },
 );
 
+MIGRATIONS.push(
+  // 15. Google review requests.
+  (db) => {
+    db.get().exec(`
+      ALTER TABLE contacts ADD COLUMN review_requested_at TEXT;
+      ALTER TABLE contacts ADD COLUMN google_reviewed_at TEXT;
+    `);
+    addGoogleReviewDefaults(db);
+  },
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;
@@ -605,3 +640,4 @@ module.exports.addPartyDefaults = addPartyDefaults;
 module.exports.addGraphicsDefaults = addGraphicsDefaults;
 module.exports.addReferralDefaults = addReferralDefaults;
 module.exports.addReviewReminderDefaults = addReviewReminderDefaults;
+module.exports.addGoogleReviewDefaults = addGoogleReviewDefaults;

@@ -48,6 +48,7 @@ function buttonDialog(textarea) {
     { name: 'link', label: 'Goes to', type: 'select', required: true, full: true, default: '{{broker.booking_link}}', options: [
       ['{{broker.booking_link}}', 'My Calendly booking link (filled in for each client)'],
       ['{{business.website}}', 'My website'],
+      ['{{business.google_review_link}}', 'My Google review link (Settings → Business)'],
       ['custom', 'Another web address…'],
     ] },
     { name: 'url', label: 'Web address (if "another")', placeholder: 'https://…', full: true },

@@ -89,8 +89,8 @@ test('deal lifecycle: checklist, stage automations, settlement commissions', asy
   const c = (await api.get(`/contacts/${contact.id}`)).data;
   assert.equal(c.status, 'client');
   assert.match(c.tags, /settled/);
-  const review = db.one("SELECT * FROM outbox WHERE contact_id = ? AND subject LIKE 'How did we do%'", contact.id);
-  assert.ok(review.send_after > new Date(Date.now() + 13 * 86400000).toISOString(), 'review request is delayed 14 days');
+  // No Google review link set up yet, so no review request goes out.
+  assert.equal(db.one("SELECT COUNT(*) AS n FROM outbox WHERE contact_id = ? AND subject LIKE 'How did we do%'", contact.id).n, 0);
 
   // Generating again is a no-op.
   assert.equal((await api.post(`/deals/${deal.id}/commissions/generate`)).data.created, 0);

@@ -15,7 +15,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Agent & solicitor** | Record the real estate agent, solicitor/conveyancer and buyer's agent (plus accountant, builder or planner) on each deal, straight from the New deal form. They're kept in a directory so you pick them again next time, can be emailed from the deal, appear in merge fields, and can be kept updated automatically |
 | **Document checklists** | Standard checklist built automatically by loan purpose (plus self-employed docs), with status tracking and a one-click "email the client what's outstanding" |
 | **Tasks** | Personal and team tasks, overdue/today/upcoming views, tasks auto-created by automations |
-| **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 27 ready-made automations, fully editable in the UI |
+| **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 28 ready-made automations, fully editable in the UI |
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
 | **Mortgage tracker** | A tab on each contact covering their properties, valuation history by method (full, desktop, kerbside, AVM, contract price…), loans and the properties securing them, and other assets. Shows LVR, equity, usable equity and net position, plus a lending structure diagram that flags cross-collateralisation and LVRs over 80% |
@@ -100,6 +100,16 @@ Tick **Shares finances** for a couple (it's ticked automatically for spouses and
 - **Lending reviews:** a review is prepared for the household (for example "Mia & Tom Jones", which also appears in the PDF and Word file names). Untick a name to address it to one person only.
 
 To separate a couple's finances again, edit the relationship and untick *Shares finances*, or click **Unlink**. Both contacts and all their records are kept.
+
+## Google reviews
+
+**Set up once:** in **Settings → Business**, paste your **Google review link**. To find it, open your Google Business Profile (search your business name on Google while signed in, or go to business.google.com), click *Ask for reviews* and copy the link (it looks like `https://g.page/r/…/review`). Until the link is added, no review requests are sent.
+
+**After settlement:** the *Settled: ask for a Google review* automation sends the **Review request** email (with a *Leave a Google review* button) and a matching SMS, two days after the deal moves to Settled. Clients marked as having left a review are skipped. You can change the delay (0 sends on the day of settlement), wording or conditions in **Automations**, and edit the email and SMS in **Email templates → Review request**. This replaces the old review email that went 14 days after settlement, so clients aren't asked twice.
+
+**Any time:** click **⭐ Review request** on a contact (or on a settled deal) to send a one-off request. Tick **Email**, **SMS** or both, and adjust the wording first if you like. Each contact's *Details* shows **Google review**: *Not asked yet*, *Asked [date]*, or *⭐ Left a review*. The dialog also warns you if you asked them in the last 90 days. Click **Mark as reviewed** once they've posted one, so they won't be asked again automatically.
+
+Review requests count as marketing, so they're only sent to clients who are happy to receive marketing, and the SMS includes "Reply STOP to opt out." In any template, use `{{business.google_review_link}}`, or *Insert button → My Google review link* in the template editor.
 
 ## Annual review reminders (emailed to you)
 

@@ -6,6 +6,7 @@ import { dealFields, coBorrowerField, newDeal, newTask, taskTable, timeline, sen
 import { emailsCard, composeDialog } from './email.js';
 import { partiesCard } from './parties.js';
 import { emailLenderDialog } from './lenders.js';
+import { requestReviewDialog } from './googleReview.js';
 import { smsCard } from './sms.js';
 
 // Moves a deal, asking for extra details where a stage needs them.
@@ -183,6 +184,7 @@ export async function dealPage(id) {
           deal.co_borrower_name ? [' & ', h('a', { href: `#/contacts/${deal.co_borrower_id}` }, deal.co_borrower_name)] : null)),
       h('div.actions',
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ dealId: deal.id, contactId: deal.contact_id, parties: deal.parties }) }, 'Send template'),
+        deal.stage === 'settled' ? h('button.secondary', { type: 'button', onclick: async () => requestReviewDialog({ contact: await api(`/contacts/${deal.contact_id}`), dealId: deal.id }) }, '⭐ Review request') : null,
         deal.lender_id ? h('button.secondary', { type: 'button', onclick: () => emailLenderDialog({ lenderId: deal.lender_id, contactId: deal.contact_id, dealId: deal.id }) }, `Email ${deal.lender_name} BDM`) : null,
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
         deal.stage !== 'lost' ? h('button.secondary', { type: 'button', onclick: async () => { if (await moveDeal(deal, 'lost')) refresh(); } }, 'Mark lost') : null,
