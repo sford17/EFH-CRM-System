@@ -412,6 +412,7 @@ function commit({ filename, sheet, headers, rows, mapping, options = {} }, userI
   const marketingDefault = options.marketing_default === false || options.marketing_default === 0 ? 0 : 1;
   const createdContacts = [];
   const createdDeals = [];
+  const createdLoans = [];
   let updated = 0;
 
   const result = db.transaction(() => {
@@ -483,6 +484,7 @@ function commit({ filename, sheet, headers, rows, mapping, options = {} }, userI
           });
           db.insert('deal_stage_history', { deal_id: dealId, from_stage: null, to_stage: stage, changed_by: userId });
           createdDeals.push(dealId);
+          if (stage === 'settled') createdLoans.push(require('./tracker').createFromDeal(dealId, { importId }));
         }
       }
     }
@@ -491,7 +493,7 @@ function commit({ filename, sheet, headers, rows, mapping, options = {} }, userI
     // already due (e.g. a fixed rate expiring next month); future dates still fire.
     let held = 0;
     if (options.hold_due_automations !== false) {
-      held = require('./automation').markScheduledDone({ contactIds: createdContacts, dealIds: createdDeals }, 'Imported – already due at import');
+      held = require('./automation').markScheduledDone({ contactIds: createdContacts, dealIds: createdDeals, loanIds: createdLoans }, 'Imported – already due at import');
     }
     db.update('imports', importId, {
       contacts_created: createdContacts.length, contacts_updated: updated, deals_created: createdDeals.length,
@@ -509,6 +511,7 @@ function undo(importId, user) {
   if (imp.created_by !== user.id && user.role !== 'admin') throw new HttpError(403, 'Only the person who ran this import (or an admin) can undo it');
   return db.transaction(() => {
     const deals = db.run('DELETE FROM deals WHERE import_id = ?', importId).changes;
+    db.run('DELETE FROM properties WHERE import_id = ?', importId);
     const contacts = db.run('DELETE FROM contacts WHERE import_id = ?', importId).changes;
     db.update('imports', importId, { undone_at: nowIso() });
     return { contacts_removed: Number(contacts), deals_removed: Number(deals) };

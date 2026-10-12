@@ -143,7 +143,9 @@ test('import creates clients and loans without messaging anyone; undo removes th
   await api.post('/automations/run-scheduled');
   assert.equal(db.one('SELECT COUNT(*) AS n FROM outbox').n, outboxBefore);
   assert.equal(db.one('SELECT COUNT(*) AS n FROM sms_messages').n, smsBefore);
-  assert.ok(db.one("SELECT 1 AS x FROM automation_runs WHERE status = 'skipped' AND entity_type = 'deal' AND entity_id = ?", loan.id));
+  const trackerLoan = db.one('SELECT id FROM loans WHERE deal_id = ?', loan.id);
+  assert.ok(trackerLoan, 'imported loan is in the mortgage tracker');
+  assert.ok(db.one("SELECT 1 AS x FROM automation_runs WHERE status = 'skipped' AND entity_type = 'loan' AND entity_id = ?", trackerLoan.id));
   const lee = db.one("SELECT id FROM contacts WHERE email = 'lee@example.com'");
   assert.ok(db.one("SELECT 1 AS x FROM automation_runs WHERE status = 'skipped' AND entity_id = ? AND run_key LIKE '%:contact:%'", lee.id), 'stale-lead chaser held for imported leads');
 

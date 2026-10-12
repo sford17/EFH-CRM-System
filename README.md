@@ -16,6 +16,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 18 ready-made automations, fully editable in the UI |
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
+| **Mortgage tracker** | A tab on each contact covering their properties, valuation history by method (full, desktop, kerbside, AVM, contract price…), loans and the properties securing them, and other assets. Shows LVR, equity, usable equity and net position, plus a lending structure diagram that flags cross-collateralisation and LVRs over 80% |
 | **Calendar (Calendly)** | Calendly bookings appear on a Calendar page, the dashboard and each client's record. Bookings are matched to clients (newcomers become leads), cancellations get a follow-up task, and a **Booking link** button copies, emails or texts a pre-filled Calendly link |
 | **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Emails are sent as formatted HTML with your logo, brand colour and each sender's own signature, with images embedded |
 | **Email templates** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
@@ -49,6 +50,18 @@ Settings come from environment variables; see [`.env.example`](.env.example). Th
 - **`HOST` / `COOKIE_SECURE` / `TRUST_PROXY`**: for running on a server behind HTTPS.
 
 Business details (name, phone, email, ACL number, monthly settlement target) are set in the app under **Settings**.
+
+## Mortgage tracker
+
+Open a contact and choose the **Mortgage tracker** tab.
+
+- **Properties:** address, type, use (owner-occupied, investment…), purchase date and price, rent, and co-owner.
+- **Valuations:** each one records its method (*Full*, *Desktop*, *Kerbside*, *AVM*, *Contract price*, *Agent appraisal*, *Client estimate* or *Other*), date, amount, provider, the ordering lender and a reference. The latest valuation is the property's current value. You also see the change against the previous valuation and the latest figure from each method side by side. You can filter by method, and `GET /api/tracker/valuations?method=avm` lists valuations across all clients.
+- **Loans:** lender (from your list or typed in), type (home, investment, line of credit, construction, car, credit card…), account number, limit and balance, rate, fixed-rate expiry, interest-only expiry, repayments, offset, status, whether you arranged it, and **which properties secure it**.
+- **Other assets:** savings, super, shares, vehicles, business and so on.
+- **Lending structure:** lenders and their loans on one side, properties on the other, with lines showing the security. A loan secured by several properties is spread across them by value, so each property gets its own LVR, equity and usable equity (to 80% LVR). Cross-collateralisation, a property securing loans with more than one lender, LVRs over 80% and properties without a valuation are flagged. Hover a loan or property to highlight what it's connected to.
+
+When a deal settles, its loan, security property and recorded value are added to the tracker automatically. Imported settled loans are added too. **Fixed-rate expiry** reminders run from tracker loans, so they also cover loans arranged elsewhere or refixed since. There's also an **Interest-only period ending** reminder (90 days ahead by default). Templates can use `{{loan.lender_name}}`, `{{loan.fixed_expiry_date|date}}`, `{{loan.io_expiry_date|date}}`, `{{loan.balance|money}}` and `{{loan.interest_rate}}`.
 
 ## Importing existing clients
 

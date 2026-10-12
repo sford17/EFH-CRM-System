@@ -30,8 +30,11 @@ function createApp() {
 
   // CSRF defence in addition to SameSite cookies: state-changing API calls must
   // be JSON, which a cross-site HTML form cannot send.
+  // (A DELETE with no body is allowed: browsers won't send one cross-site
+  // without a CORS preflight, which this app never grants.)
   app.use('/api', (req, res, next) => {
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !req.is('application/json')) {
+    const bodylessDelete = req.method === 'DELETE' && !req.headers['content-type'] && !Number(req.headers['content-length'] || 0) && !req.headers['transfer-encoding'];
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !bodylessDelete && !req.is('application/json')) {
       return res.status(415).json({ error: 'Requests must be sent as application/json' });
     }
     next();
@@ -60,6 +63,7 @@ function createApp() {
   app.use('/api/emails', outlookRoutes.emails);
   app.use('/api/sms', require('./routes/sms'));
   app.use('/api/import', require('./routes/import'));
+  app.use('/api/tracker', require('./routes/tracker'));
   const calendar = require('./routes/calendar');
   app.use('/api/calendly', calendar.calendlyRouter);
   app.use('/api/appointments', calendar.appointments);

@@ -1,0 +1,229 @@
+'use strict';
+// Mortgage tracker: a client's properties (with valuation history), loan
+// facilities and what secures them, and other assets. Also builds the
+// lending-structure view: per-property LVR, equity and usable equity.
+const db = require('../db');
+const { today, nowIso } = require('../util');
+
+const VALUATION_METHODS = [
+  { key: 'full', label: 'Full valuation' },
+  { key: 'desktop', label: 'Desktop valuation' },
+  { key: 'kerbside', label: 'Kerbside valuation' },
+  { key: 'avm', label: 'AVM' },
+  { key: 'contract_price', label: 'Contract price' },
+  { key: 'agent_appraisal', label: 'Agent appraisal' },
+  { key: 'client_estimate', label: 'Client estimate' },
+  { key: 'other', label: 'Other' },
+];
+const USABLE_EQUITY_LVR = 0.8;
+const PURCHASE_PURPOSES = ['purchase', 'first_home', 'investment', 'construction'];
+
+const normAddress = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+// Copies a settled deal into the tracker: its loan, the security property and
+// the value recorded on the deal. Safe to call more than once.
+function createFromDeal(dealId, { importId = null } = {}) {
+  const existing = db.one('SELECT id FROM loans WHERE deal_id = ?', dealId);
+  if (existing) return existing.id;
+  const deal = db.one('SELECT * FROM deals WHERE id = ?', dealId);
+  if (!deal) return null;
+
+  let propertyId = null;
+  if (deal.property_address) {
+    const match = db.all('SELECT id, address FROM properties WHERE contact_id = ?', deal.contact_id)
+      .find((p) => normAddress(p.address) === normAddress(deal.property_address));
+    const isPurchase = PURCHASE_PURPOSES.includes(deal.loan_purpose);
+    propertyId = match?.id ?? db.insert('properties', {
+      contact_id: deal.contact_id,
+      co_owner_id: deal.co_borrower_id,
+      address: deal.property_address,
+      usage: deal.loan_purpose === 'investment' ? 'investment' : 'owner_occupied',
+      purchase_date: isPurchase ? deal.settlement_date : null,
+      purchase_price: isPurchase ? deal.property_value : null,
+      deal_id: deal.id,
+      import_id: importId,
+    });
+    if (!match && deal.property_value) {
+      db.insert('valuations', {
+        property_id: propertyId,
+        valuation_date: deal.settlement_date || today(),
+        amount: deal.property_value,
+        method: isPurchase ? 'contract_price' : 'other',
+        lender_id: deal.lender_id,
+        notes: `Value recorded on deal "${deal.title}"`,
+      });
+    }
+  }
+
+  const loanId = db.insert('loans', {
+    contact_id: deal.contact_id,
+    co_borrower_id: deal.co_borrower_id,
+    deal_id: deal.id,
+    lender_id: deal.lender_id,
+    loan_type: deal.loan_purpose === 'investment' ? 'investment_loan'
+      : deal.loan_purpose === 'construction' ? 'construction'
+        : deal.loan_purpose === 'commercial' ? 'commercial' : 'home_loan',
+    account_number: deal.application_ref,
+    product_name: deal.product_name,
+    limit_amount: deal.loan_amount,
+    balance: deal.loan_amount,
+    balance_date: deal.settlement_date,
+    interest_rate: deal.interest_rate,
+    rate_type: deal.rate_type || 'variable',
+    fixed_expiry_date: deal.fixed_expiry_date,
+    repayment_type: deal.repayment_type || 'pi',
+    settlement_date: deal.settlement_date,
+    loan_term_years: deal.loan_term_years,
+  });
+  if (propertyId) db.run('INSERT OR IGNORE INTO loan_securities (loan_id, property_id) VALUES (?, ?)', loanId, propertyId);
+  return loanId;
+}
+
+// ---- Reading a client's position -------------------------------------------------
+
+const methodLabel = (key) => VALUATION_METHODS.find((m) => m.key === key)?.label || key;
+
+function propertiesFor(contactId) {
+  const props = db.all(
+    `SELECT p.*, o.first_name || ' ' || COALESCE(o.last_name,'') AS co_owner_name
+     FROM properties p LEFT JOIN contacts o ON o.id = p.co_owner_id
+     WHERE p.contact_id = ? OR p.co_owner_id = ? ORDER BY p.status = 'sold', p.id`,
+    contactId, contactId,
+  );
+  for (const p of props) {
+    p.valuations = db.all(
+      `SELECT v.*, l.name AS lender_name FROM valuations v LEFT JOIN lenders l ON l.id = v.lender_id
+       WHERE v.property_id = ? ORDER BY v.valuation_date DESC, v.id DESC`,
+      p.id,
+    );
+    // Change versus the previous valuation (any method).
+    p.valuations.forEach((v, i) => {
+      const prev = p.valuations[i + 1];
+      v.method_label = methodLabel(v.method);
+      v.change = prev ? v.amount - prev.amount : null;
+      v.change_pct = prev && prev.amount ? Math.round(((v.amount - prev.amount) / prev.amount) * 1000) / 10 : null;
+    });
+    p.current_value = p.valuations[0]?.amount ?? p.purchase_price ?? null;
+    p.current_valuation = p.valuations[0] || null;
+    // Most recent figure from each method, for side-by-side comparison.
+    const latest = new Map();
+    for (const v of p.valuations) if (!latest.has(v.method)) latest.set(v.method, v);
+    p.latest_by_method = [...latest.values()];
+  }
+  return props;
+}
+
+function loansFor(contactId) {
+  const loans = db.all(
+    `SELECT n.*, COALESCE(l.name, n.lender_name, 'Unknown lender') AS lender_display,
+            b.first_name || ' ' || COALESCE(b.last_name,'') AS co_borrower_name
+     FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id LEFT JOIN contacts b ON b.id = n.co_borrower_id
+     WHERE n.contact_id = ? OR n.co_borrower_id = ?
+     ORDER BY n.status != 'active', lender_display, n.id`,
+    contactId, contactId,
+  );
+  for (const n of loans) {
+    n.security_ids = db.all('SELECT property_id FROM loan_securities WHERE loan_id = ?', n.id).map((r) => r.property_id);
+    n.owing = n.balance ?? n.limit_amount ?? 0;
+    n.net_owing = Math.max(0, n.owing - (n.offset_balance || 0));
+  }
+  return loans;
+}
+
+const assetsFor = (contactId) => db.all('SELECT * FROM client_assets WHERE contact_id = ? ORDER BY asset_type, id', contactId);
+
+// Spreads each loan's balance over the properties securing it (by value), so
+// each property gets an LVR even when loans are cross-collateralised.
+function structure(properties, loans) {
+  const active = loans.filter((n) => n.status === 'active');
+  const owned = properties.filter((p) => p.status !== 'sold');
+  const byId = new Map(owned.map((p) => [p.id, { ...p, secured_debt: 0, lenders: new Set(), loan_ids: [] }]));
+
+  for (const n of active) {
+    const secured = n.security_ids.map((id) => byId.get(id)).filter(Boolean);
+    if (!secured.length) continue;
+    const total = secured.reduce((s, p) => s + (p.current_value || 0), 0);
+    for (const p of secured) {
+      const share = total > 0 ? (p.current_value || 0) / total : 1 / secured.length;
+      p.secured_debt += n.owing * share;
+      p.lenders.add(n.lender_display);
+      p.loan_ids.push(n.id);
+    }
+  }
+
+  const props = [...byId.values()].map((p) => {
+    const value = p.current_value || 0;
+    const lvr = value ? Math.round((p.secured_debt / value) * 1000) / 10 : null;
+    return {
+      ...p,
+      lenders: [...p.lenders],
+      secured_debt: Math.round(p.secured_debt),
+      lvr,
+      equity: value ? Math.round(value - p.secured_debt) : null,
+      usable_equity: value ? Math.max(0, Math.round(value * USABLE_EQUITY_LVR - p.secured_debt)) : null,
+      multiple_lenders: p.lenders.size > 1,
+    };
+  });
+
+  const propertyValue = props.reduce((s, p) => s + (p.current_value || 0), 0);
+  const securedDebt = active.filter((n) => n.security_ids.length).reduce((s, n) => s + n.owing, 0);
+  const unsecuredDebt = active.filter((n) => !n.security_ids.length).reduce((s, n) => s + n.owing, 0);
+  const offsets = active.reduce((s, n) => s + (n.offset_balance || 0), 0);
+
+  const groups = new Map();
+  for (const n of active) {
+    if (!groups.has(n.lender_display)) groups.set(n.lender_display, []);
+    groups.get(n.lender_display).push({
+      ...n,
+      cross_collateralised: n.security_ids.length > 1,
+      unsecured: n.security_ids.length === 0,
+    });
+  }
+  return {
+    lenders: [...groups.entries()].map(([name, list]) => ({ name, loans: list, total: list.reduce((s, n) => s + n.owing, 0) })),
+    properties: props,
+    totals: {
+      property_value: propertyValue,
+      secured_debt: securedDebt,
+      unsecured_debt: unsecuredDebt,
+      total_debt: securedDebt + unsecuredDebt,
+      offsets,
+      lvr: propertyValue ? Math.round((securedDebt / propertyValue) * 1000) / 10 : null,
+      equity: propertyValue - securedDebt,
+      usable_equity: props.reduce((s, p) => s + (p.usable_equity || 0), 0),
+    },
+    warnings: [
+      ...active.filter((n) => n.security_ids.length > 1).map((n) => `${n.lender_display} loan${n.account_number ? ` ${n.account_number}` : ''} is cross-collateralised over ${n.security_ids.length} properties`),
+      ...props.filter((p) => p.multiple_lenders).map((p) => `${p.address} secures loans with more than one lender`),
+      ...props.filter((p) => p.lvr > 80).map((p) => `${p.address} is at ${p.lvr}% LVR`),
+      ...props.filter((p) => !p.current_value && p.loan_ids.length).map((p) => `${p.address} has no valuation`),
+    ],
+  };
+}
+
+function summary(contactId) {
+  const properties = propertiesFor(contactId);
+  const loans = loansFor(contactId);
+  const assets = assetsFor(contactId);
+  const s = structure(properties, loans);
+  const otherAssets = assets.reduce((sum, a) => sum + (a.value || 0), 0);
+  return {
+    properties,
+    loans,
+    assets,
+    structure: s,
+    totals: {
+      ...s.totals,
+      other_assets: otherAssets,
+      total_assets: s.totals.property_value + otherAssets + s.totals.offsets,
+      net_position: s.totals.property_value + otherAssets + s.totals.offsets - s.totals.total_debt,
+    },
+    valuation_methods: VALUATION_METHODS,
+  };
+}
+
+function touch(table, id) {
+  db.run(`UPDATE ${table} SET updated_at = ? WHERE id = ?`, nowIso(), id);
+}
+
+module.exports = { createFromDeal, summary, structure, VALUATION_METHODS, methodLabel, touch };

@@ -36,7 +36,18 @@ function bookingLinkFor(userId, contact) {
 }
 
 // Assembles the merge-field context for a contact and/or deal.
-function buildContext({ contactId, dealId, userId, latestDeal = false } = {}) {
+function buildContext({ contactId, dealId, userId, loanId, latestDeal = false } = {}) {
+  let loan = null;
+  if (loanId) {
+    loan = db.one(
+      `SELECT n.*, COALESCE(l.name, n.lender_name) AS lender_name FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id WHERE n.id = ?`,
+      loanId,
+    );
+    if (loan) {
+      contactId = contactId || loan.contact_id;
+      dealId = dealId || loan.deal_id;
+    }
+  }
   let deal = null;
   if (dealId) {
     deal = db.one(
@@ -61,7 +72,7 @@ function buildContext({ contactId, dealId, userId, latestDeal = false } = {}) {
        ORDER BY stage = 'lost', updated_at DESC LIMIT 1`,
       contactId, contactId,
     );
-    if (latest) return buildContext({ contactId, dealId: latest.id, userId });
+    if (latest) return buildContext({ contactId, dealId: latest.id, userId, loanId });
   }
   const contact = contactId ? db.one('SELECT * FROM contacts WHERE id = ?', contactId) : null;
   if (contact) contact.full_name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
@@ -70,6 +81,7 @@ function buildContext({ contactId, dealId, userId, latestDeal = false } = {}) {
   return {
     contact,
     deal,
+    loan,
     broker: broker
       ? {
         ...broker,

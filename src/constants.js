@@ -62,6 +62,7 @@ const EVENT_TRIGGERS = [
 ];
 const SCHEDULED_TRIGGERS = [
   { key: 'schedule.fixed_rate_expiry', label: 'Fixed rate expiring (days_before)' },
+  { key: 'schedule.io_expiry', label: 'Interest-only period ending (days_before)' },
   { key: 'schedule.pre_approval_expiry', label: 'Pre-approval expiring (days_before)' },
   { key: 'schedule.finance_due', label: 'Finance due date approaching (days_before)' },
   { key: 'schedule.settlement_upcoming', label: 'Settlement approaching (days_before)' },

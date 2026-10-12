@@ -3,6 +3,7 @@ const db = require('./index');
 const auth = require('../auth');
 const commissions = require('../services/commissions');
 const documents = require('../services/documents');
+const tracker = require('../services/tracker');
 const { today, addDays, addMonths } = require('../util');
 
 // Sample data so the CRM can be explored straight away. Only runs on an empty
@@ -59,16 +60,46 @@ function seedDemo() {
     deal({ title: 'Mia Jones – investment #2', contact_id: c.mia, loan_purpose: 'investment', property_value: 720000, loan_amount: 576000, lender_id: lender('ANZ'), interest_rate: 6.04, stage: 'settlement_booked', settlement_date: addDays(t0, 2) }, ['lead', 'fact_find', 'application_lodged', 'conditional_approval', 'unconditional_approval']);
 
     const settled = [
-      { title: 'Mia Jones – home loan', contact_id: c.mia, loan_purpose: 'purchase', property_value: 950000, loan_amount: 760000, lender_id: lender('Westpac'), interest_rate: 5.69, rate_type: 'fixed', fixed_expiry_date: addDays(t0, 75), settlement_date: addMonths(t0, -34) },
-      { title: 'Jack Williams – purchase Glenelg', contact_id: c.jack, loan_purpose: 'purchase', property_value: 1100000, loan_amount: 880000, lender_id: lender('Bankwest'), interest_rate: 5.84, settlement_date: addMonths(t0, -12), referral_partner_id: reAgent },
-      { title: 'Grace Martin – refinance', contact_id: c.grace, loan_purpose: 'refinance', property_value: 780000, loan_amount: 450000, lender_id: lender('Suncorp'), interest_rate: 5.95, rate_type: 'split', fixed_expiry_date: addMonths(t0, 8), settlement_date: addMonths(t0, -5) },
+      { title: 'Mia Jones – home loan', contact_id: c.mia, loan_purpose: 'purchase', property_address: '8 King St, Newtown NSW 2042', property_value: 950000, loan_amount: 760000, lender_id: lender('Westpac'), interest_rate: 5.69, rate_type: 'fixed', fixed_expiry_date: addDays(t0, 75), settlement_date: addMonths(t0, -34) },
+      { title: 'Jack Williams – purchase Glenelg', contact_id: c.jack, loan_purpose: 'purchase', property_address: '27 Seaview Tce, Glenelg SA 5045', property_value: 1100000, loan_amount: 880000, lender_id: lender('Bankwest'), interest_rate: 5.84, settlement_date: addMonths(t0, -12), referral_partner_id: reAgent },
+      { title: 'Grace Martin – refinance', contact_id: c.grace, loan_purpose: 'refinance', property_address: '5 Rokeby Rd, Subiaco WA 6008', property_value: 780000, loan_amount: 450000, lender_id: lender('Suncorp'), interest_rate: 5.95, rate_type: 'split', fixed_expiry_date: addMonths(t0, 8), settlement_date: addMonths(t0, -5) },
     ];
     for (const s of settled) {
       const id = deal({ ...s, stage: 'settled', stage_changed_at: `${s.settlement_date}T00:00:00.000Z`, created_at: `${addDays(s.settlement_date, -42)}T00:00:00.000Z` }, ['lead', 'application_lodged', 'unconditional_approval']);
       db.run("UPDATE documents SET status = 'verified' WHERE deal_id = ?", id);
       commissions.generateForDeal(id);
+      tracker.createFromDeal(id);
     }
     db.run("UPDATE commissions SET status = 'received', received_at = period || '-15' WHERE period < ?", t0.slice(0, 7));
+
+    // Mia is an investor: a fuller mortgage-tracker picture.
+    const miaHome = db.one("SELECT id FROM properties WHERE contact_id = ? AND address LIKE '8 King St%'", c.mia).id;
+    const val = (propertyId, monthsAgo, amount, method, provider) => db.insert('valuations', {
+      property_id: propertyId, valuation_date: addMonths(t0, -monthsAgo), amount, method, provider,
+    });
+    val(miaHome, 14, 1050000, 'full', 'Herron Todd White');
+    val(miaHome, 7, 1120000, 'desktop', 'Westpac');
+    val(miaHome, 1, 1185000, 'avm', 'CoreLogic');
+    db.update('properties', miaHome, { property_type: 'house', bedrooms: 3 });
+    const miaUnit = db.insert('properties', {
+      contact_id: c.mia, address: '12/45 Enmore Rd, Newtown NSW 2042', property_type: 'unit', usage: 'investment', bedrooms: 2,
+      purchase_date: addMonths(t0, -52), purchase_price: 560000, rental_income_weekly: 620,
+    });
+    val(miaUnit, 52, 560000, 'contract_price', null);
+    val(miaUnit, 2, 655000, 'avm', 'CoreLogic');
+    const westpac = lender('Westpac');
+    const invLoan = db.insert('loans', {
+      contact_id: c.mia, lender_id: westpac, loan_type: 'investment_loan', account_number: 'WBC-448812', limit_amount: 480000, balance: 476500,
+      balance_date: t0, interest_rate: 6.24, rate_type: 'variable', repayment_type: 'io', io_expiry_date: addDays(t0, 70),
+      repayment_amount: 2478, settlement_date: addMonths(t0, -52), loan_term_years: 30, offset_balance: 18000,
+    });
+    db.run('INSERT INTO loan_securities (loan_id, property_id) VALUES (?, ?), (?, ?)', invLoan, miaHome, invLoan, miaUnit);
+    db.insert('loans', {
+      contact_id: c.mia, lender_name: 'NAB', lender_id: lender('NAB'), loan_type: 'credit_card', limit_amount: 10000, balance: 3200,
+      balance_date: t0, interest_rate: 20.99, arranged_by_us: 0,
+    });
+    db.insert('client_assets', { contact_id: c.mia, asset_type: 'superannuation', institution: 'AustralianSuper', value: 212000, value_date: t0 });
+    db.insert('client_assets', { contact_id: c.mia, asset_type: 'savings', institution: 'ING', description: 'Emergency fund', value: 35000, value_date: t0 });
 
     deal({ title: 'Ethan Clarke – purchase', contact_id: c.ethan, loan_purpose: 'purchase', property_value: 700000, loan_amount: 630000, stage: 'lost', lost_reason: 'Went direct to bank' }, ['lead', 'fact_find']);
 

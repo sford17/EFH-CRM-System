@@ -72,7 +72,7 @@ const ACTIONS = {
     const to = a.to === 'broker' ? ctx.broker?.email : undefined;
     const sendAfter = a.delay_days ? new Date(Date.now() + Number(a.delay_days) * 86400000).toISOString() : undefined;
     const { id, reason } = mailer.queueTemplate(a.template_id, {
-      contactId: ctx.contact?.id, dealId: ctx.deal?.id, automationId: auto.id, sendAfter, to,
+      contactId: ctx.contact?.id, dealId: ctx.deal?.id, loanId: ctx.loan?.id, automationId: auto.id, sendAfter, to,
     });
     return id ? `email #${id} queued` : `email skipped: ${reason}`;
   },
@@ -149,9 +149,9 @@ function hydrate(row) {
 
 // Runs one automation for one entity. Returns the run record, or null if
 // conditions did not match / the run_key was already used.
-function runAutomation(auto, { contactId, dealId, taskId, event = {}, runKey = null } = {}) {
+function runAutomation(auto, { contactId, dealId, taskId, loanId, event = {}, runKey = null } = {}) {
   if (runKey && db.one('SELECT 1 FROM automation_runs WHERE run_key = ?', runKey)) return null;
-  const ctx = buildContext({ contactId, dealId });
+  const ctx = buildContext({ contactId, dealId, loanId });
   ctx.event = event;
   if (taskId) ctx.task = db.one('SELECT * FROM tasks WHERE id = ?', taskId);
   if (!matches(ctx, auto.conditions)) return null;
@@ -173,8 +173,8 @@ function runAutomation(auto, { contactId, dealId, taskId, event = {}, runKey = n
   } finally {
     depth--;
   }
-  const entityType = dealId || ctx.deal ? 'deal' : 'contact';
-  const entityId = ctx.deal?.id ?? ctx.contact?.id ?? null;
+  const entityType = loanId ? 'loan' : dealId || ctx.deal ? 'deal' : 'contact';
+  const entityId = loanId ?? ctx.deal?.id ?? ctx.contact?.id ?? null;
   db.insert('automation_runs', {
     automation_id: auto.id, run_key: runKey, entity_type: entityType, entity_id: entityId, status, detail: results.join('\n'),
   });
@@ -208,6 +208,8 @@ function changeDealStage(dealId, toStage, userId, extra = {}) {
     contact_id: deal.contact_id, deal_id: dealId, user_id: userId, type: 'system',
     body: `Stage changed: ${stageLabel(deal.stage)} → ${stageLabel(toStage)}`,
   });
+  // A settled loan joins the client's mortgage tracker.
+  if (toStage === 'settled') require('./tracker').createFromDeal(dealId);
   emit('deal.stage_changed', { dealId, from_stage: deal.stage, to_stage: toStage });
   return db.one('SELECT * FROM deals WHERE id = ?', dealId);
 }
@@ -218,9 +220,16 @@ const yearOf = (d) => d.slice(0, 4);
 
 // Each finder returns [{ dealId?, contactId?, key }] for the given date.
 const FINDERS = {
+  // Fixed-rate and interest-only expiries come from tracker loans, so they
+  // cover loans arranged elsewhere and details updated after settlement.
   'schedule.fixed_rate_expiry': (cfg, date) => db.all(
-    `SELECT id AS dealId, fixed_expiry_date AS k FROM deals
-     WHERE stage = 'settled' AND rate_type IN ('fixed','split') AND fixed_expiry_date BETWEEN ? AND ?`,
+    `SELECT id AS loanId, contact_id AS contactId, deal_id AS dealId, fixed_expiry_date AS k FROM loans
+     WHERE status = 'active' AND rate_type IN ('fixed','split') AND fixed_expiry_date BETWEEN ? AND ?`,
+    date, addDays(date, cfg.days_before ?? 90),
+  ),
+  'schedule.io_expiry': (cfg, date) => db.all(
+    `SELECT id AS loanId, contact_id AS contactId, deal_id AS dealId, io_expiry_date AS k FROM loans
+     WHERE status = 'active' AND repayment_type = 'io' AND io_expiry_date BETWEEN ? AND ?`,
     date, addDays(date, cfg.days_before ?? 90),
   ),
   'schedule.pre_approval_expiry': (cfg, date) => db.all(
@@ -292,10 +301,11 @@ const FINDERS = {
 // Records scheduled automations that are already due for these records as
 // done, without running them (used after an import so existing clients aren't
 // all messaged at once). Returns how many were held.
-function markScheduledDone({ contactIds = [], dealIds = [] }, detail, date = today()) {
+function markScheduledDone({ contactIds = [], dealIds = [], loanIds = [] }, detail, date = today()) {
   const contacts = new Set(contactIds);
   const deals = new Set(dealIds);
-  if (!contacts.size && !deals.size) return 0;
+  const loans = new Set(loanIds);
+  if (!contacts.size && !deals.size && !loans.size) return 0;
   let held = 0;
   const hold = (auto, entityType, entityId, k) => {
     const runKey = `${auto.id}:${entityType}:${entityId}:${k}`;
@@ -308,7 +318,8 @@ function markScheduledDone({ contactIds = [], dealIds = [] }, detail, date = tod
     const finder = FINDERS[auto.trigger];
     if (!finder) continue;
     for (const row of finder(auto.trigger_config, date)) {
-      if (row.dealId && deals.has(row.dealId)) hold(auto, 'deal', row.dealId, row.k);
+      if (row.loanId) { if (loans.has(row.loanId)) hold(auto, 'loan', row.loanId, row.k); }
+      else if (row.dealId && deals.has(row.dealId)) hold(auto, 'deal', row.dealId, row.k);
       else if (!row.dealId && !row.appointmentId && contacts.has(row.contactId)) hold(auto, 'contact', row.contactId, row.k);
     }
     // "Lead not contacted" would fire a couple of days after import for every
@@ -331,14 +342,14 @@ function runScheduled(date = today()) {
     const finder = FINDERS[auto.trigger];
     if (!finder) continue;
     for (const row of finder(auto.trigger_config, date)) {
-      const entity = row.appointmentId ? `appointment:${row.appointmentId}` : row.dealId ? `deal:${row.dealId}` : `contact:${row.contactId}`;
+      const entity = row.loanId ? `loan:${row.loanId}` : row.appointmentId ? `appointment:${row.appointmentId}` : row.dealId ? `deal:${row.dealId}` : `contact:${row.contactId}`;
       const runKey = `${auto.id}:${entity}:${row.k}`;
       let event = { date };
       if (row.appointmentId) {
         const calendly = require('./calendly'); // lazy: calendly → automation
         event = { ...event, ...calendly.eventContext(db.one('SELECT * FROM appointments WHERE id = ?', row.appointmentId)) };
       }
-      const r = runAutomation(auto, { dealId: row.dealId, contactId: row.contactId, runKey, event });
+      const r = runAutomation(auto, { dealId: row.dealId, contactId: row.contactId, loanId: row.loanId, runKey, event });
       if (r) results.push({ automation: auto.name, entity, ...r });
     }
   }

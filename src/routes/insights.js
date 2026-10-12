@@ -52,15 +52,24 @@ router.get('/dashboard', (req, res) => {
        UNION ALL
        SELECT d.id, d.title, 'Pre-approval expires', d.pre_approval_expiry FROM deals d
          WHERE d.stage = 'pre_approval' AND d.pre_approval_expiry BETWEEN ? AND ? ${ownerSql}
-       UNION ALL
-       SELECT d.id, d.title, 'Fixed rate expires', d.fixed_expiry_date FROM deals d
-         WHERE d.stage = 'settled' AND d.fixed_expiry_date BETWEEN ? AND ? ${ownerSql}
      ) ORDER BY date LIMIT 30`,
     ...OPEN_STAGES, t0, addDays(t0, 30), ...ownerArgs,
     ...OPEN_STAGES, t0, addDays(t0, 30), ...ownerArgs,
     t0, addDays(t0, 30), ...ownerArgs,
-    t0, addDays(t0, 120), ...ownerArgs,
   );
+  // Fixed-rate and interest-only expiries from the mortgage tracker.
+  const loanDates = db.all(
+    `SELECT n.contact_id, c.first_name || ' ' || COALESCE(c.last_name,'') AS title, n.deal_id,
+            CASE WHEN n.repayment_type = 'io' AND n.io_expiry_date BETWEEN ? AND ? THEN 'Interest-only ends' ELSE 'Fixed rate expires' END AS label,
+            CASE WHEN n.repayment_type = 'io' AND n.io_expiry_date BETWEEN ? AND ? THEN n.io_expiry_date ELSE n.fixed_expiry_date END AS date,
+            COALESCE(l.name, n.lender_name) AS lender
+     FROM loans n JOIN contacts c ON c.id = n.contact_id LEFT JOIN lenders l ON l.id = n.lender_id
+     WHERE n.status = 'active' ${mine ? 'AND c.owner_id = ?' : ''}
+       AND ((n.rate_type IN ('fixed','split') AND n.fixed_expiry_date BETWEEN ? AND ?) OR (n.repayment_type = 'io' AND n.io_expiry_date BETWEEN ? AND ?))`,
+    t0, addDays(t0, 120), t0, addDays(t0, 120), ...ownerArgs, t0, addDays(t0, 120), t0, addDays(t0, 120),
+  );
+  keyDates.push(...loanDates.map((r) => ({ ...r, title: `${r.title}${r.lender ? ` – ${r.lender}` : ''}` })));
+  keyDates.sort((a, b) => a.date.localeCompare(b.date));
   const recentActivity = db.all(
     `SELECT a.*, c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name, u.name AS user_name
      FROM activities a LEFT JOIN contacts c ON c.id = a.contact_id LEFT JOIN users u ON u.id = a.user_id

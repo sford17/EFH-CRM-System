@@ -43,7 +43,7 @@ export async function dashboardPage() {
         d.key_dates.length
           ? h('ul.date-list', d.key_dates.map((k) => h('li',
             h('div.date-chip', h('strong', new Date(`${k.date}T00:00:00`).getDate()), h('span', new Date(`${k.date}T00:00:00`).toLocaleString('en-AU', { month: 'short' }))),
-            h('div', h('div', k.label), h('div.muted', link(`#/deals/${k.deal_id}`, k.title), ` · ${relDays(k.date)}`)))))
+            h('div', h('div', k.label), h('div.muted', link(k.deal_id ? `#/deals/${k.deal_id}` : `#/contacts/${k.contact_id}?tab=tracker`, k.title), ` · ${relDays(k.date)}`)))))
           : h('p.empty', 'No finance, settlement or expiry dates coming up.')),
       h('section.card', h('h2', 'Pipeline by stage (loan volume)'),
         barList(d.by_stage.map((s) => ({ label: s.label, value: s.volume, note: `${s.count} deal${s.count === 1 ? '' : 's'}` })), { format: money }))),

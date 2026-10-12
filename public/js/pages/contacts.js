@@ -9,6 +9,7 @@ import {
 import { emailsCard, composeDialog } from './email.js';
 import { smsCard, smsDialog } from './sms.js';
 import { contactAppointmentsCard, bookingLinkDialog } from './calendar.js';
+import { trackerTab } from './tracker.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -61,6 +62,7 @@ export async function contactsPage() {
 
 export async function contactPage(id) {
   const c = await api(`/contacts/${id}`);
+  const tab = window.routeQuery?.get('tab') === 'tracker' ? 'tracker' : 'overview';
   const edit = () => formModal(`Edit ${fullName(c)}`, contactFields(), c, async (v) => {
     await attempt(() => api(`/contacts/${id}`, { method: 'PATCH', body: v }), 'Saved');
     refresh();
@@ -84,7 +86,10 @@ export async function contactPage(id) {
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ contactId: c.id }) }, 'Send template'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
         h('button.danger.ghost', { type: 'button', onclick: remove }, 'Delete'))),
-    h('div.detail-grid',
+    h('nav.tabs', { 'aria-label': 'Contact sections' },
+      h(`a${tab === 'overview' ? '.active' : ''}`, { href: `#/contacts/${c.id}`, 'aria-current': tab === 'overview' ? 'page' : undefined }, 'Overview'),
+      h(`a${tab === 'tracker' ? '.active' : ''}`, { href: `#/contacts/${c.id}?tab=tracker`, 'aria-current': tab === 'tracker' ? 'page' : undefined }, 'Mortgage tracker')),
+    tab === 'tracker' ? await trackerTab(c) : h('div.detail-grid',
       h('div.col-side',
         h('section.card', h('h2', 'Details'), h('dl.info',
           info('Owner', c.owner_name),

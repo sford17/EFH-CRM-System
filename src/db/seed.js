@@ -2,6 +2,7 @@
 const db = require('./index');
 const { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_TEMPLATE } = require('./sms-defaults');
 const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
+const { IO_EXPIRY_AUTOMATION } = require('./tracker-defaults');
 
 // Indicative commission rates; edit them on the Lenders page to match your
 // aggregator's schedule.
@@ -38,8 +39,8 @@ const TEMPLATES = [
     `Hi {{contact.first_name}},\n\nCongratulations – your loan has settled! It's been a pleasure helping you.\n\nYour first repayment will be scheduled by {{deal.lender_name}}. I'll check in over the coming months and review your loan each year to make sure it stays competitive.${SIGNOFF}`],
   ['Review request', 'marketing', 'How did we do, {{contact.first_name}}?',
     `Hi {{contact.first_name}},\n\nNow that you've settled in, I'd love to hear how you found the process. If you were happy, a quick Google review would mean a lot – and if you know anyone thinking about buying or refinancing, I'd be glad to help them too.${SIGNOFF}`],
-  ['Fixed rate expiry review', 'retention', 'Your fixed rate ends on {{deal.fixed_expiry_date|date}}',
-    `Hi {{contact.first_name}},\n\nYour fixed rate with {{deal.lender_name}} ends on {{deal.fixed_expiry_date|date}}. When it does, the loan will roll onto the lender's standard variable rate, which is often higher.\n\nLet's book a quick review so we can compare your options – re-fixing, going variable, or refinancing.${SIGNOFF}`],
+  ['Fixed rate expiry review', 'retention', 'Your fixed rate ends on {{loan.fixed_expiry_date|date}}',
+    `Hi {{contact.first_name}},\n\nYour fixed rate with {{loan.lender_name}} ends on {{loan.fixed_expiry_date|date}}. When it does, the loan will roll onto the lender's standard variable rate, which is often higher.\n\nLet's book a quick review so we can compare your options – re-fixing, going variable, or refinancing.${SIGNOFF}`],
   ['Annual loan review', 'retention', 'Time for your annual home loan health check',
     `Hi {{contact.first_name}},\n\nIt's been another year since your loan settled. Rates and lender offers change all the time, so I'd like to do a quick health check to make sure you're still on a sharp rate. Reply with a time that suits for a 15-minute call.${SIGNOFF}`],
   ['Birthday', 'marketing', 'Happy birthday, {{contact.first_name}}!',
@@ -129,9 +130,10 @@ const AUTOMATIONS = [
     description: 'Retention: contact clients before their fixed rate rolls to the revert rate.',
     actions: [
       { type: 'send_email', template: 'Fixed rate expiry review' },
-      { type: 'create_task', title: 'Fixed rate review: {{contact.full_name}} ({{deal.lender_name}}, expires {{deal.fixed_expiry_date|date}})', due_in_days: 0, priority: 'high' },
+      { type: 'create_task', title: 'Fixed rate review: {{contact.full_name}} ({{loan.lender_name}}, expires {{loan.fixed_expiry_date|date}})', due_in_days: 0, priority: 'high' },
     ],
   },
+  IO_EXPIRY_AUTOMATION,
   {
     name: 'Pre-approval expiring in 14 days', trigger: 'schedule.pre_approval_expiry', trigger_config: { days_before: 14 },
     actions: [

@@ -28,6 +28,12 @@ test('setup is refused once a user exists', async () => {
 test('state-changing requests must be JSON (CSRF defence)', async () => {
   const r = await api.raw('POST', '/contacts', undefined, { 'Content-Type': 'application/x-www-form-urlencoded' });
   assert.equal(r.status, 415);
+  const formDelete = await api.raw('DELETE', '/contacts/1', undefined, { 'Content-Type': 'application/x-www-form-urlencoded' });
+  assert.equal(formDelete.status, 415);
+  // Delete buttons send no body at all, and must work.
+  const c = (await api.post('/contacts', { first_name: 'Temp', status: 'lead' })).data;
+  assert.equal((await api.del(`/contacts/${c.id}`)).status, 200);
+  assert.equal((await api.get(`/contacts/${c.id}`)).status, 404);
 });
 
 test('new lead triggers welcome email, call task and notification', async () => {
@@ -97,6 +103,7 @@ test('scheduled automations fire once per record and date', async () => {
     contact_id: contact.id, loan_amount: 400000, lender_id: lender.id, rate_type: 'fixed', fixed_expiry_date: addDays(t0, 60),
   })).data;
   db.run("UPDATE deals SET stage = 'settled', settlement_date = ? WHERE id = ?", addMonths(t0, -24), fixed.id);
+  require('../src/services/tracker').createFromDeal(fixed.id);
 
   const first = (await api.post('/automations/run-scheduled')).data.results;
   const names = first.map((r) => r.automation);
@@ -106,7 +113,9 @@ test('scheduled automations fire once per record and date', async () => {
   assert.ok(db.one("SELECT 1 FROM tasks WHERE deal_id = ? AND title LIKE 'Fixed rate review:%'", fixed.id));
 
   const second = (await api.post('/automations/run-scheduled')).data.results;
-  assert.equal(second.filter((r) => r.entity === `deal:${fixed.id}`).length, 0, 'not repeated');
+  const loan = db.one('SELECT id FROM loans WHERE deal_id = ?', fixed.id);
+  assert.ok(first.some((r) => r.entity === `loan:${loan.id}`), 'fixed-rate reminder comes from the tracker loan');
+  assert.equal(second.filter((r) => r.entity === `loan:${loan.id}` || r.entity === `deal:${fixed.id}`).length, 0, 'not repeated');
 });
 
 test('stale lead and stale deal automations', async () => {
