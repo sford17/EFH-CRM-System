@@ -477,3 +477,14 @@ fieldset.securities legend { font-size: .82rem; color: var(--text-2); font-weigh
   .ls-gap, .ls-lines { display: none; }
 }
 .card-head .actions select { width: auto; }
+
+/* Lending review editor */
+.review-layout { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.25fr); gap: 1rem; align-items: start; }
+.review-preview { position: sticky; top: 70px; }
+.review-frame { width: 100%; height: calc(100vh - 110px); min-height: 520px; border: 1px solid var(--border); border-radius: 10px; background: #f3f4f6; }
+.review-section { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1.1rem; }
+.review-section:last-child { margin-bottom: 0; }
+.review-section-head { display: flex; justify-content: space-between; align-items: baseline; }
+.review-section h3 { margin: 0; }
+.review-status { margin-top: .5rem; text-align: right; }
+@media (max-width: 1100px) { .review-layout { grid-template-columns: 1fr; } .review-preview { position: static; } .review-frame { height: 640px; } }

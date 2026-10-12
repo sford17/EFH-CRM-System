@@ -21,10 +21,11 @@ function getTransport() {
   return transport;
 }
 
-function queueEmail({ to, subject, body, contactId = null, dealId = null, templateId = null, automationId = null, sendAfter = null, senderUserId = null }) {
+function queueEmail({ to, subject, body, contactId = null, dealId = null, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
   if (!to) throw new Error('Recipient has no email address');
   return db.insert('outbox', {
     sender_user_id: senderUserId,
+    attachments: attachments?.length ? JSON.stringify(attachments.map((a) => ({ filename: a.filename, mime: a.mime, data: Buffer.from(a.data).toString('base64') }))) : null,
     to_email: to,
     subject,
     body,
@@ -103,18 +104,22 @@ async function processDue() {
       const senderId = senderFor(mail);
       const account = senderId ? outlook.accountForUser(senderId) : null;
       const email = buildEmail({ body: mail.body, senderUserId: senderId });
+      const files = mail.attachments ? JSON.parse(mail.attachments).map((a) => ({ ...a, data: Buffer.from(a.data, 'base64') })) : [];
       if (account) {
-        const sent = await outlook.sendMail(account, { to: mail.to_email, subject: mail.subject, email });
+        const sent = await outlook.sendMail(account, { to: mail.to_email, subject: mail.subject, email, files });
         db.update('outbox', mail.id, { status: 'sent', sent_via: 'outlook', sent_at: nowIso(), error: null });
         outlook.recordEmail(account, {
           graphId: sent.graphId, conversationId: sent.conversationId, direction: 'out',
           fromEmail: account.email, fromName: account.display_name, to: sent.to, cc: [],
-          subject: mail.subject, body: mail.body, preview: null, hasAttachments: false, webLink: sent.webLink, sentAt: nowIso(),
+          subject: mail.subject, body: mail.body, preview: null, hasAttachments: files.length > 0, webLink: sent.webLink, sentAt: nowIso(),
         }, { contactIds: [mail.contact_id], dealId: mail.deal_id });
       } else if (t) {
         await t.sendMail({
           from, to: mail.to_email, subject: mail.subject, text: email.text, html: email.html,
-          attachments: email.attachments.map((a) => ({ filename: a.filename, content: a.data, contentType: a.mime, cid: a.cid })),
+          attachments: [
+            ...email.attachments.map((a) => ({ filename: a.filename, content: a.data, contentType: a.mime, cid: a.cid })),
+            ...files.map((a) => ({ filename: a.filename, content: a.data, contentType: a.mime })),
+          ],
         });
         db.update('outbox', mail.id, { status: 'sent', sent_via: 'smtp', sent_at: nowIso(), error: null });
         logActivity(mail, 'Email sent');

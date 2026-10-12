@@ -286,13 +286,16 @@ function onInbound(account, msg, saved) {
 // ---- Sending & replying ----------------------------------------------------
 
 // `email` is the output of emailHtml.buildEmail (html + inline images).
-async function sendMail(account, { to, subject, email }) {
+async function sendMail(account, { to, subject, email, files = [] }) {
   const recipients = String(to).split(/[;,]/).map((s) => s.trim()).filter(Boolean);
   const draft = await graph(account.id, 'POST', '/me/messages', {
     subject,
     body: { contentType: 'HTML', content: email.html },
     toRecipients: recipients.map((a) => ({ emailAddress: { address: a } })),
-    attachments: email.attachments.map(graphAttachment),
+    attachments: [
+      ...email.attachments.map(graphAttachment),
+      ...files.map((f) => ({ '@odata.type': '#microsoft.graph.fileAttachment', name: f.filename, contentType: f.mime, contentBytes: f.data.toString('base64'), isInline: false })),
+    ],
   });
   await graph(account.id, 'POST', `/me/messages/${encodeURIComponent(draft.id)}/send`);
   return {

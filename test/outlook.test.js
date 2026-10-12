@@ -209,6 +209,21 @@ test('emails sent from the CRM go out through Outlook and are logged once', asyn
   assert.equal((await api.post('/outbox', { contact_id: noEmail.id, subject: 'x', body: 'y' })).status, 400);
 });
 
+test('file attachments (e.g. a review PDF) go out as regular attachments', async () => {
+  const mailer = require('../src/services/mailer');
+  const client = db.one("SELECT id FROM contacts WHERE email = 'Client@Example.com'");
+  const user = db.one("SELECT id FROM users WHERE email = 'admin@test.local'");
+  mailer.queueEmail({ to: 'Client@Example.com', subject: 'Your review', body: 'Attached.', contactId: client.id, senderUserId: user.id,
+    attachments: [{ filename: 'Review.pdf', mime: 'application/pdf', data: Buffer.from('%PDF-1.3 test') }] });
+  await mailer.processOutbox();
+  const draft = fake.sent.at(-1);
+  const file = draft.attachments.find((a) => a.name === 'Review.pdf');
+  assert.ok(file, 'attachment sent');
+  assert.equal(file.isInline, false);
+  assert.equal(Buffer.from(file.contentBytes, 'base64').toString(), '%PDF-1.3 test');
+  assert.equal(db.one("SELECT has_attachments FROM emails WHERE subject = 'Your review'").has_attachments, 1);
+});
+
 test('replying from the CRM uses the Outlook conversation', async () => {
   const inbound = db.one("SELECT id FROM emails WHERE graph_id = 'in-1'");
   assert.equal((await api.post(`/emails/${inbound.id}/reply`, { body: '  ' })).status, 400);

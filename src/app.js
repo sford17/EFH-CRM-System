@@ -64,6 +64,7 @@ function createApp() {
   app.use('/api/sms', require('./routes/sms'));
   app.use('/api/import', require('./routes/import'));
   app.use('/api/tracker', require('./routes/tracker'));
+  app.use('/api/reviews', require('./routes/reviews'));
   const calendar = require('./routes/calendar');
   app.use('/api/calendly', calendar.calendlyRouter);
   app.use('/api/appointments', calendar.appointments);

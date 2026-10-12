@@ -360,6 +360,31 @@ MIGRATIONS.push(
   },
 );
 
+MIGRATIONS.push(
+  // 7. Client lending review documents; email attachments
+  `
+  CREATE TABLE reviews (
+    id                  INTEGER PRIMARY KEY,
+    contact_id          INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    title               TEXT NOT NULL DEFAULT 'Client Lending Review',
+    review_date         TEXT NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','sent')),
+    snapshot            TEXT NOT NULL,
+    loan_review         TEXT,
+    actions_to_consider TEXT,
+    broker_to_action    TEXT,
+    next_steps          TEXT,
+    created_by          INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sent_at             TEXT,
+    sent_to             TEXT,
+    created_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_reviews_contact ON reviews(contact_id);
+  ALTER TABLE outbox ADD COLUMN attachments TEXT; -- JSON [{ filename, mime, data (base64) }]
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.addSmsDefaults = addSmsDefaults;
 module.exports.addCalendarDefaults = addCalendarDefaults;

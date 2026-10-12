@@ -64,7 +64,7 @@ outbox.get('/', (req, res) => {
        FROM outbox o LEFT JOIN contacts c ON c.id = o.contact_id LEFT JOIN automations a ON a.id = o.automation_id
        ${where} ORDER BY o.id DESC LIMIT 300`,
       ...params,
-    ),
+    ).map(({ attachments, ...m }) => ({ ...m, attachment_names: attachments ? JSON.parse(attachments).map((a) => a.filename) : [] })),
   });
 });
 

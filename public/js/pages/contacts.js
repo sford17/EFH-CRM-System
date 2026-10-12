@@ -10,6 +10,7 @@ import { emailsCard, composeDialog } from './email.js';
 import { smsCard, smsDialog } from './sms.js';
 import { contactAppointmentsCard, bookingLinkDialog } from './calendar.js';
 import { trackerTab } from './tracker.js';
+import { reviewsCard, startReview } from './review.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -83,13 +84,14 @@ export async function contactPage(id) {
         c.mobile ? h('a.button.secondary', { href: `tel:${c.mobile.replace(/\s/g, '')}` }, 'Call') : null,
         c.mobile ? h('button.secondary', { type: 'button', onclick: () => smsDialog({ contactId: c.id, mobile: c.mobile, name: c.first_name }) }, 'SMS') : null,
         h('button.secondary', { type: 'button', onclick: () => bookingLinkDialog({ contact: c }) }, 'Booking link'),
+        h('button.secondary', { type: 'button', onclick: () => startReview(c.id) }, 'Lending review'),
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ contactId: c.id }) }, 'Send template'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
         h('button.danger.ghost', { type: 'button', onclick: remove }, 'Delete'))),
     h('nav.tabs', { 'aria-label': 'Contact sections' },
       h(`a${tab === 'overview' ? '.active' : ''}`, { href: `#/contacts/${c.id}`, 'aria-current': tab === 'overview' ? 'page' : undefined }, 'Overview'),
       h(`a${tab === 'tracker' ? '.active' : ''}`, { href: `#/contacts/${c.id}?tab=tracker`, 'aria-current': tab === 'tracker' ? 'page' : undefined }, 'Mortgage tracker')),
-    tab === 'tracker' ? await trackerTab(c) : h('div.detail-grid',
+    tab === 'tracker' ? h('div', await trackerTab(c), reviewsCard(c.id, c.reviews)) : h('div.detail-grid',
       h('div.col-side',
         h('section.card', h('h2', 'Details'), h('dl.info',
           info('Owner', c.owner_name),
@@ -118,7 +120,8 @@ export async function contactPage(id) {
           taskTable(c.tasks)),
         emailsCard({ mail: c.mail, outbox: c.emails, contactId: c.id, to: c.email }),
         smsCard({ sms: c.sms, contactId: c.id, mobile: c.mobile, name: c.first_name }),
-        contactAppointmentsCard(c)),
+        contactAppointmentsCard(c),
+        reviewsCard(c.id, c.reviews)),
       h('div.col-main',
         h('section.card', h('h2', 'Activity'), timeline(c.activities, { contactId: c.id })))));
 }

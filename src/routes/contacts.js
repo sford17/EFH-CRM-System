@@ -85,6 +85,10 @@ router.get('/:id', (req, res) => {
      WHERE a.contact_id = ? ORDER BY a.start_at DESC LIMIT 30`,
     id,
   );
+  contact.reviews = db.all(
+    'SELECT id, title, review_date, status, sent_at, sent_to, updated_at FROM reviews WHERE contact_id = ? ORDER BY review_date DESC, id DESC',
+    id,
+  );
   contact.sms = db.all('SELECT id, body, status, error, from_number, send_after, sent_at FROM sms_messages WHERE contact_id = ? ORDER BY id DESC LIMIT 50', id);
   res.json(contact);
 });

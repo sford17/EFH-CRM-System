@@ -12,6 +12,7 @@ import { calculatorsPage } from './pages/calculators.js';
 import { inboxPage } from './pages/email.js';
 import { calendarPage } from './pages/calendar.js';
 import { importPage } from './pages/import.js';
+import { reviewPage } from './pages/review.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
@@ -37,6 +38,7 @@ const ROUTES = [
   [/^\/pipeline$/, pipelinePage],
   [/^\/contacts$/, contactsPage],
   [/^\/import$/, importPage],
+  [/^\/reviews\/(\d+)$/, reviewPage],
   [/^\/contacts\/(\d+)$/, contactPage],
   [/^\/deals$/, dealsPage],
   [/^\/deals\/(\d+)$/, dealPage],

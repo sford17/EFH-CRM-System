@@ -17,6 +17,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
 | **Mortgage tracker** | A tab on each contact covering their properties, valuation history by method (full, desktop, kerbside, AVM, contract price…), loans and the properties securing them, and other assets. Shows LVR, equity, usable equity and net position, plus a lending structure diagram that flags cross-collateralisation and LVRs over 80% |
+| **Client lending reviews** | A branded review document built from the mortgage tracker, with four commentary sections (Loan Review, Actions to Consider, Broker to Action, Next Steps) pre-filled with suggestions. Preview it live, download as PDF or Word, or email it to the client with the PDF attached |
 | **Calendar (Calendly)** | Calendly bookings appear on a Calendar page, the dashboard and each client's record. Bookings are matched to clients (newcomers become leads), cancellations get a follow-up task, and a **Booking link** button copies, emails or texts a pre-filled Calendly link |
 | **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Emails are sent as formatted HTML with your logo, brand colour and each sender's own signature, with images embedded |
 | **Email templates** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
@@ -62,6 +63,15 @@ Open a contact and choose the **Mortgage tracker** tab.
 - **Lending structure:** lenders and their loans on one side, properties on the other, with lines showing the security. A loan secured by several properties is spread across them by value, so each property gets its own LVR, equity and usable equity (to 80% LVR). Cross-collateralisation, a property securing loans with more than one lender, LVRs over 80% and properties without a valuation are flagged. Hover a loan or property to highlight what it's connected to.
 
 When a deal settles, its loan, security property and recorded value are added to the tracker automatically. Imported settled loans are added too. **Fixed-rate expiry** reminders run from tracker loans, so they also cover loans arranged elsewhere or refixed since. There's also an **Interest-only period ending** reminder (90 days ahead by default). Templates can use `{{loan.lender_name}}`, `{{loan.fixed_expiry_date|date}}`, `{{loan.io_expiry_date|date}}`, `{{loan.balance|money}}` and `{{loan.interest_rate}}`.
+
+## Client lending reviews
+
+On a contact, click **Lending review** (or **+ New review** under *Lending reviews*). The review takes a snapshot of the client's mortgage tracker, so the document shows the figures as at the review date even if the tracker changes later. Use *refresh from the mortgage tracker* to update the figures; your commentary is kept.
+
+- **The document** includes your logo, colours and business details; a position summary (property value, total lending, LVR, usable equity, net position); a loans table; the lending structure diagram; property LVRs; valuations by method; other assets; and a general-information disclaimer with your ACL / credit representative number.
+- **Commentary:** there are four sections: *Loan Review*, *Actions to Consider*, *Broker to Action* (shown to the client as "What we'll do") and *Next Steps*. They start with suggestions drawn from the figures, covering fixed-rate and interest-only expiries, cross-collateralisation, LVRs over 80%, rates worth repricing, expensive unsecured debt, usable equity, savings without an offset, and valuations older than 12 months. Edit them freely, and use "-" or "•" for bullet points. The preview updates as you type.
+- **Download** as **PDF** or **Word** (.docx, editable).
+- **Email to client** sends the PDF as an attachment from your Outlook, with your signature added. The review is marked *Sent*, a timeline entry is added, and the client's next review date is set 12 months out if they don't already have a future one.
 
 ## Importing existing clients
 
