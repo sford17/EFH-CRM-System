@@ -43,7 +43,7 @@ const TEMPLATE_SMS = {
 
 const RATE_REDUCTION_TEMPLATE = [
   'Rate reduction', 'retention', 'Good news: rates have come down',
-  `Hi {{contact.first_name}},\n\nInterest rates have come down, and I want to make sure you get the full benefit on your home loan.\n\nLenders don't always pass on reductions in full, and new customers are often offered sharper rates than existing ones. I can check your current rate, ask your lender for a better deal, and compare it against other lenders - at no cost to you.\n\nReply to this email or give me a call and we'll get it sorted.\n\nKind regards,\n{{broker.name}}\n{{business.name}}\n{{broker.phone}}`,
+  `Hi {{contact.first_name}},\n\nInterest rates have come down, and I want to make sure you get the full benefit on your home loan.\n\nLenders don't always pass on reductions in full, and new customers are often offered sharper rates than existing ones. I can check your current rate, ask your lender for a better deal, and compare it against other lenders - at no cost to you.\n\nReply to this email or give me a call and we'll get it sorted.\n\nKind regards,`,
 ];
 
 module.exports = { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_TEMPLATE };

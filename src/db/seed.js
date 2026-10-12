@@ -11,7 +11,8 @@ const LENDERS = [
   ['Bank of Queensland', 0.65, 0.15, 24], ['Pepper Money', 0.65, 0.15, 24], ['Liberty', 0.65, 0.15, 24],
 ];
 
-const SIGNOFF = `\n\nKind regards,\n{{broker.name}}\n{{business.name}}\n{{broker.phone}}`;
+// The sender's email signature is added after this when the email is sent.
+const SIGNOFF = '\n\nKind regards,';
 
 const TEMPLATES = [
   ['Welcome – new enquiry', 'onboarding', 'Thanks for getting in touch, {{contact.first_name}}',

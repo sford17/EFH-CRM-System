@@ -14,7 +14,12 @@ const LOCK_MS = 15 * 60 * 1000;
 
 router.get('/status', (req, res) => {
   const hasUsers = !!db.one('SELECT 1 FROM users LIMIT 1');
-  res.json({ needs_setup: !hasUsers, user: auth.sessionUser(req) });
+  const brand = require('../services/branding').getBrand();
+  res.json({
+    needs_setup: !hasUsers,
+    user: auth.sessionUser(req),
+    brand: { business_name: brand.business_name, logo: brand.logo?.url || null, version: brand.version },
+  });
 });
 
 // Creates the first admin account. Only works while there are no users.

@@ -169,7 +169,7 @@ test('template preview renders merge fields', async () => {
   assert.match(p.body, /Hi Pat/);
   assert.match(p.body, /\$750,000/);
   assert.match(p.body, /1 December 2026/);
-  assert.match(p.body, /Admin User/);
+  assert.match(p.body, /Kind regards,$/, 'signature is added at send time, not in the template');
 });
 
 test('outbox processes due emails without SMTP', async () => {

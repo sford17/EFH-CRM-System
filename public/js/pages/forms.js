@@ -153,8 +153,14 @@ export async function sendTemplateDialog({ contactId, dealId }) {
   const select = h('select', { 'aria-label': 'Template' }, h('option', { value: '' }, 'Choose a template…'), rows.map((t) => h('option', { value: t.id }, `${t.name} (${label(t.category || 'general')})`)));
   const preview = h('div.email-preview', h('p.muted', 'Choose a template to preview it.'));
   const sendBtn = h('button', { type: 'button', disabled: true }, 'Send email');
+  const previewBtn = h('button.secondary', {
+    type: 'button',
+    disabled: true,
+    onclick: async () => (await import('./branding.js')).previewEmail({ template_id: select.value, contact_id: contactId, deal_id: dealId }),
+  }, 'Preview as email');
   select.addEventListener('change', async () => {
     sendBtn.disabled = !select.value;
+    previewBtn.disabled = !select.value;
     if (!select.value) return;
     const p = await api(`/templates/${select.value}/preview`, { method: 'POST', body: { contact_id: contactId, deal_id: dealId } });
     preview.replaceChildren(h('div.muted', `To: ${p.to || '(no email address)'}`), h('h3', p.subject), h('pre', p.body),
@@ -165,7 +171,7 @@ export async function sendTemplateDialog({ contactId, dealId }) {
     dialog.close();
     refresh();
   });
-  const dialog = modal('Send email', [select, preview, h('div.actions', sendBtn)], { wide: true });
+  const dialog = modal('Send email', [select, preview, h('div.actions', previewBtn, sendBtn)], { wide: true });
 }
 
 export { refresh, link };

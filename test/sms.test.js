@@ -156,9 +156,10 @@ test('upgrading an existing install adds SMS to the default automations', () => 
   db.run("DELETE FROM email_templates WHERE name = 'Rate reduction'");
   db.run('UPDATE email_templates SET sms_body = NULL');
   db.get().exec(`DROP TABLE sms_messages; ALTER TABLE contacts DROP COLUMN sms_opt_out; ALTER TABLE users DROP COLUMN sms_from;
-    ALTER TABLE email_templates DROP COLUMN sms_body; PRAGMA user_version = 1;`);
+    ALTER TABLE email_templates DROP COLUMN sms_body; DROP TABLE assets; ALTER TABLE users DROP COLUMN signature_html;
+    PRAGMA user_version = 1;`);
   db.migrate();
-  assert.equal(db.one('PRAGMA user_version').user_version, 2);
+  assert.equal(db.one('PRAGMA user_version').user_version, require('../src/db/migrations').length);
   const withSms = db.all("SELECT name FROM automations WHERE actions LIKE '%send_sms%'").map((r) => r.name);
   for (const name of Object.keys(STAGE_SMS)) assert.ok(withSms.includes(name), name);
   assert.ok(withSms.includes('Client birthday'));

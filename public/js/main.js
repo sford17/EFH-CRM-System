@@ -52,13 +52,30 @@ const ROUTES = [
 
 const app = document.getElementById('app');
 
+// Logo (or text mark) for the sidebar and sign-in page.
+function brandMark(large = false) {
+  const b = state.brand || {};
+  if (b.logo) return h(`div.${large ? 'brand-lg' : 'brand'}`, h(`img.${large ? 'brand-logo-lg' : 'brand-logo'}`, { src: `${b.logo}?v=${b.version}`, alt: b.business_name || 'Logo' }));
+  return h(`div.${large ? 'brand-lg' : 'brand'}`, h('span.logo', 'EFH'), h('span', 'CRM'));
+}
+
+// Reloads /brand.css and the logo after branding changes.
+export function reloadBranding(brand) {
+  const link = document.getElementById('brand-css');
+  if (link) link.href = `/brand.css?v=${Date.now()}`;
+  state.brand = { ...state.brand, logo: brand.logo?.url || null, version: brand.version, business_name: brand.business_name };
+  const old = document.querySelector('.sidebar .brand');
+  if (old) old.replaceWith(brandMark());
+}
+window.addEventListener('crm:branding', (e) => reloadBranding(e.detail));
+
 function authScreen(needsSetup) {
   const fields = needsSetup
     ? [['business_name', 'Business name', 'text'], ['name', 'Your name', 'text'], ['email', 'Email', 'email'], ['password', 'Password (8+ characters)', 'password']]
     : [['email', 'Email', 'email'], ['password', 'Password', 'password']];
   const form = h('form.auth-card',
-    h('div.brand-lg', h('span.logo', 'EFH'), h('span', 'CRM')),
-    h('h1', needsSetup ? 'Set up your CRM' : 'Sign in'),
+    brandMark(true),
+    h('h1', needsSetup ? 'Set up your CRM' : `Sign in${state.brand?.business_name && !needsSetup ? ` to ${state.brand.business_name}` : ''}`),
     needsSetup ? h('p.muted', 'Create the first administrator account.') : null,
     fields.map(([name, text, type]) => h('div.field', h('label', { for: `a_${name}` }, text),
       h('input', { id: `a_${name}`, name, type, required: name !== 'business_name', autocomplete: type === 'password' ? (needsSetup ? 'new-password' : 'current-password') : name }))),
@@ -102,7 +119,7 @@ function shell() {
 
   clear(app).append(
     h('nav.sidebar',
-      h('div.brand', h('span.logo', 'EFH'), h('span', 'CRM')),
+      brandMark(),
       h('ul', NAV.map(([href, text, icon]) => h('li', h('a', { href, dataset: { nav: href } }, h('span.nav-icon', { 'aria-hidden': 'true' }, icon), text)))),
       h('div.user-box', h('div', h('strong', state.user.name), h('div.muted', state.user.role)),
         h('button.link', { type: 'button', onclick: logout }, 'Sign out'))),
@@ -165,6 +182,7 @@ async function route() {
 
 async function boot() {
   const status = await api('/auth/status');
+  state.brand = status.brand;
   if (!status.user) {
     authScreen(status.needs_setup);
     return;

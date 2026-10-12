@@ -2,6 +2,7 @@
 import {
   api, h, modal, attempt, toast, dateTime, pageHeader, table, field, readForm, state,
 } from '../core.js';
+import { previewEmail } from './branding.js';
 
 const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 const arrow = (dir) => h(`span.mail-dir.${dir}`, { title: dir === 'in' ? 'Received' : 'Sent' }, dir === 'in' ? '↙' : '↗');
@@ -68,10 +69,14 @@ export async function composeDialog({ contactId, dealId, to }) {
     form.elements.body.value = p.body;
   });
   const via = status.account?.connected
-    ? h('p.muted.small', `Sends from your Outlook (${status.account.email}) and appears in your Sent Items.`)
+    ? h('p.muted.small', `Sends from your Outlook (${status.account.email}) and appears in your Sent Items. Your signature is added automatically.`)
     : h('p.small.text-warn', 'Your Outlook isn\'t connected, so this will only be logged, not sent. Connect it in Settings.');
   const send = h('button', { type: 'submit' }, 'Send');
-  form.append(h('div.actions.full', send));
+  const preview = h('button.secondary', {
+    type: 'button',
+    onclick: () => previewEmail({ subject: form.elements.subject.value, body: form.elements.body.value || ' ' }),
+  }, 'Preview');
+  form.append(h('div.actions.full', preview, send));
   const d = modal('New email', [templateSel, form, via], { wide: true });
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();

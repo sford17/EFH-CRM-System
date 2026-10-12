@@ -21,6 +21,10 @@
   --grid: #e1e0d9;
   --sidebar: #12213a;
   --sidebar-text: #c9d3e3;
+  --sidebar-strong: #ffffff;
+  --sidebar-hover: rgba(255,255,255,.07);
+  --sidebar-active: rgba(91,155,240,.22);
+  --on-accent: #ffffff;
   --radius: 10px;
   --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -80,7 +84,7 @@ pre { white-space: pre-wrap; font-family: inherit; margin: 0; }
 
 /* Buttons & inputs */
 button, .button {
-  font: inherit; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  font: inherit; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
   padding: .5rem .9rem; border-radius: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem;
   text-decoration: none; white-space: nowrap;
 }
@@ -88,7 +92,7 @@ button:hover, .button:hover { background: var(--accent-hover); text-decoration: 
 button:disabled { opacity: .55; cursor: not-allowed; }
 button.secondary, .button.secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
 button.secondary:hover, .button.secondary:hover { background: var(--surface-2); }
-button.danger { background: var(--danger); border-color: var(--danger); }
+button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 button.danger.ghost { background: transparent; color: var(--danger); border-color: var(--border); }
 button.small, .button.small { padding: .3rem .6rem; font-size: .82rem; }
 button.link { background: none; border: none; color: var(--accent); padding: 0; font-weight: 500; }
@@ -111,16 +115,18 @@ textarea { resize: vertical; }
   position: fixed; inset: 0 auto 0 0; width: 230px; background: var(--sidebar); color: var(--sidebar-text);
   display: flex; flex-direction: column; padding: 1rem .75rem; overflow-y: auto; z-index: 20;
 }
-.brand, .brand-lg { display: flex; align-items: center; gap: .5rem; font-weight: 700; font-size: 1.1rem; color: #fff; padding: 0 .5rem 1rem; }
+.brand, .brand-lg { display: flex; align-items: center; gap: .5rem; font-weight: 700; font-size: 1.1rem; color: var(--sidebar-strong); padding: 0 .5rem 1rem; }
+.brand-logo { max-height: 44px; max-width: 170px; object-fit: contain; background: #fff; border-radius: 8px; padding: 4px 8px; }
+.brand-logo-lg { max-height: 72px; max-width: 260px; object-fit: contain; display: block; margin: 0 auto; }
 .brand-lg { color: var(--text); font-size: 1.4rem; justify-content: center; }
-.logo { background: var(--accent); color: #fff; border-radius: 8px; padding: .2rem .45rem; font-size: .9rem; letter-spacing: .04em; }
+.logo { background: var(--accent); color: var(--on-accent); border-radius: 8px; padding: .2rem .45rem; font-size: .9rem; letter-spacing: .04em; }
 .sidebar ul { list-style: none; margin: 0; padding: 0; flex: 1; }
 .sidebar li a { display: flex; gap: .6rem; align-items: center; color: var(--sidebar-text); padding: .5rem .6rem; border-radius: 8px; font-size: .92rem; }
-.sidebar li a:hover { background: rgba(255,255,255,.07); text-decoration: none; }
-.sidebar li a.active { background: rgba(91,155,240,.22); color: #fff; }
+.sidebar li a:hover { background: var(--sidebar-hover); text-decoration: none; }
+.sidebar li a.active { background: var(--sidebar-active); color: var(--sidebar-strong); }
 .nav-icon { width: 1.2rem; text-align: center; opacity: .85; }
-.user-box { border-top: 1px solid rgba(255,255,255,.1); padding: .8rem .5rem 0; display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
-.user-box strong { color: #fff; font-size: .9rem; }
+.user-box { border-top: 1px solid var(--sidebar-hover); padding: .8rem .5rem 0; display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.user-box strong { color: var(--sidebar-strong); font-size: .9rem; }
 .user-box .muted { color: var(--sidebar-text); text-transform: capitalize; font-size: .8rem; }
 .user-box button.link { color: var(--sidebar-text); font-size: .85rem; }
 .main { margin-left: 230px; min-height: 100vh; }
@@ -227,7 +233,7 @@ dl.info { margin: 0; }
 .stepper li { flex: 1; min-width: 110px; }
 .stepper button { width: 100%; justify-content: center; background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); border-radius: 6px; font-size: .8rem; padding: .5rem .3rem; white-space: normal; text-align: center; }
 .stepper li.done button { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
-.stepper li.current button { background: var(--accent); color: #fff; border-color: var(--accent); }
+.stepper li.current button { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
 /* Kanban */
 .kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: .75rem; overflow-x: auto; padding-bottom: 1rem; align-items: start; }
@@ -370,3 +376,18 @@ code.copy { background: var(--surface-2); border: 1px solid var(--border); borde
 .inline-form { display: flex; gap: .5rem; align-items: end; flex-wrap: wrap; margin-bottom: .5rem; }
 .inline-form .field { flex: 1 1 260px; margin: 0; }
 .action-fields .span-all { grid-column: 1 / -1; }
+
+/* Branding & signature */
+.brand-row { display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+.logo-box { border: 1px dashed var(--border); border-radius: 10px; padding: .75rem; min-width: 200px; min-height: 80px; display: grid; place-items: center; background: #fff; }
+.logo-box img { max-height: 72px; max-width: 240px; }
+.swatches { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+.swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border); padding: 0; cursor: pointer; }
+.swatch:hover { transform: scale(1.1); background: inherit; }
+.colour-field { display: flex; align-items: center; gap: .5rem; }
+.colour-field input[type=color] { width: 44px; height: 36px; padding: 2px; }
+.colour-field input[type=text] { width: 110px; }
+.signature-editor { min-height: 140px; border: 1px solid var(--border); border-radius: 8px; padding: .75rem; background: #fff; color: #1f2933; overflow: auto; font-family: Arial, Helvetica, sans-serif; font-size: 14px; }
+.signature-editor:empty::before { content: attr(data-placeholder); color: #8a929e; }
+.signature-editor img { max-width: 100%; }
+iframe.email-frame { width: 100%; height: 560px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }

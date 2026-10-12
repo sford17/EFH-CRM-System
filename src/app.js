@@ -15,12 +15,15 @@ function createApp() {
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'",
+      "default-src 'self'; img-src 'self' data: https:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'",
     );
     next();
   });
 
   app.use('/api', express.json({ limit: '5mb' }));
+
+  const brandingRoutes = require('./routes/branding');
+  app.use(brandingRoutes.publicRouter);
 
   // CSRF defence in addition to SameSite cookies: state-changing API calls must
   // be JSON, which a cross-site HTML form cannot send.
@@ -53,6 +56,9 @@ function createApp() {
   app.use('/api/outlook', outlookRoutes.router);
   app.use('/api/emails', outlookRoutes.emails);
   app.use('/api/sms', require('./routes/sms'));
+  app.use('/api/branding', brandingRoutes.router);
+  app.use('/api/signature', brandingRoutes.signature);
+  app.use('/api/email-preview', brandingRoutes.preview);
   app.use('/api', require('./routes/insights'));
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));

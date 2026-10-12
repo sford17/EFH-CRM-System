@@ -119,4 +119,29 @@ module.exports = [
       }
     }
   },
+
+  // 3. Branding and email signatures
+  (db) => {
+    db.get().exec(`
+      CREATE TABLE assets (
+        id         INTEGER PRIMARY KEY,
+        kind       TEXT NOT NULL,          -- logo | signature
+        mime       TEXT NOT NULL,
+        data       BLOB NOT NULL,
+        width      INTEGER,
+        height     INTEGER,
+        user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      ALTER TABLE users ADD COLUMN signature_html TEXT;
+    `);
+    // The sign-off now comes from each sender's signature, so drop the old
+    // plain-text one from templates nobody has edited.
+    const oldSignoff = '\n\nKind regards,\n{{broker.name}}\n{{business.name}}\n{{broker.phone}}';
+    for (const t of db.all('SELECT id, body FROM email_templates')) {
+      if (t.body.endsWith(oldSignoff)) {
+        db.update('email_templates', t.id, { body: `${t.body.slice(0, -oldSignoff.length)}\n\nKind regards,` });
+      }
+    }
+  },
 ];

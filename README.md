@@ -15,6 +15,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 18 ready-made automations, fully editable in the UI |
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
+| **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Emails are sent as formatted HTML with your logo, brand colour and each sender's own signature, with images embedded |
 | **Email templates** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Referral partners** | Agents, accountants, planners and others, with referral counts, settled volume and fee splits |
@@ -68,6 +69,14 @@ Notes:
 - Client secrets expire, after at most 24 months. Create a new one in Entra before then and paste it into Settings.
 - Attachments stay in Outlook. Use **Open in Outlook** on an email to view them.
 - Back up `data/secret.key` together with `data/crm.db`. Without the key, Outlook has to be reconnected.
+
+## Branding and email signatures
+
+- **Settings → Branding** (admin): upload a PNG or JPG logo, then choose a main colour (colours from your logo are suggested) and a sidebar colour. Colours are adjusted automatically where needed so text stays readable. You can choose a *Branded* email style (logo and colour band) or a *Plain* one that looks like a normal email.
+- **Settings → My email signature** (each user): Outlook doesn't let other apps read your signature, so copy it from Outlook and paste it in. Images embedded in the signature are kept. Images that only exist on your PC (common when copying from Outlook desktop) can't be copied; add them with **Insert image**. Without a signature, your name, business name and phone are used.
+- The signature is added when an email is sent, so templates end with just "Kind regards,". Replies sent from the CRM get your signature above the quoted conversation.
+- Logos and signature images are embedded in the email itself, so clients see them without clicking "download pictures", even when the CRM runs on your own computer.
+- **Preview** buttons (Settings, new email, Send template) show exactly how an email will look.
 
 ## Sending SMS
 

@@ -43,9 +43,22 @@ const graphServer = http.createServer(async (req, res) => {
     return json(201, { id, conversationId: `conv-${id}`, webLink: `https://outlook.office.com/${id}` });
   }
   const send = url.pathname.match(/^\/v1\.0\/me\/messages\/([^/]+)\/send$/);
-  if (send) { fake.sent.find((m) => m.id === decodeURIComponent(send[1])).sent = true; return json(202); }
-  const reply = url.pathname.match(/^\/v1\.0\/me\/messages\/([^/]+)\/reply$/);
-  if (reply) { fake.replies.push({ id: decodeURIComponent(reply[1]), ...JSON.parse(raw) }); return json(202); }
+  const draft = send && fake.sent.find((m) => m.id === decodeURIComponent(send[1]));
+  if (draft) { draft.sent = true; return json(202); }
+  const createReply = url.pathname.match(/^\/v1\.0\/me\/messages\/([^/]+)\/createReply$/);
+  if (createReply) {
+    assert.match(req.headers.prefer, /body-content-type="html"/);
+    const id = `reply-${fake.replies.length + 1}`;
+    fake.replies.push({ id, inReplyTo: decodeURIComponent(createReply[1]), sent: false, attachments: [] });
+    return json(201, { id, body: { contentType: 'html', content: '<html><body dir="ltr"><div>-- original message --</div></body></html>' } });
+  }
+  const draftMatch = url.pathname.match(/^\/v1\.0\/me\/messages\/([^/]+?)(\/attachments|\/send)?$/);
+  const draftReply = draftMatch && fake.replies.find((r) => r.id === decodeURIComponent(draftMatch[1]));
+  if (draftReply) {
+    if (req.method === 'PATCH') { draftReply.body = JSON.parse(raw).body; return json(200, {}); }
+    if (draftMatch[2] === '/attachments') { draftReply.attachments.push(JSON.parse(raw)); return json(201, {}); }
+    if (draftMatch[2] === '/send') { draftReply.sent = true; return json(202); }
+  }
   return json(404, { error: { message: `unhandled ${req.method} ${url.pathname}` } });
 });
 
@@ -176,7 +189,9 @@ test('emails sent from the CRM go out through Outlook and are logged once', asyn
   const draft = fake.sent.at(-1);
   assert.equal(draft.sent, true);
   assert.equal(draft.toRecipients[0].emailAddress.address, 'Client@Example.com');
-  assert.equal(draft.body.content, 'Hi Cli,\nRates dropped.');
+  assert.equal(draft.body.contentType, 'HTML');
+  assert.match(draft.body.content, /<p style="[^"]*">Hi Cli,<br>Rates dropped\.<\/p>/);
+  assert.match(draft.body.content, /Admin User<br>EFH Mortgage Broking<br>0400 111 222/, 'fallback signature');
 
   const stored = db.one("SELECT * FROM emails WHERE subject = 'Rate update'");
   assert.equal(stored.direction, 'out');
@@ -199,7 +214,10 @@ test('replying from the CRM uses the Outlook conversation', async () => {
   assert.equal((await api.post(`/emails/${inbound.id}/reply`, { body: '  ' })).status, 400);
   const r = await api.post(`/emails/${inbound.id}/reply`, { body: 'Thanks, got them!' });
   assert.equal(r.status, 200);
-  assert.deepEqual(fake.replies.at(-1), { id: 'in-1', comment: 'Thanks, got them!' });
+  const sentReply = fake.replies.at(-1);
+  assert.equal(sentReply.inReplyTo, 'in-1');
+  assert.equal(sentReply.sent, true);
+  assert.match(sentReply.body.content, /^<html><body dir="ltr"><div style="[^"]*"><p[^>]*>Thanks, got them!<\/p>.*Admin User.*<br><div>-- original message --<\/div>/s);
 
   // Another team member can read it but not reply from someone else's mailbox.
   await api.post('/users', { name: 'Other', email: 'other@test.local', password: 'password123', role: 'broker' });

@@ -157,14 +157,14 @@ async function accessToken(accountId, forceRefresh = false) {
 
 // ---- Graph requests --------------------------------------------------------
 
-async function rawGraph(token, method, pathOrUrl, body) {
+async function rawGraph(token, method, pathOrUrl, body, { html = false } = {}) {
   const url = /^https?:\/\//.test(pathOrUrl) ? pathOrUrl : `${graphBase()}${pathOrUrl}`;
   const res = await fetch(url, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
       // Immutable ids survive a message moving from Drafts to Sent Items.
-      Prefer: 'IdType="ImmutableId", outlook.body-content-type="text"',
+      Prefer: `IdType="ImmutableId", outlook.body-content-type="${html ? 'html' : 'text'}"`,
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -179,14 +179,23 @@ async function rawGraph(token, method, pathOrUrl, body) {
   return text ? JSON.parse(text) : null;
 }
 
-async function graph(accountId, method, pathOrUrl, body) {
+async function graph(accountId, method, pathOrUrl, body, opts) {
   try {
-    return await rawGraph(await accessToken(accountId), method, pathOrUrl, body);
+    return await rawGraph(await accessToken(accountId), method, pathOrUrl, body, opts);
   } catch (err) {
     if (err.status !== 401) throw err;
-    return rawGraph(await accessToken(accountId, true), method, pathOrUrl, body);
+    return rawGraph(await accessToken(accountId, true), method, pathOrUrl, body, opts);
   }
 }
+
+const graphAttachment = (a) => ({
+  '@odata.type': '#microsoft.graph.fileAttachment',
+  name: a.filename,
+  contentType: a.mime,
+  contentBytes: a.data.toString('base64'),
+  isInline: true,
+  contentId: a.cid,
+});
 
 // ---- Storing messages ------------------------------------------------------
 
@@ -276,12 +285,14 @@ function onInbound(account, msg, saved) {
 
 // ---- Sending & replying ----------------------------------------------------
 
-async function sendMail(account, { to, subject, body }) {
+// `email` is the output of emailHtml.buildEmail (html + inline images).
+async function sendMail(account, { to, subject, email }) {
   const recipients = String(to).split(/[;,]/).map((s) => s.trim()).filter(Boolean);
   const draft = await graph(account.id, 'POST', '/me/messages', {
     subject,
-    body: { contentType: 'Text', content: body },
+    body: { contentType: 'HTML', content: email.html },
     toRecipients: recipients.map((a) => ({ emailAddress: { address: a } })),
+    attachments: email.attachments.map(graphAttachment),
   });
   await graph(account.id, 'POST', `/me/messages/${encodeURIComponent(draft.id)}/send`);
   return {
@@ -298,7 +309,17 @@ async function reply(emailId, userId, body) {
   if (email.user_id !== userId) throw new HttpError(403, 'This email is in another team member\'s mailbox, so only they can reply to it');
   if (!email.connected) throw new HttpError(400, 'Your Outlook is not connected. Reconnect it in Settings.');
   if (!String(body || '').trim()) throw new HttpError(400, 'Write a reply first');
-  await graph(email.account_id, 'POST', `/me/messages/${encodeURIComponent(email.graph_id)}/reply`, { comment: String(body) });
+  // createReply gives a draft with the quoted thread; our message and the
+  // sender's signature go above it.
+  const { buildEmail } = require('./emailHtml');
+  const built = buildEmail({ body: String(body), senderUserId: userId, reply: true });
+  const draft = await graph(email.account_id, 'POST', `/me/messages/${encodeURIComponent(email.graph_id)}/createReply`, {}, { html: true });
+  const quoted = draft.body?.content || '';
+  const content = /<body[^>]*>/i.test(quoted) ? quoted.replace(/<body[^>]*>/i, (tag) => `${tag}${built.html}<br>`) : `${built.html}<br>${quoted}`;
+  const draftPath = `/me/messages/${encodeURIComponent(draft.id)}`;
+  await graph(email.account_id, 'PATCH', draftPath, { body: { contentType: 'HTML', content } }, { html: true });
+  for (const a of built.attachments) await graph(email.account_id, 'POST', `${draftPath}/attachments`, graphAttachment(a));
+  await graph(email.account_id, 'POST', `${draftPath}/send`);
   // The sent reply is picked up from Sent Items by the next sync; nudge one soon.
   setTimeout(() => syncAccount(email.account_id).catch(() => {}), 5000).unref();
   return { ok: true };

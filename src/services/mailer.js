@@ -3,6 +3,7 @@ const db = require('../db');
 const { render, buildContext } = require('./templating');
 const outlook = require('./outlook');
 const sms = require('./sms');
+const { buildEmail } = require('./emailHtml');
 const { nowIso } = require('../util');
 
 let transport;
@@ -101,8 +102,9 @@ async function processDue() {
     try {
       const senderId = senderFor(mail);
       const account = senderId ? outlook.accountForUser(senderId) : null;
+      const email = buildEmail({ body: mail.body, senderUserId: senderId });
       if (account) {
-        const sent = await outlook.sendMail(account, { to: mail.to_email, subject: mail.subject, body: mail.body });
+        const sent = await outlook.sendMail(account, { to: mail.to_email, subject: mail.subject, email });
         db.update('outbox', mail.id, { status: 'sent', sent_via: 'outlook', sent_at: nowIso(), error: null });
         outlook.recordEmail(account, {
           graphId: sent.graphId, conversationId: sent.conversationId, direction: 'out',
@@ -110,7 +112,10 @@ async function processDue() {
           subject: mail.subject, body: mail.body, preview: null, hasAttachments: false, webLink: sent.webLink, sentAt: nowIso(),
         }, { contactIds: [mail.contact_id], dealId: mail.deal_id });
       } else if (t) {
-        await t.sendMail({ from, to: mail.to_email, subject: mail.subject, text: mail.body });
+        await t.sendMail({
+          from, to: mail.to_email, subject: mail.subject, text: email.text, html: email.html,
+          attachments: email.attachments.map((a) => ({ filename: a.filename, content: a.data, contentType: a.mime, cid: a.cid })),
+        });
         db.update('outbox', mail.id, { status: 'sent', sent_via: 'smtp', sent_at: nowIso(), error: null });
         logActivity(mail, 'Email sent');
       } else {
