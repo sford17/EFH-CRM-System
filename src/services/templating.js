@@ -29,7 +29,7 @@ function lvr(deal) {
 }
 
 // Assembles the merge-field context for a contact and/or deal.
-function buildContext({ contactId, dealId, userId } = {}) {
+function buildContext({ contactId, dealId, userId, latestDeal = false } = {}) {
   let deal = null;
   if (dealId) {
     deal = db.one(
@@ -46,6 +46,16 @@ function buildContext({ contactId, dealId, userId } = {}) {
       contactId = contactId || deal.contact_id;
     }
   }
+  // Sent from a contact rather than a deal: use their most recent loan so
+  // fields like {{deal.lender_name}} still fill in.
+  if (!deal && contactId && latestDeal) {
+    const latest = db.one(
+      `SELECT id FROM deals WHERE contact_id = ? OR co_borrower_id = ?
+       ORDER BY stage = 'lost', updated_at DESC LIMIT 1`,
+      contactId, contactId,
+    );
+    if (latest) return buildContext({ contactId, dealId: latest.id, userId });
+  }
   const contact = contactId ? db.one('SELECT * FROM contacts WHERE id = ?', contactId) : null;
   if (contact) contact.full_name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
   const brokerId = userId || deal?.owner_id || contact?.owner_id;
@@ -53,7 +63,9 @@ function buildContext({ contactId, dealId, userId } = {}) {
   return {
     contact,
     deal,
-    broker: broker || { name: db.getSetting('business_name', 'Your broker'), email: '', phone: '' },
+    broker: broker
+      ? { ...broker, first_name: String(broker.name || '').split(' ')[0] }
+      : { name: db.getSetting('business_name', 'Your broker'), first_name: db.getSetting('business_name', 'Your broker'), email: '', phone: '' },
     business: {
       name: db.getSetting('business_name', 'EFH Mortgage Broking'),
       phone: db.getSetting('business_phone', ''),

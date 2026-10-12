@@ -1,5 +1,6 @@
 'use strict';
 const db = require('./index');
+const { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_TEMPLATE } = require('./sms-defaults');
 
 // Indicative commission rates; edit them on the Lenders page to match your
 // aggregator's schedule.
@@ -180,6 +181,13 @@ const AUTOMATIONS = [
   },
 ];
 
+TEMPLATES.push(RATE_REDUCTION_TEMPLATE);
+for (const a of AUTOMATIONS) {
+  if (STAGE_SMS[a.name]) a.actions.push({ type: 'send_sms', message: STAGE_SMS[a.name] });
+  if (a.name === BIRTHDAY_SMS.automation) a.actions.push({ type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });
+}
+AUTOMATIONS.push(...SMS_AUTOMATIONS);
+
 function seedDefaults() {
   db.transaction(() => {
     if (!db.one('SELECT 1 FROM lenders LIMIT 1')) {
@@ -188,7 +196,9 @@ function seedDefaults() {
       }
     }
     if (!db.one('SELECT 1 FROM email_templates LIMIT 1')) {
-      for (const [name, category, subject, body] of TEMPLATES) db.insert('email_templates', { name, category, subject, body });
+      for (const [name, category, subject, body] of TEMPLATES) {
+        db.insert('email_templates', { name, category, subject, body, sms_body: TEMPLATE_SMS[name] || null });
+      }
     }
     if (!db.getSetting('automations_seeded')) {
       const templateId = (name) => db.one('SELECT id FROM email_templates WHERE name = ?', name)?.id;

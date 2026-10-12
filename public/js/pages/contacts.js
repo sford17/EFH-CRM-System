@@ -7,6 +7,7 @@ import {
   CONTACT_STATUSES, LEAD_SOURCES,
 } from './forms.js';
 import { emailsCard, composeDialog } from './email.js';
+import { smsCard, smsDialog } from './sms.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -90,6 +91,7 @@ export async function contactPage(id) {
       h('div.actions',
         c.email ? h('button.secondary', { type: 'button', onclick: () => composeDialog({ contactId: c.id, to: c.email }) }, 'Email') : null,
         c.mobile ? h('a.button.secondary', { href: `tel:${c.mobile.replace(/\s/g, '')}` }, 'Call') : null,
+        c.mobile ? h('button.secondary', { type: 'button', onclick: () => smsDialog({ contactId: c.id, mobile: c.mobile, name: c.first_name }) }, 'SMS') : null,
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ contactId: c.id }) }, 'Send template'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
         h('button.danger.ghost', { type: 'button', onclick: remove }, 'Delete'))),
@@ -108,6 +110,7 @@ export async function contactPage(id) {
           info('Last contacted', c.last_contacted_at ? date(c.last_contacted_at) : 'Never'),
           info('Next review', c.next_review_date ? date(c.next_review_date) : null),
           info('Marketing', c.marketing_opt_in ? 'Opted in' : 'Opted out'),
+          c.sms_opt_out ? info('SMS', h('span.text-danger', 'Opted out of all SMS')) : null,
           info('Tags', c.tags ? c.tags.split(',').map((t) => h('span.tag', t)) : null)),
         c.background ? h('div.background', h('h3', 'Background'), h('p.pre', c.background)) : null),
         h('section.card',
@@ -119,7 +122,8 @@ export async function contactPage(id) {
         h('section.card',
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ contact_id: c.id }) }, '+ Task')),
           taskTable(c.tasks)),
-        emailsCard({ mail: c.mail, outbox: c.emails, contactId: c.id, to: c.email })),
+        emailsCard({ mail: c.mail, outbox: c.emails, contactId: c.id, to: c.email }),
+        smsCard({ sms: c.sms, contactId: c.id, mobile: c.mobile, name: c.first_name })),
       h('div.col-main',
         h('section.card', h('h2', 'Activity'), timeline(c.activities, { contactId: c.id })))));
 }

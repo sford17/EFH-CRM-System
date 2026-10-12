@@ -84,6 +84,7 @@ router.get('/:id', (req, res) => {
     id,
   );
   deal.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE deal_id = ? AND COALESCE(sent_via,'') != 'outlook' ORDER BY id DESC", id);
+  deal.sms = db.all('SELECT id, body, status, error, from_number, send_after, sent_at FROM sms_messages WHERE deal_id = ? ORDER BY id DESC LIMIT 50', id);
   deal.mail = listEmails({ contactIds: [deal.contact_id, deal.co_borrower_id].filter(Boolean), limit: 50 });
   res.json(deal);
 });

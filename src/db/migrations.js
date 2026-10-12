@@ -1,7 +1,9 @@
 'use strict';
 // Schema changes applied on top of schema.sql, in order. Each entry runs once;
 // progress is tracked in SQLite's user_version so existing databases upgrade
-// in place when a new version of the CRM starts.
+// in place when a new version of the CRM starts. An entry is either SQL or a
+// function receiving the db helpers.
+const { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_TEMPLATE } = require('./sms-defaults');
 
 module.exports = [
   // 1. Outlook email sync
@@ -62,4 +64,59 @@ module.exports = [
   ALTER TABLE outbox ADD COLUMN sent_via TEXT;
   ALTER TABLE activities ADD COLUMN email_id INTEGER REFERENCES emails(id) ON DELETE SET NULL;
   `,
+
+  // 2. SMS
+  (db) => {
+    db.get().exec(`
+      CREATE TABLE sms_messages (
+        id             INTEGER PRIMARY KEY,
+        to_number      TEXT NOT NULL,
+        from_number    TEXT,
+        body           TEXT NOT NULL,
+        contact_id     INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+        deal_id        INTEGER REFERENCES deals(id) ON DELETE SET NULL,
+        template_id    INTEGER REFERENCES email_templates(id) ON DELETE SET NULL,
+        automation_id  INTEGER REFERENCES automations(id) ON DELETE SET NULL,
+        sender_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        status         TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','sent','logged','failed','cancelled')),
+        provider_id    TEXT,
+        error          TEXT,
+        send_after     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        sent_at        TEXT,
+        created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      CREATE INDEX idx_sms_contact ON sms_messages(contact_id);
+      ALTER TABLE contacts ADD COLUMN sms_opt_out INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN sms_from TEXT;
+      ALTER TABLE email_templates ADD COLUMN sms_body TEXT;
+    `);
+
+    // Existing installs: add SMS to the default automations and templates.
+    // (Fresh installs get them from the seed data instead.)
+    if (db.getSetting('automations_seeded')) {
+      const addSms = (name, action) => {
+        const row = db.one('SELECT id, actions FROM automations WHERE name = ?', name);
+        if (!row) return;
+        const actions = JSON.parse(row.actions);
+        if (actions.some((a) => a.type === 'send_sms')) return;
+        db.update('automations', row.id, { actions: JSON.stringify([...actions, action]) });
+      };
+      for (const [name, message] of Object.entries(STAGE_SMS)) addSms(name, { type: 'send_sms', message });
+      addSms(BIRTHDAY_SMS.automation, { type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });
+      for (const a of SMS_AUTOMATIONS) {
+        if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
+        db.insert('automations', {
+          name: a.name, description: a.description || null, trigger: a.trigger,
+          conditions: JSON.stringify(a.conditions || []), actions: JSON.stringify(a.actions),
+        });
+      }
+    }
+    if (db.one('SELECT 1 FROM email_templates LIMIT 1')) {
+      const [name, category, subject, body] = RATE_REDUCTION_TEMPLATE;
+      if (!db.one('SELECT 1 FROM email_templates WHERE name = ?', name)) db.insert('email_templates', { name, category, subject, body });
+      for (const [tname, sms] of Object.entries(TEMPLATE_SMS)) {
+        db.run('UPDATE email_templates SET sms_body = ? WHERE name = ? AND sms_body IS NULL', sms, tname);
+      }
+    }
+  },
 ];

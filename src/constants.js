@@ -70,7 +70,7 @@ const SCHEDULED_TRIGGERS = [
   { key: 'schedule.stale_lead', label: 'Lead not contacted (days_inactive)' },
 ];
 const ACTION_TYPES = [
-  'create_task', 'send_email', 'add_note', 'add_tag', 'remove_tag',
+  'create_task', 'send_email', 'send_sms', 'add_note', 'add_tag', 'remove_tag',
   'set_contact_status', 'set_deal_stage', 'notify', 'create_document_checklist', 'generate_commissions',
 ];
 

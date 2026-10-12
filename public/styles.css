@@ -362,3 +362,11 @@ ul.errors { color: var(--danger); font-size: .85rem; }
 .outlook-setup summary { cursor: pointer; margin-bottom: .5rem; }
 .setup-steps { padding-left: 1.2rem; display: grid; gap: .45rem; margin: .5rem 0 1rem; }
 code.copy { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: .05rem .35rem; user-select: all; overflow-wrap: anywhere; }
+
+/* SMS */
+.sms-list li { display: flex; flex-direction: column; gap: .25rem; align-items: flex-start; }
+.sms-bubble { background: var(--ok-soft); color: var(--text); border-radius: 14px 14px 4px 14px; padding: .5rem .75rem; white-space: pre-wrap; max-width: 100%; overflow-wrap: anywhere; }
+.sms-companion { margin-top: .75rem; display: flex; flex-direction: column; gap: .35rem; }
+.inline-form { display: flex; gap: .5rem; align-items: end; flex-wrap: wrap; margin-bottom: .5rem; }
+.inline-form .field { flex: 1 1 260px; margin: 0; }
+.action-fields .span-all { grid-column: 1 / -1; }

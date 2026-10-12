@@ -7,7 +7,7 @@ const { HttpError } = require('../util');
 const { pick, requireFields, notFound, intParam } = require('./helpers');
 
 const templates = express.Router();
-const FIELDS = ['name', 'category', 'subject', 'body'];
+const FIELDS = ['name', 'category', 'subject', 'body', 'sms_body'];
 
 templates.get('/', (req, res) => res.json({ rows: db.all('SELECT * FROM email_templates ORDER BY category, name') }));
 
@@ -34,8 +34,11 @@ templates.delete('/:id', (req, res) => {
 
 templates.post('/:id/preview', (req, res) => {
   const t = notFound(db.one('SELECT * FROM email_templates WHERE id = ?', intParam(req.params.id)), 'Template');
-  const ctx = buildContext({ contactId: req.body?.contact_id, dealId: req.body?.deal_id, userId: req.user.id });
-  res.json({ subject: render(t.subject, ctx), body: render(t.body, ctx), to: ctx.contact?.email || null });
+  const ctx = buildContext({ contactId: req.body?.contact_id, dealId: req.body?.deal_id, userId: req.user.id, latestDeal: true });
+  res.json({
+    subject: render(t.subject, ctx), body: render(t.body, ctx), to: ctx.contact?.email || null,
+    sms: t.sms_body ? render(t.sms_body, ctx) : null, mobile: ctx.contact?.mobile || null,
+  });
 });
 
 templates.post('/:id/send', async (req, res) => {

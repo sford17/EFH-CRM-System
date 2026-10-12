@@ -2,6 +2,7 @@
 const automation = require('./automation');
 const mailer = require('./mailer');
 const outlook = require('./outlook');
+const sms = require('./sms');
 
 let timer;
 
@@ -11,6 +12,8 @@ async function tick(log = console) {
     if (results.length) log.info(`[scheduler] ${results.length} scheduled automation run(s)`);
     const sent = await mailer.processOutbox();
     if (sent) log.info(`[scheduler] processed ${sent} outbox email(s)`);
+    const texts = await sms.processSms();
+    if (texts) log.info(`[scheduler] processed ${texts} SMS`);
     const synced = await outlook.syncAll(log);
     if (synced) log.info(`[scheduler] filed ${synced} Outlook email(s) against contacts`);
   } catch (err) {

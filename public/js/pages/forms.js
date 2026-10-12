@@ -31,7 +31,8 @@ export const contactFields = () => [
   { name: 'dependants', label: 'Dependants', type: 'number', step: 1 },
   { name: 'next_review_date', label: 'Next review date', type: 'date' },
   { name: 'tags', label: 'Tags (comma separated)', full: true },
-  { name: 'marketing_opt_in', label: 'Happy to receive marketing emails', type: 'checkbox', default: true, full: true },
+  { name: 'marketing_opt_in', label: 'Happy to receive marketing emails & texts', type: 'checkbox', default: true },
+  { name: 'sms_opt_out', label: 'Opted out of all SMS (replied STOP)', type: 'checkbox', default: false },
   { name: 'background', label: 'Background notes', type: 'textarea', full: true },
 ];
 
@@ -151,15 +152,16 @@ export async function sendTemplateDialog({ contactId, dealId }) {
   const { rows } = await api('/templates');
   const select = h('select', { 'aria-label': 'Template' }, h('option', { value: '' }, 'Choose a template…'), rows.map((t) => h('option', { value: t.id }, `${t.name} (${label(t.category || 'general')})`)));
   const preview = h('div.email-preview', h('p.muted', 'Choose a template to preview it.'));
-  const sendBtn = h('button', { type: 'button', disabled: true }, 'Queue email');
+  const sendBtn = h('button', { type: 'button', disabled: true }, 'Send email');
   select.addEventListener('change', async () => {
     sendBtn.disabled = !select.value;
     if (!select.value) return;
     const p = await api(`/templates/${select.value}/preview`, { method: 'POST', body: { contact_id: contactId, deal_id: dealId } });
-    preview.replaceChildren(h('div.muted', `To: ${p.to || '(no email address)'}`), h('h3', p.subject), h('pre', p.body));
+    preview.replaceChildren(h('div.muted', `To: ${p.to || '(no email address)'}`), h('h3', p.subject), h('pre', p.body),
+      p.sms ? h('div.sms-companion', h('strong.small', `Also texts ${p.mobile || '(no mobile – SMS will be skipped)'}:`), h('div.sms-bubble', p.sms)) : null);
   });
   sendBtn.addEventListener('click', async () => {
-    await attempt(() => api(`/templates/${select.value}/send`, { method: 'POST', body: { contact_id: contactId, deal_id: dealId } }), 'Email queued');
+    await attempt(() => api(`/templates/${select.value}/send`, { method: 'POST', body: { contact_id: contactId, deal_id: dealId } }), 'Email sent');
     dialog.close();
     refresh();
   });

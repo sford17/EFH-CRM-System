@@ -52,6 +52,7 @@ function createApp() {
   app.use('/api/partners', admin.partners);
   app.use('/api/outlook', outlookRoutes.router);
   app.use('/api/emails', outlookRoutes.emails);
+  app.use('/api/sms', require('./routes/sms'));
   app.use('/api', require('./routes/insights'));
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));

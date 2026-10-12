@@ -1,6 +1,7 @@
 import { api, h, pageHeader, table, badge, money, pct, attempt, confirmDialog, label, formModal, state, loadLookups, field, readForm, opts } from '../core.js';
 import { refresh } from './forms.js';
 import { outlookSettingsCard } from './email.js';
+import { smsSettingsCard } from './sms.js';
 
 const PARTNER_TYPES = ['real_estate', 'accountant', 'financial_planner', 'solicitor', 'builder', 'past_client', 'other'];
 
@@ -128,6 +129,7 @@ export async function settingsPage() {
   return h('div',
     pageHeader('Settings'),
     await outlookSettingsCard(),
+    await smsSettingsCard(),
     h('section.card', h('h2', 'Business'), bizForm),
     h('section.card',
       h('div.card-head', h('h2', 'Team'), isAdmin ? h('button.small', { type: 'button', onclick: () => editUser() }, '+ Add user') : null),

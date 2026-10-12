@@ -14,6 +14,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Tasks** | Personal and team tasks, overdue/today/upcoming views, tasks auto-created by automations |
 | **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 18 ready-made automations, fully editable in the UI |
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
+| **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
 | **Email templates** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Referral partners** | Agents, accountants, planners and others, with referral counts, settled volume and fee splits |
@@ -68,6 +69,35 @@ Notes:
 - Attachments stay in Outlook. Use **Open in Outlook** on an email to view them.
 - Back up `data/secret.key` together with `data/crm.db`. Without the key, Outlook has to be reconnected.
 
+## Sending SMS
+
+Texts go through [ClickSend](https://www.clicksend.com/au/), an Australian SMS service that charges per message with no monthly fee. Set it up in **Settings → SMS**:
+
+1. **Admin:** create a ClickSend account, then copy the username and API key from *Developers → API Credentials* into the CRM.
+2. **Each broker:** in ClickSend, verify your mobile under *Sender IDs → Own Numbers*. ClickSend texts you a 6-digit code, and the number must be re-verified every 12 months. Then enter the same number under **My mobile number** in the CRM and click **Send me a test**.
+
+Clients then receive texts from the broker's own mobile number, and their replies go straight to that phone. A text goes out as the person who triggered it, otherwise the owner of the deal or contact. If the broker has no verified number, the fallback sender is used. Until ClickSend is connected, texts are only logged, never sent.
+
+What is texted by default (all editable under **Automations** and **Email templates**):
+
+| When | Text |
+| --- | --- |
+| New deal opened at New Lead | Thanks for choosing us |
+| Fact Find | Documents list emailed |
+| Pre-Approval | Pre-approved with the lender |
+| Application Lodged | Application lodged |
+| Conditional Approval | Conditionally approved |
+| Unconditional Approval | Formally approved, loan docs coming |
+| Settlement Booked | Settlement date confirmed |
+| Settled | Congratulations |
+| Birthday | Happy birthday *(marketing)* |
+| "Annual loan review" email sent | Time for your annual review *(marketing)* |
+| "Rate reduction" email sent | Rates have dropped *(marketing)* |
+
+Any email template can have a companion SMS, which is sent whenever that email is sent. Automations can also use a **Send an SMS** action.
+
+Marketing texts follow the Spam Act. They only go to contacts who allow marketing, and they end with "Reply STOP to opt out". Because replies come to your phone rather than the CRM, when a client replies STOP, tick **Opted out of all SMS** on their contact record, and the CRM won't text them again. Service updates about a client's own loan are always sent unless they have opted out of SMS.
+
 ## How automations work
 
 Each automation has three parts:
@@ -79,6 +109,7 @@ Each automation has three parts:
 3. **Then**: one or more actions:
    - create a task
    - send a template email (optionally delayed)
+   - send an SMS (optionally delayed; service update or marketing)
    - add a note
    - add or remove a tag
    - set the contact status

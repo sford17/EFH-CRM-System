@@ -22,7 +22,9 @@ function migrate() {
   const version = db.prepare('PRAGMA user_version').get().user_version;
   for (let i = version; i < MIGRATIONS.length; i++) {
     transaction(() => {
-      db.exec(MIGRATIONS[i]);
+      const step = MIGRATIONS[i];
+      if (typeof step === 'function') step(module.exports);
+      else db.exec(step);
       db.exec(`PRAGMA user_version = ${i + 1}`);
     });
   }
@@ -88,4 +90,4 @@ function setSetting(key, value) {
   run('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', key, value);
 }
 
-module.exports = { open, get, close, file, all, one, run, insert, update, transaction, getSetting, setSetting };
+module.exports = { open, get, close, file, migrate, all, one, run, insert, update, transaction, getSetting, setSetting };

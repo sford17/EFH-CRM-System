@@ -1,5 +1,6 @@
 import { api, h, pageHeader, table, badge, dateTime, attempt, confirmDialog, label, toast, state, opts, userOptions } from '../core.js';
 import { CONTACT_STATUSES } from './forms.js';
+import { counted } from './sms.js';
 
 const CONDITION_FIELDS = [
   'event.to_stage', 'event.from_stage', 'event.to_status', 'contact.status', 'contact.lead_source', 'contact.tags',
@@ -12,7 +13,7 @@ const OP_LABELS = {
   contains: 'contains', has_tag: 'has tag', empty: 'is empty', not_empty: 'is not empty',
 };
 const ACTION_LABELS = {
-  create_task: 'Create a task', send_email: 'Send an email', add_note: 'Add a note to the timeline', add_tag: 'Add a tag',
+  create_task: 'Create a task', send_email: 'Send an email', send_sms: 'Send an SMS', add_note: 'Add a note to the timeline', add_tag: 'Add a tag',
   remove_tag: 'Remove a tag', set_contact_status: 'Set contact status', set_deal_stage: 'Move deal to stage',
   notify: 'Notify the owner', create_document_checklist: 'Add standard document checklist', generate_commissions: 'Generate commission entries',
 };
@@ -28,6 +29,7 @@ function summarise(a) {
   const parts = a.actions.map((x) => {
     if (x.type === 'send_email') return `email "${templates.find((t) => t.id === Number(x.template_id))?.name || '?'}"${x.delay_days ? ` after ${x.delay_days}d` : ''}`;
     if (x.type === 'create_task') return `task "${x.title}"`;
+    if (x.type === 'send_sms') return `SMS${x.marketing ? ' (marketing)' : ''}`;
     return ACTION_LABELS[x.type]?.toLowerCase() || x.type;
   });
   return parts.join(', ');
@@ -93,6 +95,11 @@ function actionFieldDefs(type) {
       ['delay_days', 'Delay (days)', 'number'],
       ['to', 'Send to', 'select', [['contact', 'Contact'], ['broker', 'Broker (internal)']]],
     ];
+    case 'send_sms': return [
+      ['message', 'Text message (merge fields allowed, e.g. {{contact.first_name}}, {{broker.first_name}})', 'textarea'],
+      ['delay_days', 'Delay (days)', 'number'],
+      ['marketing', 'Type', 'select', [['', 'Service update (always sent)'], ['true', 'Marketing (needs consent, adds opt-out)']]],
+    ];
     case 'add_note': return [['body', 'Note', 'text']];
     case 'add_tag': case 'remove_tag': return [['tag', 'Tag', 'text']];
     case 'set_contact_status': return [['status', 'Status', 'select', opts(CONTACT_STATUSES)]];
@@ -109,7 +116,10 @@ function actionRow(a = { type: 'create_task' }) {
       const v = values[name] ?? '';
       const input = kind === 'select'
         ? h('select', { name }, options.map(([ov, ol]) => h('option', { value: ov, selected: String(ov) === String(v) }, ol)))
-        : h('input', { name, type: kind, value: v, min: kind === 'number' ? 0 : undefined });
+        : kind === 'textarea'
+          ? h('textarea', { name, rows: 3 }, v)
+          : h('input', { name, type: kind, value: v, min: kind === 'number' ? 0 : undefined });
+      if (kind === 'textarea') return h('label.field.span-all', h('span', text), input, counted(input));
       return h('label.field', h('span', text), input);
     }));
   };
@@ -125,7 +135,8 @@ function readActions(container) {
     const out = { type: row.querySelector('.action-type').value };
     for (const el of row.querySelectorAll('.action-fields [name]')) {
       if (el.value === '') continue;
-      out[el.name] = el.type === 'number' || el.name === 'template_id' ? Number(el.value) : el.value;
+      if (el.name === 'marketing') out.marketing = el.value === 'true';
+      else out[el.name] = el.type === 'number' || el.name === 'template_id' ? Number(el.value) : el.value;
     }
     return out;
   });

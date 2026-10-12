@@ -2,6 +2,7 @@
 const db = require('../db');
 const { render, buildContext } = require('./templating');
 const mailer = require('./mailer');
+const sms = require('./sms');
 const documents = require('./documents');
 const commissions = require('./commissions');
 const { STAGE_KEYS } = require('../constants');
@@ -66,6 +67,17 @@ const ACTIONS = {
       contactId: ctx.contact?.id, dealId: ctx.deal?.id, automationId: auto.id, sendAfter, to,
     });
     return id ? `email #${id} queued` : `email skipped: ${reason}`;
+  },
+  send_sms(a, ctx, auto) {
+    if (!ctx.contact) return 'no contact';
+    const sendAfter = a.delay_days ? new Date(Date.now() + Number(a.delay_days) * 86400000).toISOString() : undefined;
+    const { id, reason } = sms.queueForContact({
+      contactId: ctx.contact.id, dealId: ctx.deal?.id ?? null, body: render(a.message, ctx),
+      marketing: Boolean(a.marketing), automationId: auto.id, senderUserId: ctx.broker?.id ?? null, sendAfter,
+    });
+    if (!id) return `SMS skipped: ${reason}`;
+    if (!sendAfter) sms.processSoon();
+    return `SMS #${id} queued`;
   },
   add_note(a, ctx) {
     db.insert('activities', {

@@ -4,6 +4,7 @@ import {
 } from '../core.js';
 import { dealFields, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard } from './email.js';
+import { smsCard } from './sms.js';
 
 // Moves a deal, asking for extra details where a stage needs them.
 export async function moveDeal(deal, stage) {
@@ -221,5 +222,6 @@ export async function dealPage(id) {
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ deal_id: deal.id, contact_id: deal.contact_id }) }, '+ Task')),
           taskTable(deal.tasks)),
         emailsCard({ mail: deal.mail, outbox: deal.emails, contactId: deal.contact_id, dealId: deal.id, to: deal.contact_email }),
+        smsCard({ sms: deal.sms, contactId: deal.contact_id, dealId: deal.id, mobile: deal.contact_mobile, name: deal.contact_name.split(' ')[0] }),
         h('section.card', h('h2', 'Activity'), timeline(deal.activities, { contactId: deal.contact_id, dealId: deal.id })))));
 }

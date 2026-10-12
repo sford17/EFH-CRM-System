@@ -12,7 +12,7 @@ const router = express.Router();
 const FIELDS = [
   'first_name', 'last_name', 'email', 'mobile', 'phone', 'dob', 'address', 'suburb', 'state', 'postcode',
   'employment_type', 'employer', 'annual_income', 'marital_status', 'dependants', 'status', 'lead_source',
-  'referral_partner_id', 'owner_id', 'tags', 'marketing_opt_in', 'next_review_date', 'background',
+  'referral_partner_id', 'owner_id', 'tags', 'marketing_opt_in', 'sms_opt_out', 'next_review_date', 'background',
 ];
 const CONTACT_TYPES = ['call', 'email', 'sms', 'meeting'];
 
@@ -20,6 +20,7 @@ const CONTACT_TYPES = ['call', 'email', 'sms', 'meeting'];
 function normalise(row) {
   if ('tags' in row) row.tags = [...new Set(parseTags(row.tags))].join(',');
   if ('marketing_opt_in' in row && row.marketing_opt_in === null) row.marketing_opt_in = 0;
+  if ('sms_opt_out' in row && row.sms_opt_out === null) row.sms_opt_out = 0;
   return row;
 }
 
@@ -100,6 +101,7 @@ router.get('/:id', (req, res) => {
   );
   contact.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE contact_id = ? AND COALESCE(sent_via,'') != 'outlook' ORDER BY id DESC LIMIT 50", id);
   contact.mail = listEmails({ contactIds: [id], limit: 50 });
+  contact.sms = db.all('SELECT id, body, status, error, from_number, send_after, sent_at FROM sms_messages WHERE contact_id = ? ORDER BY id DESC LIMIT 50', id);
   res.json(contact);
 });
 

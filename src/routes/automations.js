@@ -30,6 +30,7 @@ function validate(body, partial) {
     if (key === 'actions') {
       for (const a of value) {
         if (!ACTION_TYPES.includes(a.type)) throw new HttpError(400, `Unknown action type "${a.type}"`);
+        if (a.type === 'send_sms' && !String(a.message || '').trim()) throw new HttpError(400, 'send_sms actions need a message');
         if (a.type === 'send_email' && !db.one('SELECT 1 FROM email_templates WHERE id = ?', Number(a.template_id) || 0)) {
           throw new HttpError(400, 'send_email actions need a valid template_id');
         }

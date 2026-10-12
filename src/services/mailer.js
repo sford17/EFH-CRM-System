@@ -2,6 +2,7 @@
 const db = require('../db');
 const { render, buildContext } = require('./templating');
 const outlook = require('./outlook');
+const sms = require('./sms');
 const { nowIso } = require('../util');
 
 let transport;
@@ -39,7 +40,7 @@ function queueEmail({ to, subject, body, contactId = null, dealId = null, templa
 function queueTemplate(templateId, { contactId, dealId, automationId, sendAfter, to, userId } = {}) {
   const template = db.one('SELECT * FROM email_templates WHERE id = ?', templateId);
   if (!template) return { id: null, reason: `Template ${templateId} not found` };
-  const ctx = buildContext({ contactId, dealId, userId });
+  const ctx = buildContext({ contactId, dealId, userId, latestDeal: true });
   const recipient = to || ctx.contact?.email;
   if (!recipient) return { id: null, reason: 'Contact has no email address' };
   if (template.category === 'marketing' && ctx.contact && !ctx.contact.marketing_opt_in) {
@@ -56,7 +57,23 @@ function queueTemplate(templateId, { contactId, dealId, automationId, sendAfter,
     sendAfter,
     senderUserId: userId || ctx.broker?.id || null,
   });
-  return { id, reason: null };
+  // Templates can carry a companion text that goes out with the email.
+  let smsId = null;
+  if (template.sms_body && ctx.contact) {
+    const r = sms.queueForContact({
+      contactId: ctx.contact.id,
+      dealId: ctx.deal?.id ?? null,
+      body: render(template.sms_body, ctx),
+      marketing: ['marketing', 'retention'].includes(template.category),
+      templateId,
+      automationId,
+      senderUserId: userId || ctx.broker?.id || null,
+      sendAfter,
+    });
+    smsId = r.id;
+    if (smsId && !sendAfter) sms.processSoon();
+  }
+  return { id, reason: null, smsId };
 }
 
 // The team member an email goes out as: whoever queued it, otherwise the
