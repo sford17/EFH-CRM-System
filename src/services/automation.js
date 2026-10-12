@@ -289,6 +289,40 @@ const FINDERS = {
   ),
 };
 
+// Records scheduled automations that are already due for these records as
+// done, without running them (used after an import so existing clients aren't
+// all messaged at once). Returns how many were held.
+function markScheduledDone({ contactIds = [], dealIds = [] }, detail, date = today()) {
+  const contacts = new Set(contactIds);
+  const deals = new Set(dealIds);
+  if (!contacts.size && !deals.size) return 0;
+  let held = 0;
+  const hold = (auto, entityType, entityId, k) => {
+    const runKey = `${auto.id}:${entityType}:${entityId}:${k}`;
+    if (db.one('SELECT 1 FROM automation_runs WHERE run_key = ?', runKey)) return;
+    db.insert('automation_runs', { automation_id: auto.id, run_key: runKey, entity_type: entityType, entity_id: entityId, status: 'skipped', detail });
+    held++;
+  };
+  const autos = db.all("SELECT * FROM automations WHERE enabled = 1 AND trigger LIKE 'schedule.%'").map(hydrate);
+  for (const auto of autos) {
+    const finder = FINDERS[auto.trigger];
+    if (!finder) continue;
+    for (const row of finder(auto.trigger_config, date)) {
+      if (row.dealId && deals.has(row.dealId)) hold(auto, 'deal', row.dealId, row.k);
+      else if (!row.dealId && !row.appointmentId && contacts.has(row.contactId)) hold(auto, 'contact', row.contactId, row.k);
+    }
+    // "Lead not contacted" would fire a couple of days after import for every
+    // imported lead; its key is known now, so hold it in advance.
+    if (auto.trigger === 'schedule.stale_lead') {
+      for (const id of contacts) {
+        const c = db.one("SELECT COALESCE(last_contacted_at, created_at) AS k FROM contacts WHERE id = ? AND status = 'lead'", id);
+        if (c) hold(auto, 'contact', id, c.k);
+      }
+    }
+  }
+  return held;
+}
+
 function runScheduled(date = today()) {
   if (process.env.AUTOMATIONS === 'off') return [];
   const autos = db.all("SELECT * FROM automations WHERE enabled = 1 AND trigger LIKE 'schedule.%' ORDER BY id").map(hydrate);
@@ -311,4 +345,4 @@ function runScheduled(date = today()) {
   return results;
 }
 
-module.exports = { emit, runScheduled, runAutomation, changeDealStage, evaluateCondition, hydrate, ACTIONS, FINDERS };
+module.exports = { emit, runScheduled, markScheduledDone, runAutomation, changeDealStage, evaluateCondition, hydrate, ACTIONS, FINDERS };

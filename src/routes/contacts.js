@@ -56,27 +56,6 @@ router.get('/export.csv', (req, res) => {
   res.send(csv.stringify(rows, ['id', ...FIELDS, 'created_at']));
 });
 
-// Body: { csv: "<text>" }. Columns are matched by header name; rows whose email
-// already exists are skipped.
-router.post('/import', (req, res) => {
-  const rows = csv.parse(req.body?.csv || '');
-  if (!rows.length) throw new HttpError(400, 'No rows found. The first line must be a header row.');
-  const result = { created: 0, skipped: 0, errors: [] };
-  rows.forEach((raw, i) => {
-    const row = normalise(pick(raw, FIELDS.filter((f) => !['owner_id', 'referral_partner_id'].includes(f))));
-    if (!row.first_name) { result.errors.push(`Row ${i + 2}: first_name is required`); return; }
-    if (row.email && db.one('SELECT 1 FROM contacts WHERE email = ? COLLATE NOCASE', row.email)) { result.skipped++; return; }
-    try {
-      const id = db.insert('contacts', { ...row, owner_id: req.user.id });
-      automation.emit('contact.created', { contactId: id });
-      result.created++;
-    } catch (err) {
-      result.errors.push(`Row ${i + 2}: ${err.message}`);
-    }
-  });
-  res.json(result);
-});
-
 router.get('/:id', (req, res) => {
   const id = intParam(req.params.id);
   const contact = notFound(db.one(

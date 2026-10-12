@@ -6,7 +6,49 @@
 const { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_TEMPLATE } = require('./sms-defaults');
 const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 
-module.exports = [
+// Existing installs: add SMS to the default automations and templates.
+// (Fresh installs get them from the seed data instead.)
+function addSmsDefaults(db) {
+  if (db.getSetting('automations_seeded')) {
+    const addSms = (name, action) => {
+      const row = db.one('SELECT id, actions FROM automations WHERE name = ?', name);
+      if (!row) return;
+      const actions = JSON.parse(row.actions);
+      if (actions.some((a) => a.type === 'send_sms')) return;
+      db.update('automations', row.id, { actions: JSON.stringify([...actions, action]) });
+    };
+    for (const [name, message] of Object.entries(STAGE_SMS)) addSms(name, { type: 'send_sms', message });
+    addSms(BIRTHDAY_SMS.automation, { type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });
+    for (const a of SMS_AUTOMATIONS) {
+      if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
+      db.insert('automations', {
+        name: a.name, description: a.description || null, trigger: a.trigger,
+        conditions: JSON.stringify(a.conditions || []), actions: JSON.stringify(a.actions),
+      });
+    }
+  }
+  if (db.one('SELECT 1 FROM email_templates LIMIT 1')) {
+    const [name, category, subject, body] = RATE_REDUCTION_TEMPLATE;
+    if (!db.one('SELECT 1 FROM email_templates WHERE name = ?', name)) db.insert('email_templates', { name, category, subject, body });
+    for (const [tname, sms] of Object.entries(TEMPLATE_SMS)) {
+      db.run('UPDATE email_templates SET sms_body = ? WHERE name = ? AND sms_body IS NULL', sms, tname);
+    }
+  }
+}
+
+function addCalendarDefaults(db) {
+  if (db.getSetting('automations_seeded')) {
+    for (const a of CALENDAR_AUTOMATIONS) {
+      if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
+      db.insert('automations', {
+        name: a.name, description: a.description || null, trigger: a.trigger,
+        conditions: JSON.stringify(a.conditions || []), actions: JSON.stringify(a.actions),
+      });
+    }
+  }
+}
+
+const MIGRATIONS = [
   // 1. Outlook email sync
   `
   CREATE TABLE mail_accounts (
@@ -92,33 +134,7 @@ module.exports = [
       ALTER TABLE email_templates ADD COLUMN sms_body TEXT;
     `);
 
-    // Existing installs: add SMS to the default automations and templates.
-    // (Fresh installs get them from the seed data instead.)
-    if (db.getSetting('automations_seeded')) {
-      const addSms = (name, action) => {
-        const row = db.one('SELECT id, actions FROM automations WHERE name = ?', name);
-        if (!row) return;
-        const actions = JSON.parse(row.actions);
-        if (actions.some((a) => a.type === 'send_sms')) return;
-        db.update('automations', row.id, { actions: JSON.stringify([...actions, action]) });
-      };
-      for (const [name, message] of Object.entries(STAGE_SMS)) addSms(name, { type: 'send_sms', message });
-      addSms(BIRTHDAY_SMS.automation, { type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });
-      for (const a of SMS_AUTOMATIONS) {
-        if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
-        db.insert('automations', {
-          name: a.name, description: a.description || null, trigger: a.trigger,
-          conditions: JSON.stringify(a.conditions || []), actions: JSON.stringify(a.actions),
-        });
-      }
-    }
-    if (db.one('SELECT 1 FROM email_templates LIMIT 1')) {
-      const [name, category, subject, body] = RATE_REDUCTION_TEMPLATE;
-      if (!db.one('SELECT 1 FROM email_templates WHERE name = ?', name)) db.insert('email_templates', { name, category, subject, body });
-      for (const [tname, sms] of Object.entries(TEMPLATE_SMS)) {
-        db.run('UPDATE email_templates SET sms_body = ? WHERE name = ? AND sms_body IS NULL', sms, tname);
-      }
-    }
+    addSmsDefaults(db);
   },
 
   // 3. Branding and email signatures
@@ -192,14 +208,30 @@ module.exports = [
       CREATE INDEX idx_appointments_start ON appointments(start_at);
       CREATE INDEX idx_appointments_contact ON appointments(contact_id);
     `);
-    if (db.getSetting('automations_seeded')) {
-      for (const a of CALENDAR_AUTOMATIONS) {
-        if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
-        db.insert('automations', {
-          name: a.name, description: a.description || null, trigger: a.trigger,
-          conditions: JSON.stringify(a.conditions || []), actions: JSON.stringify(a.actions),
-        });
-      }
-    }
+    addCalendarDefaults(db);
   },
+
+  // 5. Spreadsheet imports (with undo)
+  `
+  CREATE TABLE imports (
+    id               INTEGER PRIMARY KEY,
+    filename         TEXT,
+    sheet            TEXT,
+    created_by       INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    contacts_created INTEGER NOT NULL DEFAULT 0,
+    contacts_updated INTEGER NOT NULL DEFAULT 0,
+    deals_created    INTEGER NOT NULL DEFAULT 0,
+    skipped          INTEGER NOT NULL DEFAULT 0,
+    held_automations INTEGER NOT NULL DEFAULT 0,
+    options          TEXT,
+    undone_at        TEXT,
+    created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  ALTER TABLE contacts ADD COLUMN import_id INTEGER REFERENCES imports(id) ON DELETE SET NULL;
+  ALTER TABLE deals ADD COLUMN import_id INTEGER REFERENCES imports(id) ON DELETE SET NULL;
+  `,
 ];
+
+module.exports = MIGRATIONS;
+module.exports.addSmsDefaults = addSmsDefaults;
+module.exports.addCalendarDefaults = addCalendarDefaults;

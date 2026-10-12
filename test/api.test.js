@@ -189,12 +189,7 @@ test('tasks: complete, filter, and task.completed event', async () => {
   assert.ok(done.completed_at);
 });
 
-test('CSV import and export', async () => {
-  const csv = 'First Name,Last Name,Email,Status\nAmy,Lee,amy@example.com,lead\n"O\'Neil, Jr",,amy@example.com,lead\n,NoFirst,x@example.com,lead\n';
-  const r = (await api.post('/contacts/import', { csv })).data;
-  assert.equal(r.created, 1);
-  assert.equal(r.skipped, 1);
-  assert.equal(r.errors.length, 1);
+test('CSV export neutralises spreadsheet formulas', async () => {
   await api.post('/contacts', { first_name: '=HYPERLINK("x")', status: 'lead' });
   const out = await api.get('/contacts/export.csv');
   assert.match(out.data, /^id,first_name/);

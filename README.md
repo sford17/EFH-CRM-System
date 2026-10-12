@@ -7,7 +7,8 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | Area | What it does |
 | --- | --- |
 | **Dashboard** | Open pipeline, settlements against a monthly target, commission, overdue tasks, upcoming finance/settlement/expiry dates, recent activity |
-| **Contacts** | Leads → prospects → clients, with owner, lead source, referral partner, tags, income and employment details, marketing opt-in, review date. Full activity timeline (calls, emails, meetings, notes). CSV import/export |
+| **Contacts** | Leads → prospects → clients, with owner, lead source, referral partner, tags, income and employment details, marketing opt-in, review date. Full activity timeline (calls, emails, meetings, notes). CSV export |
+| **Spreadsheet import** | Import existing clients and their loans from Excel (.xlsx) or CSV. Columns are matched automatically, with a preview, duplicate handling and one-click undo. Imported clients aren't sent welcome or stage messages |
 | **Pipeline** | Kanban board across New Lead → Fact Find → Pre-Approval → Application Lodged → Conditional → Unconditional → Settlement Booked → Settled / Lost. Drag and drop, or use the stage menu |
 | **Deals** | Loan amount, property value, auto-calculated LVR, lender, product, rate, fixed-rate expiry, pre-approval expiry, finance and settlement dates, co-borrower, stage history |
 | **Document checklists** | Standard checklist built automatically by loan purpose (plus self-employed docs), with status tracking and a one-click "email the client what's outstanding" |
@@ -48,6 +49,19 @@ Settings come from environment variables; see [`.env.example`](.env.example). Th
 - **`HOST` / `COOKIE_SECURE` / `TRUST_PROXY`**: for running on a server behind HTTPS.
 
 Business details (name, phone, email, ACL number, monthly settlement target) are set in the app under **Settings**.
+
+## Importing existing clients
+
+Go to **Contacts → Import from spreadsheet** and drop in an Excel (.xlsx) or CSV file. Up to 20,000 rows are supported, and a downloadable template is provided.
+
+1. **Match columns.** Common headings are recognised automatically, such as "Client Name", "Surname", "D.O.B.", "Mobile Phone", "Bank", "Loan Amount", "Fixed Expiry" and "Date Settled". Title rows above the headings are skipped. If the workbook has several sheets, pick the one to import.
+2. **Choose options.** Set the default status, who owns the clients, what to do with clients already in the CRM (skip them, or fill in their missing details without overwriting anything), the stage for imported loans (usually *Settled*), a tag for everyone imported, and marketing consent.
+3. **Preview.** Rows with problems are listed first, along with any new lenders that will be added.
+4. **Import.** Every import is listed with an **Undo** button, which deletes everyone it added.
+
+The importer understands Australian day-first dates (`04/03/1985`, `4/3/85`, `1 Jan 2020`), real Excel dates, amounts like `$450,000` or `450k`, rates like `5.89%` or Excel percentages, mobiles that lost their leading 0 in Excel, full state names, and common lender abbreviations (CBA, WBC, STG, BOQ and others).
+
+Imports never trigger welcome emails or deal-stage texts. By default, scheduled messages that are already due at the time of import are held, for example a fixed rate expiring next month, an overdue review, today's birthdays, or "uncontacted lead" chasers. Future fixed-rate expiries, anniversaries and birthdays still trigger as normal.
 
 ## Connecting Outlook
 

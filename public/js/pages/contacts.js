@@ -14,6 +14,10 @@ const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: 
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
 
 export async function contactsPage() {
+  // Links like #/contacts?tag=imported-2026-10-12 pre-set a filter.
+  for (const key of Object.keys(filters)) {
+    if (window.routeQuery?.has(key)) filters[key] = window.routeQuery.get(key);
+  }
   const results = h('div');
   const load = async () => {
     const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
@@ -43,7 +47,7 @@ export async function contactsPage() {
   await load();
   return h('div',
     pageHeader('Contacts',
-      h('button.secondary', { type: 'button', onclick: importDialog }, 'Import CSV'),
+      h('a.button.secondary', { href: '#/import' }, 'Import from spreadsheet'),
       h('a.button.secondary', { href: '/api/contacts/export.csv', download: 'contacts.csv' }, 'Export CSV'),
       h('button', { type: 'button', onclick: () => newContact() }, '+ New contact')),
     h('div.filters',
@@ -53,23 +57,6 @@ export async function contactsPage() {
       select('owner_id', 'All owners', userOptions()),
       control('tag', h('input', { type: 'search', placeholder: 'Tag', 'aria-label': 'Filter by tag' }))),
     results);
-}
-
-function importDialog() {
-  const area = h('textarea', { rows: 10, placeholder: 'first_name,last_name,email,mobile,status,lead_source\nJane,Citizen,jane@example.com,0400 123 456,lead,website' });
-  const file = h('input', { type: 'file', accept: '.csv,text/csv' });
-  file.addEventListener('change', async () => { if (file.files[0]) area.value = await file.files[0].text(); });
-  const btn = h('button', { type: 'button' }, 'Import');
-  const d = modal('Import contacts from CSV', [
-    h('p.muted', 'The first row must be headers. Recognised columns include first_name, last_name, email, mobile, phone, dob (YYYY-MM-DD), status, lead_source, suburb, state, postcode, tags. Contacts whose email already exists are skipped.'),
-    file, area, h('div.actions', btn),
-  ], { wide: true });
-  btn.addEventListener('click', async () => {
-    const r = await attempt(() => api('/contacts/import', { method: 'POST', body: { csv: area.value } }));
-    toast(`Imported ${r.created}, skipped ${r.skipped}${r.errors.length ? `, ${r.errors.length} errors` : ''}`, r.errors.length ? 'error' : 'ok');
-    if (r.errors.length) d.querySelector('.modal-body').append(h('ul.errors', r.errors.map((e) => h('li', e))));
-    else { d.close(); refresh(); }
-  });
 }
 
 export async function contactPage(id) {

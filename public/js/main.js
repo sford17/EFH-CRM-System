@@ -11,6 +11,7 @@ import { reportsPage } from './pages/reports.js';
 import { calculatorsPage } from './pages/calculators.js';
 import { inboxPage } from './pages/email.js';
 import { calendarPage } from './pages/calendar.js';
+import { importPage } from './pages/import.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
@@ -35,6 +36,7 @@ const ROUTES = [
   [/^\/$/, dashboardPage],
   [/^\/pipeline$/, pipelinePage],
   [/^\/contacts$/, contactsPage],
+  [/^\/import$/, importPage],
   [/^\/contacts\/(\d+)$/, contactPage],
   [/^\/deals$/, dealsPage],
   [/^\/deals\/(\d+)$/, dealPage],
@@ -159,7 +161,8 @@ async function logout() {
 }
 
 async function route() {
-  const path = location.hash.replace(/^#/, '') || '/';
+  const [path, query = ''] = (location.hash.replace(/^#/, '') || '/').split('?');
+  window.routeQuery = new URLSearchParams(query);
   if (path === '/login') return;
   document.body.classList.remove('nav-open');
   const view = document.getElementById('view');

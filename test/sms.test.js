@@ -146,26 +146,25 @@ test('rejected texts are marked failed and can be retried', async () => {
   assert.match((await api.post('/sms', { contact_id: none.id, body: 'x' })).data.error, /no mobile/);
 });
 
-test('upgrading an existing install adds SMS to the default automations', () => {
+test('upgrading an existing install adds SMS and calendar defaults', () => {
+  const migrations = require('../src/db/migrations');
   const { STAGE_SMS } = require('../src/db/sms-defaults');
-  // Rewind to how a version-1 database looked.
+  assert.equal(db.one('PRAGMA user_version').user_version, migrations.length, 'fresh database is fully migrated');
+  // Rewind the data to how a pre-SMS install looked, then apply the upgrade steps.
   for (const a of db.all('SELECT id, actions FROM automations')) {
     db.update('automations', a.id, { actions: JSON.stringify(JSON.parse(a.actions).filter((x) => x.type !== 'send_sms')) });
   }
-  db.run("DELETE FROM automations WHERE name IN ('New deal: welcome SMS', 'Settlement booked: SMS')");
+  db.run("DELETE FROM automations WHERE name IN ('New deal: welcome SMS', 'Settlement booked: SMS') OR trigger LIKE 'appointment.%'");
   db.run("DELETE FROM email_templates WHERE name = 'Rate reduction'");
   db.run('UPDATE email_templates SET sms_body = NULL');
-  db.get().exec(`DROP TABLE sms_messages; ALTER TABLE contacts DROP COLUMN sms_opt_out; ALTER TABLE users DROP COLUMN sms_from;
-    ALTER TABLE email_templates DROP COLUMN sms_body; DROP TABLE assets; ALTER TABLE users DROP COLUMN signature_html;
-    DROP TABLE appointments; DROP TABLE calendly_accounts; DELETE FROM automations WHERE trigger LIKE 'appointment.%';
-    PRAGMA user_version = 1;`);
-  db.migrate();
-  assert.equal(db.one('PRAGMA user_version').user_version, require('../src/db/migrations').length);
+  migrations.addSmsDefaults(db);
+  migrations.addCalendarDefaults(db);
+  migrations.addSmsDefaults(db); // idempotent
   const withSms = db.all("SELECT name FROM automations WHERE actions LIKE '%send_sms%'").map((r) => r.name);
   for (const name of Object.keys(STAGE_SMS)) assert.ok(withSms.includes(name), name);
   assert.ok(withSms.includes('Client birthday'));
-  assert.ok(withSms.includes('New deal: welcome SMS'));
+  assert.equal(withSms.filter((n) => n === 'New deal: welcome SMS').length, 1);
   assert.ok(db.one("SELECT sms_body FROM email_templates WHERE name = 'Rate reduction'").sms_body);
   assert.ok(db.one("SELECT sms_body FROM email_templates WHERE name = 'Annual loan review'").sms_body);
-  assert.equal(db.one("SELECT COUNT(*) AS n FROM automations WHERE trigger LIKE 'appointment.%'").n, 2, 'calendar automations added');
+  assert.equal(db.one("SELECT COUNT(*) AS n FROM automations WHERE trigger LIKE 'appointment.%'").n, 2);
 });
