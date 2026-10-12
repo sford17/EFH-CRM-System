@@ -591,3 +591,17 @@ tr.subtotal td { font-weight: 600; border-top: 2px solid var(--border); }
 .settle-month th:nth-child(6), .settle-undated th:nth-child(6) { width: 11%; }
 .settle-month th:nth-child(7), .settle-undated th:nth-child(7) { width: 13%; }
 .settle-month td, .settle-undated td { overflow-wrap: anywhere; }
+
+/* ---- Adobe Sign ---- */
+.sign-list > li { display: grid; gap: .25rem; padding: .6rem 0; border-bottom: 1px solid var(--border); }
+.sign-list > li:last-child { border-bottom: 0; }
+.signer-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .25rem .9rem; font-size: .85rem; }
+.signer.signed { color: var(--ok); }
+.signer.declined { color: var(--danger); }
+.sign-form { display: grid; gap: .8rem; }
+.sign-form .field { display: grid; gap: .35rem; }
+.sign-form input[hidden], .sign-form select[hidden] { display: none; }
+.signer-rows { display: grid; gap: .35rem; }
+.signer-row { display: grid; grid-template-columns: auto 1fr 1.4fr auto; gap: .4rem; align-items: center; }
+.grid-2.tight { gap: .5rem; }
+@media (max-width: 600px) { .signer-row { grid-template-columns: auto 1fr; } .signer-row input[type=email] { grid-column: 2; } }

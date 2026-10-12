@@ -59,6 +59,7 @@ const EVENT_TRIGGERS = [
   { key: 'email.received', label: 'Email received from a contact' },
   { key: 'appointment.booked', label: 'Appointment booked (Calendly)' },
   { key: 'appointment.cancelled', label: 'Appointment cancelled (Calendly)' },
+  { key: 'document.signed', label: 'Document signed (Adobe Sign)' },
 ];
 const SCHEDULED_TRIGGERS = [
   { key: 'schedule.fixed_rate_expiry', label: 'Fixed rate expiring (days_before)' },

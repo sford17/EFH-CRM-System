@@ -97,6 +97,7 @@ router.get('/:id', (req, res) => {
     id,
   );
   contact.sms = db.all('SELECT id, body, status, error, from_number, send_after, sent_at FROM sms_messages WHERE contact_id = ? ORDER BY id DESC LIMIT 50', id);
+  contact.sign_requests = require('../services/adobeSign').list({ contactId: id });
   res.json(contact);
 });
 

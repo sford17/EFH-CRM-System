@@ -631,6 +631,35 @@ MIGRATIONS.push(
   },
 );
 
+MIGRATIONS.push(
+  // 16. Documents sent for e-signature through Adobe Acrobat Sign.
+  `
+  CREATE TABLE sign_requests (
+    id               INTEGER PRIMARY KEY,
+    contact_id       INTEGER REFERENCES contacts(id) ON DELETE CASCADE,
+    deal_id          INTEGER REFERENCES deals(id) ON DELETE SET NULL,
+    document_id      INTEGER REFERENCES documents(id) ON DELETE SET NULL, -- checklist item ticked off when signed
+    agreement_id     TEXT,                                               -- Adobe Sign agreement id
+    name             TEXT NOT NULL,
+    file_name        TEXT,
+    message          TEXT,
+    status           TEXT NOT NULL DEFAULT 'sending'
+                     CHECK (status IN ('sending','out_for_signature','signed','declined','cancelled','expired','failed')),
+    adobe_status     TEXT,
+    signers          TEXT NOT NULL DEFAULT '[]',                         -- JSON [{name, email, contact_id, order, status}]
+    sender_user_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sent_at          TEXT,
+    completed_at     TEXT,
+    last_checked_at  TEXT,
+    error            TEXT,
+    signed_pdf       BLOB,
+    created_at       TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_sign_requests_contact ON sign_requests(contact_id);
+  CREATE INDEX idx_sign_requests_status ON sign_requests(status);
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

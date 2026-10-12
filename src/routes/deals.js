@@ -92,6 +92,7 @@ router.get('/:id', (req, res) => {
   );
   deal.mail = listEmails({ contactIds: [deal.contact_id, deal.co_borrower_id].filter(Boolean), limit: 50 });
   deal.parties = parties.list(deal.id);
+  deal.sign_requests = require('../services/adobeSign').list({ dealId: deal.id });
   // The broker's accreditation number with this lender, and who to email there.
   const lenders = require('../services/lenders');
   deal.accreditation = lenders.accreditationOf(deal.lender_id, deal.owner_id);

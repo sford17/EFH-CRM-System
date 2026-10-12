@@ -20,6 +20,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
 | **Mortgage tracker** | A tab on each contact covering their properties, valuation history by method (full, desktop, kerbside, AVM, contract price…), loans and the properties securing them, and other assets. Shows LVR, equity, usable equity and net position, plus a lending structure diagram that flags cross-collateralisation and LVRs over 80% |
 | **Client lending reviews** | A branded review document built from the mortgage tracker, with four commentary sections (Loan Review, Actions to Consider, Broker to Action, Next Steps) pre-filled with suggestions. Preview it live, download as PDF or Word, or email it to the client with the PDF attached |
+| **E-signatures (Adobe Sign)** | Send a PDF or Word document (or a lending review) to clients for signature through Adobe Acrobat Sign, in order or all at once, with you countersigning if needed. Track who has signed, chase, cancel, and keep the signed PDF in the CRM; a deal checklist item can be ticked off automatically when it's signed |
 | **Calendar (Calendly)** | Calendly bookings appear on a Calendar page, the dashboard and each client's record. Bookings are matched to clients (newcomers become leads), cancellations get a follow-up task, and a **Booking link** button copies, emails or texts a pre-filled Calendly link |
 | **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Every email has your logo on a band of your brand colour, a footer with your business details and disclaimer, and each sender's own signature, with images embedded |
 | **Email templates** | 18 editable templates with merge fields, headings and bullet points, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
@@ -100,6 +101,35 @@ Tick **Shares finances** for a couple (it's ticked automatically for spouses and
 - **Lending reviews:** a review is prepared for the household (for example "Mia & Tom Jones", which also appears in the PDF and Word file names). Untick a name to address it to one person only.
 
 To separate a couple's finances again, edit the relationship and untick *Shares finances*, or click **Unlink**. Both contacts and all their records are kept.
+
+## Sending documents for signing (Adobe Sign)
+
+**Connect once (admin):** in **Settings → Adobe Sign**:
+
+1. In Adobe Acrobat Sign (signed in as an account administrator), go to **Account → Acrobat Sign API → API Information → Integration Key**.
+2. Name it "EFH CRM" and tick the **user_read, agreement_read, agreement_write and agreement_send** scopes.
+3. Save, open the key and copy it, then paste it into the CRM and click **Connect**.
+
+Integration keys come with Acrobat Sign business and enterprise plans. If *Acrobat Sign API* isn't in your account menu, ask Adobe support to switch on API access. The key is stored encrypted.
+
+**Send a document:** on a contact or deal, click **✍ Send for signing** in the *Documents for signing* card.
+
+- **Document:** upload a PDF or Word document (up to 10 MB), or choose one of the client's lending reviews.
+- **Signers:** the client and their partner are listed (tick who needs to sign), and you can add anyone else. Choose whether everyone signs at the same time or one after another. Tick *I need to sign too* to countersign after the clients.
+- **Deal:** optionally link it to a deal, and pick a checklist item (e.g. *Signed privacy consent*) to tick off automatically when it's signed.
+- **Message, reminders and expiry:** add a message, and choose automatic reminders (daily, every 3 days or weekly) and an expiry.
+
+Adobe Sign emails each signer a secure link. If your document has no signature fields, Adobe adds a signature block at the end. For precise placement, add fields in Adobe, or use Adobe *text tags* in your Word/PDF template (e.g. `{{Sig_es_:signer1:signature}}`).
+
+**Tracking:** the card shows each signer's progress (*waiting to sign*, *after the others*, *✓ signed*, *✗ declined*). The CRM checks Adobe every 10 minutes, or click **Check now**. Use **Send reminder** to chase whoever is up next, or **Cancel** to withdraw it. When everyone has signed:
+
+- the signed PDF is saved (**⬇ Signed copy**);
+- it's logged on the client's timeline;
+- you get a notification;
+- the linked checklist item is ticked off;
+- the **Document signed (Adobe Sign)** automation trigger fires, so you can add a task or a thank-you message, for example.
+
+Documents go out from the connected Adobe account. To send each broker's documents from their own Adobe account, tick *Send as each team member* in Settings (each broker must also be a user in your Acrobat Sign account).
 
 ## Running settlements report
 

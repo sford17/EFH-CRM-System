@@ -13,6 +13,7 @@ import { trackerTab } from './tracker.js';
 import { reviewsCard, startReview } from './review.js';
 import { relatedCard } from './household.js';
 import { googleReviewInfo, requestReviewDialog } from './googleReview.js';
+import { signingCard } from './signing.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -124,6 +125,7 @@ export async function contactPage(id) {
         h('section.card',
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ contact_id: c.id }) }, '+ Task')),
           taskTable(c.tasks)),
+        signingCard({ requests: c.sign_requests, contact: c }),
         emailsCard({ mail: c.mail, outbox: c.emails, contactId: c.id, to: c.email }),
         smsCard({ sms: c.sms, contactId: c.id, mobile: c.mobile, name: c.first_name }),
         contactAppointmentsCard(c),

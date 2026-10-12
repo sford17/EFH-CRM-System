@@ -4,6 +4,7 @@ import { outlookSettingsCard } from './email.js';
 import { smsSettingsCard } from './sms.js';
 import { brandingCard, signatureCard } from './branding.js';
 import { calendlySettingsCard } from './calendar.js';
+import { adobeSignSettingsCard } from './signing.js';
 
 const PARTNER_TYPES = ['real_estate', 'buyers_agent', 'solicitor', 'conveyancer', 'accountant', 'financial_planner', 'builder', 'past_client', 'other'];
 const TYPE_LABELS = { real_estate: 'Real estate agent', buyers_agent: "Buyer's agent" };
@@ -165,6 +166,7 @@ export async function settingsPage() {
     await outlookSettingsCard(),
     await smsSettingsCard(),
     await calendlySettingsCard(),
+    await adobeSignSettingsCard(),
     h('section.card', h('h2', 'Business'), bizForm),
     h('section.card',
       h('div.card-head', h('h2', 'Team'), isAdmin ? h('button.small', { type: 'button', onclick: () => editUser() }, '+ Add user') : null),
