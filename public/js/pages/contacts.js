@@ -1,6 +1,6 @@
 import {
   api, h, table, badge, fullName, date, money, pageHeader, formModal, attempt, confirmDialog, modal, stageLabel,
-  opts, label, userOptions, toast,
+  opts, label, userOptions, toast, lenderTag,
 } from '../core.js';
 import {
   contactFields, newContact, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh,
@@ -113,7 +113,7 @@ export async function contactPage(id) {
           h('div.card-head', h('h2', 'Deals'), h('button.small', { type: 'button', onclick: () => newDeal(c.id) }, '+ Deal')),
           c.deals.length
             ? h('ul.plain', c.deals.map((d) => h('li', h('a', { href: `#/deals/${d.id}` }, d.title),
-              h('div.muted', `${stageLabel(d.stage)} · ${money(d.loan_amount)}${d.lender_name ? ` · ${d.lender_name}` : ''}`))))
+              h('div.muted', `${stageLabel(d.stage)} · ${money(d.loan_amount)}`, d.lender_name ? [' · ', lenderTag(d.lender_logo_id, d.lender_name)] : null))))
             : h('p.empty', 'No deals yet.')),
         h('section.card',
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ contact_id: c.id }) }, '+ Task')),

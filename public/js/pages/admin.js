@@ -1,4 +1,4 @@
-import { api, h, pageHeader, table, badge, money, pct, attempt, confirmDialog, label, formModal, state, loadLookups, field, readForm, opts } from '../core.js';
+import { api, h, pageHeader, table, badge, money, pct, attempt, confirmDialog, label, formModal, state, loadLookups, field, readForm, opts, lenderLogo, toast } from '../core.js';
 import { refresh } from './forms.js';
 import { outlookSettingsCard } from './email.js';
 import { smsSettingsCard } from './sms.js';
@@ -20,6 +20,7 @@ const partnerFields = [
 
 const lenderFields = [
   { name: 'name', label: 'Lender', required: true },
+  { name: 'website', label: 'Website (for fetching a logo)', placeholder: 'westpac.com.au' },
   { name: 'upfront_pct', label: 'Upfront commission (% of loan)', type: 'number', step: 0.01, required: true, default: 0.65 },
   { name: 'trail_pct', label: 'Trail commission (% p.a.)', type: 'number', step: 0.01, required: true, default: 0.15 },
   { name: 'clawback_months', label: 'Clawback period (months)', type: 'number', step: 1, required: true, default: 24 },
@@ -30,7 +31,43 @@ const lenderFields = [
   { name: 'notes', label: 'Notes (policy, turnaround times…)', type: 'textarea', full: true },
 ];
 
-function crudPage({ title, path, fields, columns, intro }) {
+const pickImage = () => new Promise((resolve) => {
+  const input = h('input', { type: 'file', accept: 'image/png,image/jpeg' });
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) return resolve(null);
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.readAsDataURL(file);
+  });
+  input.click();
+});
+
+function logoCell(l) {
+  const done = async (msg) => { toast(msg); await loadLookups(true); window.dispatchEvent(new Event('crm:refresh')); };
+  const upload = async () => {
+    const image = await pickImage();
+    if (!image) return;
+    await attempt(() => api(`/lenders/${l.id}/logo`, { method: 'POST', body: { image } }));
+    done('Logo uploaded');
+  };
+  const fetchIt = async () => {
+    await attempt(() => api(`/lenders/${l.id}/logo/fetch`, { method: 'POST', body: {} }));
+    done('Logo fetched from website');
+  };
+  const remove = async () => {
+    await attempt(() => api(`/lenders/${l.id}/logo`, { method: 'DELETE' }));
+    done('Logo removed');
+  };
+  return h('div.logo-cell',
+    l.logo_asset_id ? lenderLogo(l.logo_asset_id, l.name, 'md') : h('span.logo-empty', 'No logo'),
+    h('div.row-actions.small',
+      h('button.link.small', { type: 'button', onclick: upload }, 'Upload'),
+      l.website ? h('button.link.small', { type: 'button', onclick: fetchIt }, 'Fetch') : null,
+      l.logo_asset_id ? h('button.link.small', { type: 'button', onclick: remove }, 'Remove') : null));
+}
+
+function crudPage({ title, path, fields, columns, intro, intro2 }) {
   return async () => {
     const { rows } = await api(path);
     const edit = (row) => formModal(row ? `Edit ${row.name}` : `New ${title.replace(/s$/, '').toLowerCase()}`, fields, row || {}, async (v) => {
@@ -47,6 +84,7 @@ function crudPage({ title, path, fields, columns, intro }) {
     return h('div',
       pageHeader(title, h('button', { type: 'button', onclick: () => edit() }, `+ Add`)),
       intro ? h('p.muted', intro) : null,
+      intro2 ? h('p.muted', intro2) : null,
       table([...columns, { label: '', value: (r) => h('button.link.small', { type: 'button', onclick: () => remove(r) }, 'Delete') }], rows, { onRow: edit }));
   };
 }
@@ -72,8 +110,10 @@ export const lendersPage = crudPage({
   path: '/lenders',
   fields: lenderFields,
   intro: 'Commission rates drive the expected upfront and trail entries created at settlement. Defaults are indicative – update them to match your aggregator schedule.',
+  intro2: 'Logos appear on pipeline cards, the mortgage tracker, lending reviews, and client emails that mention the lender. Upload the logo from your lender\'s broker portal for the best quality, or fetch the website icon.',
   columns: [
-    { label: 'Lender', value: (l) => h('div', h('strong', l.name), l.active ? null : badge('inactive')) },
+    { label: 'Logo', value: (l) => logoCell(l) },
+    { label: 'Lender', value: (l) => h('div', h('strong', l.name), l.active ? null : badge('inactive'), l.website ? h('div.muted.small', l.website) : null) },
     { label: 'Upfront', value: (l) => pct(l.upfront_pct), class: 'num' },
     { label: 'Trail', value: (l) => pct(l.trail_pct), class: 'num' },
     { label: 'Clawback', value: (l) => `${l.clawback_months} mths`, class: 'num' },

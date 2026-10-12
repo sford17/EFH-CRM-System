@@ -77,7 +77,7 @@ function simpleCrud(table, fields, { required = ['name'], list, label = 'Record'
 
 const lenders = simpleCrud(
   'lenders',
-  ['name', 'upfront_pct', 'trail_pct', 'clawback_months', 'bdm_name', 'bdm_email', 'bdm_phone', 'notes', 'active'],
+  ['name', 'website', 'upfront_pct', 'trail_pct', 'clawback_months', 'bdm_name', 'bdm_email', 'bdm_phone', 'notes', 'active'],
   {
     label: 'Lender',
     list: () => db.all(
@@ -102,5 +102,19 @@ const partners = simpleCrud(
     ),
   },
 );
+
+const lenderLogos = require('../services/lenderLogos');
+lenders.post('/:id/logo', (req, res) => {
+  const assetId = lenderLogos.setLogo(intParam(req.params.id), req.body?.image);
+  res.json({ logo_asset_id: assetId });
+});
+lenders.post('/:id/logo/fetch', async (req, res) => {
+  const assetId = await lenderLogos.fetchFromWebsite(intParam(req.params.id));
+  res.json({ logo_asset_id: assetId });
+});
+lenders.delete('/:id/logo', (req, res) => {
+  lenderLogos.removeLogo(intParam(req.params.id));
+  res.json({ ok: true });
+});
 
 module.exports = { users, settings, lenders, partners };

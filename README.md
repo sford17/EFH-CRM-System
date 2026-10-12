@@ -23,7 +23,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Email templates** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Referral partners** | Agents, accountants, planners and others, with referral counts, settled volume and fee splits |
-| **Lenders** | Commission rates, clawback periods, BDM contacts, settled volume |
+| **Lenders** | Commission rates, clawback periods, BDM contacts, settled volume, and logos (uploaded or fetched from the lender's website) shown across the pipeline, tracker, review documents and client emails |
 | **Reports** | Settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
 | **Team** | Admin, broker and assistant roles, with notifications for automation alerts |
@@ -63,6 +63,16 @@ Open a contact and choose the **Mortgage tracker** tab.
 - **Lending structure:** lenders and their loans on one side, properties on the other, with lines showing the security. A loan secured by several properties is spread across them by value, so each property gets its own LVR, equity and usable equity (to 80% LVR). Cross-collateralisation, a property securing loans with more than one lender, LVRs over 80% and properties without a valuation are flagged. Hover a loan or property to highlight what it's connected to.
 
 When a deal settles, its loan, security property and recorded value are added to the tracker automatically. Imported settled loans are added too. **Fixed-rate expiry** reminders run from tracker loans, so they also cover loans arranged elsewhere or refixed since. There's also an **Interest-only period ending** reminder (90 days ahead by default). Templates can use `{{loan.lender_name}}`, `{{loan.fixed_expiry_date|date}}`, `{{loan.io_expiry_date|date}}`, `{{loan.balance|money}}` and `{{loan.interest_rate}}`.
+
+## Lender logos
+
+On **Lenders**, each lender has **Upload** (PNG/JPG) and **Fetch** buttons. *Fetch* uses the lender's website icon and is quick but low resolution. For the best result, upload the logo from the lender's broker portal or your aggregator. Website addresses are pre-filled for the standard lenders.
+
+Logos appear:
+
+- **In the CRM:** pipeline cards, the deals list and deal page, the client's deals, and the mortgage tracker (loans table and lending structure diagram).
+- **In lending reviews:** the loans table and diagram, in the preview, PDF and Word versions.
+- **In emails to clients:** any email that mentions a lender by name gets that lender's logo, top-right opposite yours (or above the signature in the *Plain* style). Up to three lenders are shown. Short names like ANZ, NAB and ING only match in capitals, so ordinary words never trigger them. Replies stay plain.
 
 ## Client lending reviews
 

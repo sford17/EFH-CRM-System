@@ -1,7 +1,7 @@
 // Mortgage tracker tab on a contact: position summary, lending-structure
 // diagram, properties & valuations, loans and other assets.
 import {
-  api, h, attempt, formModal, modal, confirmDialog, field, readForm, money, date, pct, label, opts, badge, lenderOptions, todayStr,
+  api, h, attempt, formModal, modal, confirmDialog, field, readForm, money, date, pct, label, opts, badge, lenderOptions, todayStr, lenderLogo,
 } from '../core.js';
 
 const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
@@ -32,7 +32,7 @@ export async function trackerTab(contact) {
     const propEls = new Map();
     const loansCol = h('div.ls-col.ls-loans', h('div.ls-col-title', 'Lenders & loans'),
       s.lenders.map((g) => h('div.ls-lender',
-        h('header', h('strong', g.name), h('span', compactMoney(g.total))),
+        h('header', h('span.lender-tag', lenderLogo(g.logo_id, g.name), h('strong', g.name)), h('span', compactMoney(g.total))),
         g.loans.map((n) => {
           const el = h(`div.ls-loan${n.cross_collateralised ? '.cross' : ''}`, { tabindex: 0, dataset: { loan: n.id } },
             h('div.ls-loan-top', h('span', loanType(n.loan_type)), h('strong', compactMoney(n.owing))),
@@ -307,7 +307,7 @@ export async function trackerTab(contact) {
       list.length ? h('div.table-wrap', h('table',
         h('thead', h('tr', ['Lender', 'Type', 'Balance', 'Rate', 'Repayments', 'Secured by', 'Status'].map((t) => h('th', t)))),
         h('tbody', list.map((n) => h(`tr.clickable${n.status !== 'active' ? '.inactive' : ''}`, { onclick: () => loanDialog(n, props) },
-          h('td', h('strong', n.lender_display), n.account_number ? h('div.muted.small', n.account_number) : null, !n.arranged_by_us ? h('div.muted.small', 'not arranged by us') : null),
+          h('td', h('span.lender-tag', lenderLogo(n.lender_logo_id, n.lender_display), h('strong', n.lender_display)), n.account_number ? h('div.muted.small', n.account_number) : null, !n.arranged_by_us ? h('div.muted.small', 'not arranged by us') : null),
           h('td', loanType(n.loan_type), n.co_borrower_name ? h('div.muted.small', `with ${n.co_borrower_name}`) : null),
           h('td.num', money(n.balance ?? n.limit_amount), n.limit_amount && n.balance !== null && n.balance !== n.limit_amount ? h('div.muted.small', `limit ${compactMoney(n.limit_amount)}`) : null,
             n.balance_date ? h('div.muted.small', `as at ${date(n.balance_date)}`) : null, n.offset_balance ? h('div.muted.small', `offset ${compactMoney(n.offset_balance)}`) : null),

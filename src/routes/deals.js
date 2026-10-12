@@ -22,7 +22,7 @@ const FIELDS = [
 
 const SELECT = `
   SELECT d.*, c.first_name || ' ' || COALESCE(c.last_name, '') AS contact_name, c.email AS contact_email,
-         c.mobile AS contact_mobile, l.name AS lender_name, u.name AS owner_name, p.name AS partner_name,
+         c.mobile AS contact_mobile, l.name AS lender_name, l.logo_asset_id AS lender_logo_id, u.name AS owner_name, p.name AS partner_name,
          cb.first_name || ' ' || COALESCE(cb.last_name, '') AS co_borrower_name
   FROM deals d
   JOIN contacts c ON c.id = d.contact_id

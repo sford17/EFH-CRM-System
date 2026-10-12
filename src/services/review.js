@@ -5,6 +5,15 @@
 const db = require('../db');
 const tracker = require('./tracker');
 const branding = require('./branding');
+const lenderLogos = require('./lenderLogos');
+
+// Table cells are strings, or { text, logo } for a lender with its logo.
+const cellText = (c) => (c && typeof c === 'object' ? c.text : String(c ?? ''));
+const cellLogo = (c) => (c && typeof c === 'object' ? lenderLogos.logoData(c.logo) : null);
+function fitBox(w, h, maxW, maxH) {
+  const scale = Math.min(1, maxW / w, maxH / h);
+  return { width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)) };
+}
 const { today, addMonths, formatDate, money: aud } = require('../util');
 
 // ---- Snapshot & suggested commentary ----------------------------------------------
@@ -132,7 +141,7 @@ function model(review) {
       columns: ['Lender', 'Loan', 'Balance', 'Rate', 'Rate type', 'Repayments', 'Secured by'],
       align: ['left', 'left', 'right', 'right', 'left', 'left', 'left'],
       rows: active.map((n) => [
-        `${n.lender_display}${n.account_number ? `\n${n.account_number}` : ''}`,
+        { text: `${n.lender_display}${n.account_number ? `\n${n.account_number}` : ''}`, logo: n.lender_logo_id },
         typeLabel(n.loan_type),
         `${aud(n.owing)}${n.offset_balance ? `\noffset ${aud(n.offset_balance)}` : ''}`,
         n.interest_rate ? `${n.interest_rate}%` : '–',
@@ -216,8 +225,16 @@ function structureSvg(structure) {
   for (const g of structure.lenders) {
     const secured = g.loans.filter((n) => !n.unsecured);
     if (!secured.length) continue;
-    parts.push(`<text x="0" y="${y + 11}" font-family="Helvetica" font-size="9" font-weight="bold" fill="#374151">${esc(clip(g.name, 30))}</text>`);
-    y += 16;
+    const logo = lenderLogos.logoData(g.logo_id);
+    if (logo) {
+      const { width, height } = fitBox(logo.width, logo.height, 70, 16);
+      parts.push(`<image x="0" y="${y}" width="${width}" height="${height}" href="data:${logo.mime};base64,${logo.data.toString('base64')}"/>`);
+      parts.push(`<text x="${width + 6}" y="${y + 11}" font-family="Helvetica" font-size="9" font-weight="bold" fill="#374151">${esc(clip(g.name, 24))}</text>`);
+      y += Math.max(16, height + 4);
+    } else {
+      parts.push(`<text x="0" y="${y + 11}" font-family="Helvetica" font-size="9" font-weight="bold" fill="#374151">${esc(clip(g.name, 30))}</text>`);
+      y += 16;
+    }
     for (const n of secured) {
       parts.push(`<rect x="0.5" y="${y + 0.5}" width="${BOX}" height="34" rx="4" fill="#ffffff" stroke="${n.cross_collateralised ? '#b45309' : '#cbd5e1'}"/>`);
       parts.push(`<text x="8" y="${y + 14}" font-family="Helvetica" font-size="8.5" fill="#111827">${esc(clip(typeLabel(n.loan_type), 24))}</text>`);
@@ -300,7 +317,12 @@ function renderHtml(m) {
     if (b.type === 'note') return `<p class="note">${esc(b.text)}</p>`;
     if (b.type === 'table') {
       const al = (i) => (b.align?.[i] === 'right' ? ' class="r"' : '');
-      return `<table><thead><tr>${b.columns.map((c, i) => `<th${al(i)}>${esc(c)}</th>`).join('')}</tr></thead><tbody>${b.rows.map((r) => `<tr>${r.map((c, i) => `<td${al(i)}>${cell(c)}</td>`).join('')}</tr>`).join('')}${b.total ? `<tr class="total">${b.total.map((c, i) => `<td${al(i)}>${cell(c)}</td>`).join('')}</tr>` : ''}</tbody></table>`;
+      const td = (c, i) => {
+        const logo = cellLogo(c);
+        const img = logo ? (() => { const f = fitBox(logo.width, logo.height, 90, 22); return `<img class="lender-logo" src="${logo.url}" width="${f.width}" height="${f.height}" alt=""><br>`; })() : '';
+        return `<td${al(i)}>${img}${cell(cellText(c))}</td>`;
+      };
+      return `<table><thead><tr>${b.columns.map((c, i) => `<th${al(i)}>${esc(c)}</th>`).join('')}</tr></thead><tbody>${b.rows.map((r) => `<tr>${r.map(td).join('')}</tr>`).join('')}${b.total ? `<tr class="total">${b.total.map(td).join('')}</tr>` : ''}</tbody></table>`;
     }
     return '';
   }).join('\n');
@@ -316,7 +338,7 @@ h3{font-size:13px;margin:16px 0 6px;color:#374151}p,li{font-size:13.5px;line-hei
 .tiles span{display:block;font-size:11px;color:#6b7280}.tiles strong{font-size:16px}
 table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}th{text-align:left;background:#f3f4f6;color:#374151;padding:6px;font-weight:600}
 td{padding:6px;border-bottom:1px solid #e5e7eb;vertical-align:top}.r{text-align:right}tr.total td{font-weight:bold;border-top:2px solid #d1d5db}
-.diagram{margin:8px 0 12px;overflow-x:auto}.note{font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:12px;margin-top:28px}
+.diagram{margin:8px 0 12px;overflow-x:auto}img.lender-logo{margin-bottom:3px}.note{font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:12px;margin-top:28px}
 @media (max-width:700px){.page{padding:24px}.tiles{grid-template-columns:repeat(2,1fr)}}
 </style></head><body><div class="page">
 <header><div>${logo ? `<img src="${logo.url}" alt="${esc(m.business.name)}">` : `<strong style="font-size:20px">${esc(m.business.name)}</strong>`}</div>
@@ -374,8 +396,12 @@ async function renderPdf(m) {
           widths: b.widths.map((w) => `${(w / total) * 100}%`),
           body: [
             b.columns.map((c, i) => ({ text: c, bold: true, fillColor: '#f3f4f6', fontSize: 8.5, alignment: al(i) })),
-            ...b.rows.map((r) => r.map((c, i) => ({ text: String(c), fontSize: 8.5, alignment: al(i) }))),
-            ...(b.total ? [b.total.map((c, i) => ({ text: String(c), bold: true, fontSize: 8.5, alignment: al(i) }))] : []),
+            ...b.rows.map((r) => r.map((c, i) => {
+              const logo = cellLogo(c);
+              const text = { text: cellText(c), fontSize: 8.5, alignment: al(i) };
+              return logo ? { stack: [{ image: `data:${logo.mime};base64,${logo.data.toString('base64')}`, fit: [60, 16], margin: [0, 0, 0, 2] }, text] } : text;
+            })),
+            ...(b.total ? [b.total.map((c, i) => ({ text: cellText(c), bold: true, fontSize: 8.5, alignment: al(i) }))] : []),
           ],
         },
         layout: { hLineWidth: (i) => (i === 0 ? 0 : 0.5), vLineWidth: () => 0, hLineColor: () => '#e5e7eb', paddingTop: () => 4, paddingBottom: () => 4 },
@@ -475,7 +501,15 @@ async function renderDocx(m) {
           width: { size: Math.round((b.widths[i] / total) * 100), type: D.WidthType.PERCENTAGE },
           shading: header ? { fill: 'F3F4F6', type: D.ShadingType.CLEAR, color: 'auto' } : undefined,
           margins: { top: 60, bottom: 60, left: 80, right: 80 },
-          children: cellPara(c, { bold: header || bold, align: al(i) }),
+          children: [
+            ...(() => {
+              const logo = cellLogo(c);
+              if (!logo) return [];
+              const f = fitBox(logo.width, logo.height, 70, 18);
+              return [new D.Paragraph({ children: [new D.ImageRun({ type: logo.mime === 'image/png' ? 'png' : 'jpg', data: logo.data, transformation: f })] })];
+            })(),
+            ...cellPara(cellText(c), { bold: header || bold, align: al(i) }),
+          ],
         })),
       });
       children.push(new D.Table({

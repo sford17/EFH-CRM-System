@@ -1,6 +1,6 @@
 import {
   api, h, table, badge, date, money, money2, pct, pageHeader, formModal, attempt, confirmDialog, state, stageLabel,
-  label, userOptions, todayStr, relDays, opts, dateTime,
+  label, userOptions, todayStr, relDays, opts, dateTime, lenderTag, lenderLogo,
 } from '../core.js';
 import { dealFields, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard } from './email.js';
@@ -57,7 +57,8 @@ export async function pipelinePage() {
     const el = h(`article.deal-card${d.priority === 'high' ? '.high' : ''}`, { draggable: 'true' },
       h('a', { href: `#/deals/${d.id}` }, d.title),
       h('div.deal-amount', money(d.loan_amount), d.lvr ? h('span.muted', ` · LVR ${d.lvr}%`) : null),
-      h('div.muted', [d.lender_name, d.owner_name].filter(Boolean).join(' · ')),
+      d.lender_name ? h('div.card-lender', lenderLogo(d.lender_logo_id, d.lender_name), h('span.muted', d.lender_name)) : null,
+      d.owner_name ? h('div.muted', d.owner_name) : null,
       d.finance_due_date && !['settled', 'lost', 'unconditional_approval', 'settlement_booked'].includes(d.stage)
         ? h('div.small.text-warn', `Finance due ${relDays(d.finance_due_date)}`) : null,
       d.settlement_date && ['unconditional_approval', 'settlement_booked'].includes(d.stage)
@@ -95,7 +96,7 @@ export async function dealsPage() {
       { label: 'Stage', value: (d) => badge(stageLabel(d.stage), d.stage === 'settled' ? 'ok' : d.stage === 'lost' ? 'danger' : 'info') },
       { label: 'Loan', value: (d) => money(d.loan_amount), class: 'num' },
       { label: 'LVR', value: (d) => (d.lvr ? `${d.lvr}%` : '—'), class: 'num' },
-      { label: 'Lender', value: (d) => d.lender_name || '—' },
+      { label: 'Lender', value: (d) => lenderTag(d.lender_logo_id, d.lender_name) },
       { label: 'Broker', value: (d) => d.owner_name || '—' },
       { label: 'Updated', value: (d) => date(d.updated_at) },
     ], rows, { onRow: (d) => { location.hash = `#/deals/${d.id}`; }, empty: 'No deals match.' }));
@@ -198,7 +199,7 @@ export async function dealPage(id) {
           info('Loan amount', deal.loan_amount ? money(deal.loan_amount) : null),
           info('LVR', deal.lvr ? `${deal.lvr}%` : null),
           info('Deposit / equity', deal.deposit ? money(deal.deposit) : null),
-          info('Lender', deal.lender_name),
+          info('Lender', deal.lender_name ? lenderTag(deal.lender_logo_id, deal.lender_name, 'md') : null),
           info('Product', deal.product_name),
           info('Rate', deal.interest_rate ? `${pct(deal.interest_rate)} ${label(deal.rate_type || '')}` : null),
           info('Fixed expiry', deal.fixed_expiry_date ? `${date(deal.fixed_expiry_date)} (${relDays(deal.fixed_expiry_date)})` : null),

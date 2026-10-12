@@ -488,3 +488,13 @@ fieldset.securities legend { font-size: .82rem; color: var(--text-2); font-weigh
 .review-section h3 { margin: 0; }
 .review-status { margin-top: .5rem; text-align: right; }
 @media (max-width: 1100px) { .review-layout { grid-template-columns: 1fr; } .review-preview { position: static; } .review-frame { height: 640px; } }
+
+/* Lender logos */
+img.lender-logo { object-fit: contain; background: #fff; border-radius: 4px; vertical-align: middle; flex: none; }
+img.lender-logo.sm { height: 20px; max-width: 64px; padding: 1px 3px; }
+img.lender-logo.md { height: 30px; max-width: 110px; padding: 2px 4px; border: 1px solid var(--border); }
+.lender-tag { display: inline-flex; align-items: center; gap: .4rem; }
+.card-lender { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
+.logo-cell { display: flex; flex-direction: column; gap: .25rem; align-items: flex-start; min-width: 110px; }
+.logo-empty { font-size: .75rem; color: var(--muted); border: 1px dashed var(--border); border-radius: 4px; padding: .3rem .5rem; }
+.ls-lender header .lender-tag strong { font-size: .9rem; }

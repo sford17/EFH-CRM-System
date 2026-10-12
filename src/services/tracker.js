@@ -115,7 +115,7 @@ function propertiesFor(contactId) {
 
 function loansFor(contactId) {
   const loans = db.all(
-    `SELECT n.*, COALESCE(l.name, n.lender_name, 'Unknown lender') AS lender_display,
+    `SELECT n.*, COALESCE(l.name, n.lender_name, 'Unknown lender') AS lender_display, l.logo_asset_id AS lender_logo_id,
             b.first_name || ' ' || COALESCE(b.last_name,'') AS co_borrower_name
      FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id LEFT JOIN contacts b ON b.id = n.co_borrower_id
      WHERE n.contact_id = ? OR n.co_borrower_id = ?
@@ -180,7 +180,9 @@ function structure(properties, loans) {
     });
   }
   return {
-    lenders: [...groups.entries()].map(([name, list]) => ({ name, loans: list, total: list.reduce((s, n) => s + n.owing, 0) })),
+    lenders: [...groups.entries()].map(([name, list]) => ({
+      name, logo_id: list.find((n) => n.lender_logo_id)?.lender_logo_id ?? null, loans: list, total: list.reduce((s, n) => s + n.owing, 0),
+    })),
     properties: props,
     totals: {
       property_value: propertyValue,

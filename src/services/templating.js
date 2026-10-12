@@ -72,9 +72,23 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false } 
        ORDER BY stage = 'lost', updated_at DESC LIMIT 1`,
       contactId, contactId,
     );
-    if (latest) return buildContext({ contactId, dealId: latest.id, userId, loanId });
+    if (latest) return buildContext({ contactId, dealId: latest.id, userId, loanId, latestDeal: true });
   }
   const contact = contactId ? db.one('SELECT * FROM contacts WHERE id = ?', contactId) : null;
+  // Sent by hand from a contact or deal: pick the loan the email is most
+  // likely about – the deal's own loan, else the next fixed-rate expiry,
+  // else the most recent active loan – so {{loan.*}} fields fill in.
+  if (!loan && latestDeal && contact) {
+    const pickId = (deal && db.one('SELECT id FROM loans WHERE deal_id = ?', deal.id)?.id)
+      ?? db.one(
+        `SELECT id FROM loans WHERE (contact_id = ? OR co_borrower_id = ?) AND status = 'active'
+         ORDER BY (rate_type != 'variable' AND fixed_expiry_date >= date('now')) DESC, fixed_expiry_date, id DESC LIMIT 1`,
+        contact.id, contact.id,
+      )?.id;
+    if (pickId) {
+      loan = db.one('SELECT n.*, COALESCE(l.name, n.lender_name) AS lender_name FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id WHERE n.id = ?', pickId);
+    }
+  }
   if (contact) contact.full_name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
   const brokerId = userId || deal?.owner_id || contact?.owner_id;
   const broker = brokerId ? db.one('SELECT id, name, email, phone FROM users WHERE id = ?', brokerId) : null;

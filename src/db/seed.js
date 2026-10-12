@@ -196,7 +196,7 @@ function seedDefaults() {
   db.transaction(() => {
     if (!db.one('SELECT 1 FROM lenders LIMIT 1')) {
       for (const [name, upfront, trail, clawback] of LENDERS) {
-        db.insert('lenders', { name, upfront_pct: upfront, trail_pct: trail, clawback_months: clawback });
+        db.insert('lenders', { name, upfront_pct: upfront, trail_pct: trail, clawback_months: clawback, website: require('./migrations').LENDER_WEBSITES[name] || null });
       }
     }
     if (!db.one('SELECT 1 FROM email_templates LIMIT 1')) {

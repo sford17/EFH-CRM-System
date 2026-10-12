@@ -4,6 +4,13 @@
 const sanitizeHtml = require('sanitize-html');
 const db = require('../db');
 const branding = require('./branding');
+const lenderLogos = require('./lenderLogos');
+
+// Scales an image to fit a box without upscaling.
+function fit(w, h, maxW, maxH) {
+  const scale = Math.min(1, maxW / w, maxH / h);
+  return { width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)) };
+}
 const { HttpError } = require('../util');
 
 const MAX_SIGNATURE = 300 * 1024;
@@ -116,16 +123,27 @@ function buildEmail({ body, senderUserId = null, reply = false, preview = false 
   const content = `${textToHtml(body, colours.link)}\n<div class="signature" style="margin-top:4px;">${signature}</div>`;
   const text = `${String(body || '').trim()}\n\n${htmlToText(signature)}`.trim();
 
+  // Lenders named in the email get their logo shown (not on replies).
+  const lenderImgs = reply ? [] : lenderLogos.mentionedIn(body).map((l) => {
+    const a = branding.getAsset(l.logo_asset_id);
+    const { width, height } = fit(a.width, a.height, 120, 36);
+    return `<img src="/assets/${a.id}" width="${width}" height="${height}" alt="${escape(l.name)}" style="border:0;width:${width}px;height:${height}px;vertical-align:middle;margin-left:12px;">`;
+  });
+
   let html;
   if (reply || brand.email_style === 'plain') {
-    html = `<div style="font-family:${FONT};font-size:15px;line-height:1.5;color:#1f2933;">${content}</div>`;
+    const lenderRow = lenderImgs.length ? `<div style="margin:4px 0 14px 0;">${lenderImgs.join('').replace(/margin-left:12px/g, 'margin-right:12px')}</div>` : '';
+    html = `<div style="font-family:${FONT};font-size:15px;line-height:1.5;color:#1f2933;">${content.replace('<div class="signature"', `${lenderRow}<div class="signature"`)}</div>`;
   } else {
     let logoRow = '';
+    let brandImg = '';
     if (brand.logo && brand.email_logo) {
-      const height = Math.min(56, brand.logo.height);
-      const width = Math.min(220, Math.round((height * brand.logo.width) / brand.logo.height));
-      const finalHeight = Math.round((width * brand.logo.height) / brand.logo.width);
-      logoRow = `<tr><td style="padding:24px 32px 0 32px;"><img src="${brand.logo.url}" width="${width}" height="${finalHeight}" alt="${escape(brand.business_name)}" style="display:block;border:0;width:${width}px;height:${finalHeight}px;"></td></tr>`;
+      const { width, height } = fit(brand.logo.width, brand.logo.height, 220, 56);
+      brandImg = `<img src="${brand.logo.url}" width="${width}" height="${height}" alt="${escape(brand.business_name)}" style="display:block;border:0;width:${width}px;height:${height}px;">`;
+    }
+    if (brandImg || lenderImgs.length) {
+      logoRow = `<tr><td style="padding:24px 32px 0 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td align="left" valign="middle">${brandImg}</td><td align="right" valign="middle">${lenderImgs.join('')}</td></tr></table></td></tr>`;
     }
     html = `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>

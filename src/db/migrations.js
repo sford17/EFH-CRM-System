@@ -385,7 +385,26 @@ MIGRATIONS.push(
   `,
 );
 
+// Lender websites, so a logo can be fetched with one click.
+const LENDER_WEBSITES = {
+  ANZ: 'anz.com.au', 'Commonwealth Bank': 'commbank.com.au', NAB: 'nab.com.au', Westpac: 'westpac.com.au', 'Macquarie Bank': 'macquarie.com.au',
+  ING: 'ing.com.au', 'St.George': 'stgeorge.com.au', Suncorp: 'suncorp.com.au', Bankwest: 'bankwest.com.au', 'Bank of Queensland': 'boq.com.au',
+  'Pepper Money': 'pepper.com.au', Liberty: 'liberty.com.au',
+};
+
+MIGRATIONS.push(
+  // 8. Lender logos
+  (db) => {
+    db.get().exec(`
+      ALTER TABLE lenders ADD COLUMN logo_asset_id INTEGER REFERENCES assets(id) ON DELETE SET NULL;
+      ALTER TABLE lenders ADD COLUMN website TEXT;
+    `);
+    for (const [name, site] of Object.entries(LENDER_WEBSITES)) db.run('UPDATE lenders SET website = ? WHERE name = ? AND website IS NULL', site, name);
+  },
+);
+
 module.exports = MIGRATIONS;
+module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;
 module.exports.addCalendarDefaults = addCalendarDefaults;
 module.exports.addTrackerDefaults = addTrackerDefaults;

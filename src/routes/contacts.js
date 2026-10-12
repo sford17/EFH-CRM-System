@@ -64,7 +64,7 @@ router.get('/:id', (req, res) => {
     id,
   ), 'Contact');
   contact.deals = db.all(
-    `SELECT d.*, l.name AS lender_name FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id
+    `SELECT d.*, l.name AS lender_name, l.logo_asset_id AS lender_logo_id FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id
      WHERE d.contact_id = ? OR d.co_borrower_id = ? ORDER BY d.created_at DESC`,
     id, id,
   );

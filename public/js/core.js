@@ -218,3 +218,12 @@ export const opts = (list) => list.map((v) => [v, label(v)]);
 
 export const pageHeader = (title, ...actions) => h('div.page-header', h('h1', title), h('div.actions', actions));
 export const link = (href, text) => h('a', { href }, text);
+
+// Lender logo (if one has been added on the Lenders page), sized to fit.
+export function lenderLogo(assetId, name, size = 'sm') {
+  if (!assetId) return null;
+  return h(`img.lender-logo.${size}`, { src: `/assets/${assetId}`, alt: name ? `${name} logo` : '', loading: 'lazy' });
+}
+
+// Lender logo + name, or just the name.
+export const lenderTag = (assetId, name, size = 'sm') => (name ? h('span.lender-tag', lenderLogo(assetId, name, size), h('span', name)) : '—');
