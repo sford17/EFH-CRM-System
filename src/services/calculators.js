@@ -135,6 +135,12 @@ function refinance(input) {
   };
 }
 
-const CALCULATORS = { repayment, 'borrowing-power': borrowingPower, lvr, refinance };
+const stampDuty = require('./stampDuty');
+
+const CALCULATORS = {
+  repayment, 'borrowing-power': borrowingPower, lvr, refinance,
+  'stamp-duty-residential': (input) => stampDuty.residential(input),
+  'stamp-duty-commercial': (input) => stampDuty.commercial(input),
+};
 
 module.exports = { CALCULATORS, incomeTax, paymentFor };

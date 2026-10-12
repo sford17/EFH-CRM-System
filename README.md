@@ -29,7 +29,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
 | **Reports** | Running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
-| **Calculators** | Repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
+| **Calculators** | Stamp duty for residential and commercial property in every state and territory (2026-27 rates, with owner-occupier and first home buyer concessions and foreign surcharges), repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
 | **Team** | Admin, broker and assistant roles, with notifications for automation alerts |
 
 ## Getting started
@@ -130,6 +130,36 @@ Adobe Sign emails each signer a secure link. If your document has no signature f
 - the **Document signed (Adobe Sign)** automation trigger fires, so you can add a task or a thank-you message, for example.
 
 Documents go out from the connected Adobe account. To send each broker's documents from their own Adobe account, tick *Send as each team member* in Settings (each broker must also be a user in your Acrobat Sign account).
+
+## Stamp duty calculators
+
+**Calculators** has two stamp duty calculators covering every state and territory.
+
+**Residential:** enter the state, price, property type (established, new, off-the-plan or vacant land), whether the buyer will live in it or invest, and whether they're a first home buyer and/or a foreign purchaser. The result shows:
+
+- the duty at general rates;
+- any concessions, such as owner-occupier or principal place of residence rates (VIC, QLD, ACT) and first home buyer exemptions and concessions;
+- the foreign purchaser surcharge;
+- the total and the effective rate;
+- the eligibility conditions to check;
+- the same purchase in every other state.
+
+**Commercial:** enter the state and price (excluding GST). It handles the differences between states:
+
+- Victoria's Commercial and Industrial Property Tax;
+- South Australia charging no duty on commercial land;
+- the ACT's $2.1 million threshold;
+- NSW premium duty applying to residential land only.
+
+**Keeping the rates current:** the rates are for contracts from 1 July 2026 (2026-27) and are kept in `src/services/stampDutyRates.js`. NSW and the ACT change their figures every 1 July, and states often change concessions in their budgets, so review the file each July.
+
+A few items couldn't be checked against the official calculators when they were loaded. Results that rely on them show a **Please confirm** note:
+
+- the NSW first home buyer concession formula;
+- the WA first home vacant land rate;
+- the ACT investor rates.
+
+Every result links to that state's official calculator. Land titles registration fees and off-the-plan concessions (VIC, WA) aren't included.
 
 ## Running settlements report
 

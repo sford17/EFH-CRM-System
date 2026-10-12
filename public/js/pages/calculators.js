@@ -1,4 +1,4 @@
-import { api, h, pageHeader, field, readForm, money, money2, attempt } from '../core.js';
+import { api, h, pageHeader, field, readForm, money, money2, attempt, table } from '../core.js';
 
 const CALCS = [
   {
@@ -79,17 +79,77 @@ const CALCS = [
   },
 ];
 
+// ---- Stamp duty -----------------------------------------------------------------
+const STATE_OPTIONS = [['NSW', 'New South Wales'], ['VIC', 'Victoria'], ['QLD', 'Queensland'], ['WA', 'Western Australia'], ['SA', 'South Australia'], ['TAS', 'Tasmania'], ['ACT', 'Australian Capital Territory'], ['NT', 'Northern Territory']];
+
+function dutyResult(r) {
+  const rows = [
+    [`Stamp duty – ${r.state_name}`, money2(r.total)],
+    r.kind === 'residential' ? ['Property', `${r.property_type} · ${r.buyer} · ${money(r.property_value)}`] : ['Property value', money(r.property_value)],
+    r.kind === 'residential' && r.concessions.length ? ['Duty at general rates', money2(r.general_duty)] : null,
+    ...(r.concessions || []).map((c) => [c.label, `− ${money2(c.saving)}`]),
+    r.kind === 'residential' && (r.concessions.length || r.foreign_surcharge) ? ['Transfer duty', money2(r.transfer_duty)] : null,
+    r.foreign_surcharge ? [`Foreign purchaser surcharge (${r.foreign_rate}%)`, money2(r.foreign_surcharge)] : null,
+    ['Effective rate', `${r.effective_rate}% of the price`],
+  ].filter(Boolean);
+  const best = Math.min(...r.comparison.map((c) => c.total));
+  return [
+    h('dl.calc-result', rows.map(([k, v], i) => h(`div.info-row${i === 0 ? '.headline' : ''}`, h('dt', k), h('dd', v)))),
+    r.verify.length ? h('div.alert.warn-box.small', h('strong', 'Please confirm: '), `${r.verify.join('; ')} could not be checked against the official calculator when these rates were loaded. `,
+      h('a', { href: r.calculator, target: '_blank', rel: 'noopener noreferrer' }, 'Check on the official calculator ↗')) : null,
+    r.notes.length ? h('ul.duty-notes.small', r.notes.map((n) => h('li', n))) : null,
+    h('details.duty-compare',
+      h('summary.small', 'The same purchase in other states'),
+      table([
+        { label: 'State', value: (c) => (c.state === r.state ? h('strong', c.state) : c.state) },
+        { label: 'Stamp duty', value: (c) => h('span', money2(c.total), c.total === best ? h('span.muted.small', ' lowest') : null), class: 'num' },
+      ], r.comparison)),
+    h('p.muted.small', `${r.rates_label}. An estimate only, excluding land titles office registration fees. `,
+      h('a', { href: r.calculator, target: '_blank', rel: 'noopener noreferrer' }, `${r.state_name} official calculator ↗`)),
+  ];
+}
+
+const STAMP_DUTY = [
+  {
+    key: 'stamp-duty-residential', title: 'Stamp duty – residential',
+    fields: [
+      { name: 'state', label: 'State or territory', type: 'select', required: true, options: STATE_OPTIONS, default: 'NSW' },
+      { name: 'property_value', label: 'Purchase price ($)', type: 'number', default: 850000, required: true },
+      { name: 'property_type', label: 'Property', type: 'select', required: true, options: [['established', 'Established home'], ['new', 'New home'], ['off_the_plan', 'Off-the-plan apartment / unit'], ['land', 'Vacant land to build on']] },
+      { name: 'buyer', label: 'Buying to', type: 'select', required: true, options: [['owner', 'Live in (owner-occupier)'], ['investor', 'Invest']] },
+      { name: 'first_home', label: 'First home buyer', type: 'checkbox', default: false },
+      { name: 'foreign', label: 'Foreign purchaser', type: 'checkbox', default: false },
+    ],
+    result: dutyResult,
+    note: 'Includes owner-occupier rates and first home buyer exemptions and concessions where eligible, plus foreign purchaser surcharges.',
+  },
+  {
+    key: 'stamp-duty-commercial', title: 'Stamp duty – commercial',
+    fields: [
+      { name: 'state', label: 'State or territory', type: 'select', required: true, options: STATE_OPTIONS, default: 'NSW' },
+      { name: 'property_value', label: 'Purchase price ($, excluding GST)', type: 'number', default: 1500000, required: true },
+    ],
+    result: dutyResult,
+    note: 'Commercial, industrial and other non-residential property.',
+  },
+];
+
 function calcCard(c) {
-  const out = h('dl.calc-result', h('p.muted', 'Enter the numbers and press Calculate.'));
+  const out = h(c.result ? 'div.calc-output' : 'dl.calc-result', h('p.muted', 'Enter the numbers and press Calculate.'));
   const form = h('form.grid-form', c.fields.map((f) => field(f)), h('div.actions.full', h('button', { type: 'submit' }, 'Calculate')));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const r = await attempt(() => api(`/calculators/${c.key}`, { method: 'POST', body: readForm(form, c.fields) }));
-    out.replaceChildren(...c.render(r).filter(Boolean).map(([k, v], i) => h(`div.info-row${i === 0 ? '.headline' : ''}`, h('dt', k), h('dd', v))));
+    if (c.result) out.replaceChildren(...c.result(r).filter(Boolean));
+    else out.replaceChildren(...c.render(r).filter(Boolean).map(([k, v], i) => h(`div.info-row${i === 0 ? '.headline' : ''}`, h('dt', k), h('dd', v))));
   });
   return h('section.card', h('h2', c.title), form, out, c.note ? h('p.muted.small', c.note) : null);
 }
 
 export async function calculatorsPage() {
-  return h('div', pageHeader('Calculators'), h('div.grid-2', CALCS.map(calcCard)));
+  return h('div', pageHeader('Calculators'),
+    h('h2.section-title', 'Stamp duty'),
+    h('div.grid-2', STAMP_DUTY.map(calcCard)),
+    h('h2.section-title', 'Loans'),
+    h('div.grid-2', CALCS.map(calcCard)));
 }

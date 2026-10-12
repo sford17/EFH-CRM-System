@@ -610,3 +610,9 @@ tr.subtotal td { font-weight: 600; border-top: 2px solid var(--border); }
 .period-picker { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .date-range { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
 .period-label { margin-top: -.5rem; }
+
+/* ---- Stamp duty calculators ---- */
+.section-title { font-size: 1.05rem; margin: 1.25rem 0 .6rem; color: var(--text-2); }
+.duty-notes { margin: .5rem 0; padding-left: 1.1rem; color: var(--text-2); display: grid; gap: .3rem; }
+.duty-compare { margin: .5rem 0; }
+.duty-compare summary { cursor: pointer; color: var(--accent); }
