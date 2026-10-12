@@ -24,9 +24,11 @@ function seedDemo() {
     userId('assistant@efh.local', 'Casey Nguyen', 'assistant');
 
     const partner = (row) => db.insert('referral_partners', row);
-    const reAgent = partner({ name: 'Alex Morgan', company: 'Harbourside Realty', type: 'real_estate', email: 'alex@harbourside.example', referral_fee_pct: 0 });
+    const reAgent = partner({ name: 'Alex Morgan', company: 'Harbourside Realty', type: 'real_estate', email: 'alex@harbourside.example', mobile: '0412 345 678', referral_fee_pct: 0 });
     const accountant = partner({ name: 'Priya Shah', company: 'Shah & Co Accountants', type: 'accountant', email: 'priya@shahco.example', referral_fee_pct: 20 });
-    partner({ name: 'Tom Barker', company: 'Barker Conveyancing', type: 'solicitor', email: 'tom@barker.example' });
+    const conveyancer = partner({ name: 'Tom Barker', company: 'Barker Conveyancing', type: 'conveyancer', email: 'tom@barker.example', phone: '07 3000 1234' });
+    const qldAgent = partner({ name: 'Kylie Nguyen', company: 'Ipswich First National', type: 'real_estate', email: 'kylie@ipswichfn.example', mobile: '0423 456 789' });
+    const buyersAgent = partner({ name: 'Ben Carter', company: 'Northern Beaches Buyers Agency', type: 'buyers_agent', email: 'ben@nbba.example', mobile: '0434 567 890' });
 
     const contact = (row) => db.insert('contacts', { owner_id: admin, marketing_opt_in: 1, ...row });
     const c = {
@@ -57,9 +59,13 @@ function seedDemo() {
     };
 
     deal({ title: 'Olivia Brown – first home', contact_id: c.olivia, loan_purpose: 'first_home', property_value: 650000, loan_amount: 585000, stage: 'lead' });
-    deal({ title: 'Liam Wilson – purchase Manly', contact_id: c.liam, loan_purpose: 'purchase', property_value: 1650000, loan_amount: 1200000, lender_id: lender('Macquarie Bank'), interest_rate: 5.89, stage: 'fact_find', referral_partner_id: reAgent }, ['lead']);
+    const liamDeal = deal({ title: 'Liam Wilson – purchase Manly', contact_id: c.liam, loan_purpose: 'purchase', property_value: 1650000, loan_amount: 1200000, lender_id: lender('Macquarie Bank'), interest_rate: 5.89, stage: 'fact_find', referral_partner_id: reAgent }, ['lead']);
+    db.insert('deal_parties', { deal_id: liamDeal, role: 'buyers_agent', partner_id: buyersAgent });
     deal({ title: 'Ava Taylor – investment', contact_id: c.ava, loan_purpose: 'investment', property_value: 820000, loan_amount: 656000, lender_id: lender('ING'), interest_rate: 6.09, stage: 'pre_approval', pre_approval_expiry: addDays(t0, 10), owner_id: broker, referral_partner_id: accountant }, ['lead', 'fact_find']);
-    deal({ title: 'Noah Smith – first home Ipswich', contact_id: c.noah, loan_purpose: 'first_home', property_value: 540000, loan_amount: 513000, lender_id: lender('Commonwealth Bank'), interest_rate: 5.99, stage: 'application_lodged', finance_due_date: addDays(t0, 3), application_ref: 'CBA-2210931' }, ['lead', 'fact_find', 'pre_approval']);
+    const party = (dealId, role, partnerId) => db.insert('deal_parties', { deal_id: dealId, role, partner_id: partnerId });
+    const noahDeal = deal({ title: 'Noah Smith – first home Ipswich', contact_id: c.noah, loan_purpose: 'first_home', property_value: 540000, loan_amount: 513000, lender_id: lender('Commonwealth Bank'), interest_rate: 5.99, stage: 'application_lodged', finance_due_date: addDays(t0, 3), application_ref: 'CBA-2210931', property_address: '14 Brisbane St, Ipswich QLD 4305' }, ['lead', 'fact_find', 'pre_approval']);
+    party(noahDeal, 'real_estate_agent', qldAgent);
+    party(noahDeal, 'solicitor', conveyancer);
     deal({ title: 'Zoe Clarke – refinance', contact_id: c.zoe, loan_purpose: 'refinance', property_value: 900000, loan_amount: 540000, lender_id: lender('NAB'), interest_rate: 5.74, stage: 'conditional_approval' }, ['lead', 'fact_find', 'application_lodged']);
     deal({ title: 'Mia Jones – investment #2', contact_id: c.mia, loan_purpose: 'investment', property_value: 720000, loan_amount: 576000, lender_id: lender('ANZ'), interest_rate: 6.04, stage: 'settlement_booked', settlement_date: addDays(t0, 2) }, ['lead', 'fact_find', 'application_lodged', 'conditional_approval', 'unconditional_approval']);
 

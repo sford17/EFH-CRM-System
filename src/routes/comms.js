@@ -1,5 +1,6 @@
 'use strict';
 const express = require('express');
+const parties = require('../services/parties');
 const db = require('../db');
 const mailer = require('../services/mailer');
 const { render, buildContext } = require('../services/templating');
@@ -34,10 +35,12 @@ templates.delete('/:id', (req, res) => {
 
 templates.post('/:id/preview', (req, res) => {
   const t = notFound(db.one('SELECT * FROM email_templates WHERE id = ?', intParam(req.params.id)), 'Template');
-  const ctx = buildContext({ contactId: req.body?.contact_id, dealId: req.body?.deal_id, userId: req.user.id, latestDeal: true, addresseeIds: req.body?.addressee_ids });
+  const recipientRole = parties.isRole(req.body?.recipient_role) ? req.body.recipient_role : null;
+  const ctx = buildContext({ contactId: req.body?.contact_id, dealId: req.body?.deal_id, userId: req.user.id, latestDeal: true, addresseeIds: req.body?.addressee_ids, recipientRole });
+  const to = recipientRole ? ctx.recipient.email || null : ctx.addressees.map((c) => c.email).filter(Boolean).join(', ') || null;
   res.json({
-    subject: render(t.subject, ctx), body: render(t.body, ctx), to: ctx.addressees.map((c) => c.email).filter(Boolean).join(', ') || null,
-    sms: t.sms_body ? render(t.sms_body, ctx) : null, mobile: ctx.contact?.mobile || null,
+    subject: render(t.subject, ctx), body: render(t.body, ctx), to,
+    sms: t.sms_body && !recipientRole ? render(t.sms_body, ctx) : null, mobile: ctx.contact?.mobile || null,
   });
 });
 
@@ -46,6 +49,7 @@ templates.post('/:id/send', async (req, res) => {
   if (!req.body?.contact_id && !req.body?.deal_id) throw new HttpError(400, 'Choose a contact or deal to send to');
   const { id: outboxId, reason } = mailer.queueTemplate(id, {
     contactId: req.body.contact_id, dealId: req.body.deal_id, userId: req.user.id, addresseeIds: req.body.addressee_ids,
+    recipientRole: parties.isRole(req.body.recipient_role) ? req.body.recipient_role : null,
   });
   if (!outboxId) throw new HttpError(400, reason);
   await mailer.processOutbox();

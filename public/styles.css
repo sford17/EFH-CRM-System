@@ -513,3 +513,18 @@ fieldset.addressees legend { font-size: .82rem; color: var(--text-2); font-weigh
 .check-pill { display: inline-flex; align-items: center; gap: .4rem; padding: .3rem .7rem; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; }
 .check-pill:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .household-note a { font-weight: 500; }
+
+/* ---- Deal parties (agent, solicitor, buyer's agent) ---- */
+fieldset.parties-fieldset { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem .8rem; }
+fieldset.parties-fieldset legend { font-size: .82rem; color: var(--text-2); font-weight: 500; padding: 0 .25rem; }
+.parties-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; }
+.party-picker { display: grid; gap: .3rem; align-content: start; }
+.party-picker > label { font-size: .82rem; color: var(--text-2); font-weight: 500; }
+.party-new { display: grid; gap: .4rem; padding: .5rem; border-left: 3px solid var(--accent-soft); }
+.party-new[hidden] { display: none; }
+.party-new .field label { font-size: .78rem; }
+.party-list li.party { display: grid; gap: .15rem; }
+.party-list li.party.empty { display: flex; justify-content: space-between; align-items: center; }
+.party-contact { display: flex; flex-wrap: wrap; gap: .25rem .75rem; }
+.send-to { margin-bottom: .75rem; }
+.send-to select { width: 100%; }

@@ -169,9 +169,11 @@ export function readForm(form, fields) {
 }
 
 // Opens a modal form; resolves via onSubmit(values) which may throw to keep it open.
-export function formModal(title, fields, values = {}, onSubmit, { submitLabel = 'Save', wide = true } = {}) {
+// `extra` is an element added below the fields (read it in onSubmit).
+export function formModal(title, fields, values = {}, onSubmit, { submitLabel = 'Save', wide = true, extra = null } = {}) {
   const form = h('form.grid-form',
     fields.map((f) => field(f, values[f.name])),
+    extra,
     h('div.actions.full', h('button.secondary', { type: 'button', onclick: () => dialog.close() }, 'Cancel'), h('button', { type: 'submit' }, submitLabel)));
   const dialog = modal(title, form, { wide });
   form.addEventListener('submit', async (e) => {

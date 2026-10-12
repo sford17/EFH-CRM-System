@@ -26,7 +26,7 @@ const NAV = [
   ['#/templates', 'Email templates', '✎'],
   ['#/outbox', 'Outbox', '⇪'],
   ['#/commissions', 'Commissions', '¢'],
-  ['#/partners', 'Referral partners', '⇄'],
+  ['#/partners', 'Partners & agents', '⇄'],
   ['#/lenders', 'Lenders', '⌂'],
   ['#/reports', 'Reports', '▥'],
   ['#/calculators', 'Calculators', '±'],

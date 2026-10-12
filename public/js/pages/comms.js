@@ -2,7 +2,7 @@ import { api, h, pageHeader, table, badge, dateTime, attempt, confirmDialog, lab
 import { refresh } from './forms.js';
 import { smsLog, counted } from './sms.js';
 
-const MERGE_HELP = 'Your email signature is added automatically when the email is sent, so end the message with something like "Kind regards,". Merge fields: {{contact.first_name}} {{contact.full_name}} {{deal.title}} {{deal.loan_amount|money}} {{deal.lender_name}} {{deal.settlement_date|date}} {{deal.fixed_expiry_date|date}} {{deal.pre_approval_expiry|date}} {{deal.outstanding_documents}} {{broker.name}} {{broker.phone}} {{business.name}}. Templates in the "marketing" category are not sent to contacts who opted out.';
+const MERGE_HELP = 'Your email signature is added automatically when the email is sent, so end the message with something like "Kind regards,". Merge fields: {{contact.first_name}} {{contact.full_name}} {{deal.title}} {{deal.loan_amount|money}} {{deal.lender_name}} {{deal.settlement_date|date}} {{deal.fixed_expiry_date|date}} {{deal.pre_approval_expiry|date}} {{deal.outstanding_documents}} {{broker.name}} {{broker.phone}} {{business.name}} {{agent.name}} {{agent.company}} {{solicitor.name}} {{buyers_agent.name}}, and {{recipient.first_name}} for emails sent to the agent or solicitor on a deal. Templates in the "marketing" category are not sent to contacts who opted out.';
 
 const templateFields = [
   { name: 'name', label: 'Name', required: true },

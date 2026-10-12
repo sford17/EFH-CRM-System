@@ -36,7 +36,7 @@ function bookingLinkFor(userId, contact) {
 }
 
 // Assembles the merge-field context for a contact and/or deal.
-function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, addresseeIds = null } = {}) {
+function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, addresseeIds = null, recipientRole = null } = {}) {
   let loan = null;
   if (loanId) {
     loan = db.one(
@@ -72,7 +72,7 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
        ORDER BY stage = 'lost', updated_at DESC LIMIT 1`,
       contactId, contactId,
     );
-    if (latest) return buildContext({ contactId, dealId: latest.id, userId, loanId, latestDeal: true, addresseeIds });
+    if (latest) return buildContext({ contactId, dealId: latest.id, userId, loanId, latestDeal: true, addresseeIds, recipientRole });
   }
   const contact = contactId ? db.one('SELECT * FROM contacts WHERE id = ?', contactId) : null;
   // Sent by hand from a contact or deal: pick the loan the email is most
@@ -109,9 +109,17 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
   }
   const brokerId = userId || deal?.owner_id || contact?.owner_id;
   const broker = brokerId ? db.one('SELECT id, name, email, phone FROM users WHERE id = ?', brokerId) : null;
+  // The agent, solicitor etc. on the deal: {{agent.name}}, {{solicitor.email}}…
+  // and {{recipient.*}} when the email is going to one of them.
+  const parties = deal ? require('./parties').forContext(deal.id) : {};
   return {
     contact,
     addressees,
+    parties,
+    agent: parties.real_estate_agent || {},
+    solicitor: parties.solicitor || {},
+    buyers_agent: parties.buyers_agent || {},
+    recipient: (recipientRole && Object.hasOwn(parties, recipientRole) && parties[recipientRole]) || {},
     deal,
     loan,
     broker: broker

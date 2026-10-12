@@ -1,9 +1,10 @@
 // Field definitions and shared widgets used across pages.
 import {
   api, h, opts, userOptions, lenderOptions, partnerOptions, stageOptions, formModal, attempt, toast, state,
-  date, dateTime, link, label, modal, field, readForm, fullName,
+  date, dateTime, link, label, modal, field, readForm, fullName, loadLookups,
 } from '../core.js';
 import { addresseePicker, householdOf } from './household.js';
+import { partiesFieldset } from './parties.js';
 
 export const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 export const CONTACT_STATUSES = ['lead', 'prospect', 'client', 'past_client', 'lost'];
@@ -99,10 +100,13 @@ export async function newDeal(contactId, values = {}) {
     const { rows } = await api('/contacts?limit=500');
     fields.unshift({ name: 'contact_id', label: 'Borrower', type: 'select', required: true, full: true, options: rows.map((c) => [c.id, fullName(c)]) });
   }
+  const parties = partiesFieldset();
   formModal('New deal', fields, { ...values, contact_id: contactId }, async (v) => {
-    const d = await attempt(() => api('/deals', { method: 'POST', body: { ...v, contact_id: contactId || v.contact_id } }), 'Deal created');
+    const body = { ...v, contact_id: contactId || v.contact_id, parties: parties.read() };
+    const d = await attempt(() => api('/deals', { method: 'POST', body }), 'Deal created');
+    if (body.parties.some((p) => p.new_partner)) await loadLookups(true);
     location.hash = `#/deals/${d.id}`;
-  });
+  }, { extra: parties.el });
 }
 
 export function newTask(context = {}) {
@@ -166,11 +170,15 @@ export function emailList(emails) {
 
 // Pick a template, preview it with merge fields filled in, then queue it.
 // For a couple it can be addressed to one or both of them.
-export async function sendTemplateDialog({ contactId, dealId }) {
+export async function sendTemplateDialog({ contactId, dealId, parties = [] }) {
   const [{ rows }, members] = await Promise.all([api('/templates'), householdOf(contactId)]);
   let addressees = defaultAddressees(members, contactId);
+  let recipientRole = '';
   // The first person ticked is the main addressee ("Hi Tom" if only Tom).
-  const body = () => ({ contact_id: addressees.includes(Number(contactId)) ? contactId : addressees[0], deal_id: dealId, addressee_ids: addressees });
+  const body = () => ({
+    contact_id: addressees.includes(Number(contactId)) ? contactId : addressees[0], deal_id: dealId, addressee_ids: addressees,
+    recipient_role: recipientRole || undefined,
+  });
   const select = h('select', { 'aria-label': 'Template' }, h('option', { value: '' }, 'Choose a template…'), rows.map((t) => h('option', { value: t.id }, `${t.name} (${label(t.category || 'general')})`)));
   const preview = h('div.email-preview', h('p.muted', 'Choose a template to preview it.'));
   const sendBtn = h('button', { type: 'button', disabled: true }, 'Send email');
@@ -189,12 +197,22 @@ export async function sendTemplateDialog({ contactId, dealId }) {
   };
   select.addEventListener('change', showPreview);
   const picker = addresseePicker(members, addressees, (ids) => { addressees = ids; showPreview(); });
+  // On a deal, it can go to the agent, solicitor etc. instead of the client.
+  const withEmail = parties.filter((p) => p.email);
+  const sendTo = withEmail.length ? h('select', {
+    'aria-label': 'Send to',
+    onchange: (e) => {
+      recipientRole = e.target.value;
+      if (picker) picker.hidden = Boolean(recipientRole);
+      showPreview();
+    },
+  }, h('option', { value: '' }, 'Send to the client'), withEmail.map((p) => h('option', { value: p.role }, `Send to the ${p.role_label.toLowerCase()} – ${p.name}`))) : null;
   sendBtn.addEventListener('click', async () => {
     await attempt(() => api(`/templates/${select.value}/send`, { method: 'POST', body: body() }), 'Email sent');
     dialog.close();
     refresh();
   });
-  const dialog = modal('Send email', [picker, select, preview, h('div.actions', previewBtn, sendBtn)], { wide: true });
+  const dialog = modal('Send email', [sendTo ? h('div.send-to', sendTo) : null, picker, select, preview, h('div.actions', previewBtn, sendBtn)], { wide: true });
 }
 
 // A couple who share finances get joint emails by default.

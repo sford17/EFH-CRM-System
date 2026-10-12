@@ -5,14 +5,17 @@ import { smsSettingsCard } from './sms.js';
 import { brandingCard, signatureCard } from './branding.js';
 import { calendlySettingsCard } from './calendar.js';
 
-const PARTNER_TYPES = ['real_estate', 'accountant', 'financial_planner', 'solicitor', 'builder', 'past_client', 'other'];
+const PARTNER_TYPES = ['real_estate', 'buyers_agent', 'solicitor', 'conveyancer', 'accountant', 'financial_planner', 'builder', 'past_client', 'other'];
+const TYPE_LABELS = { real_estate: 'Real estate agent', buyers_agent: "Buyer's agent" };
+const typeLabel = (t) => TYPE_LABELS[t] || label(t);
 
 const partnerFields = [
   { name: 'name', label: 'Name', required: true },
   { name: 'company', label: 'Company' },
-  { name: 'type', label: 'Type', type: 'select', options: opts(PARTNER_TYPES), required: true, default: 'real_estate' },
+  { name: 'type', label: 'Type', type: 'select', options: PARTNER_TYPES.map((t) => [t, typeLabel(t)]), required: true, default: 'real_estate' },
   { name: 'email', label: 'Email', type: 'email' },
-  { name: 'phone', label: 'Phone' },
+  { name: 'mobile', label: 'Mobile' },
+  { name: 'phone', label: 'Office phone' },
   { name: 'referral_fee_pct', label: 'Referral fee (% of upfront)', type: 'number', default: 0, required: true },
   { name: 'active', label: 'Active', type: 'checkbox', default: true },
   { name: 'notes', label: 'Notes', type: 'textarea', full: true },
@@ -67,10 +70,10 @@ function logoCell(l) {
       l.logo_asset_id ? h('button.link.small', { type: 'button', onclick: remove }, 'Remove') : null));
 }
 
-function crudPage({ title, path, fields, columns, intro, intro2 }) {
+function crudPage({ title, singular, path, fields, columns, intro, intro2 }) {
   return async () => {
     const { rows } = await api(path);
-    const edit = (row) => formModal(row ? `Edit ${row.name}` : `New ${title.replace(/s$/, '').toLowerCase()}`, fields, row || {}, async (v) => {
+    const edit = (row) => formModal(row ? `Edit ${row.name}` : `New ${singular || title.replace(/s$/, '').toLowerCase()}`, fields, row || {}, async (v) => {
       await attempt(() => api(row ? `${path}/${row.id}` : path, { method: row ? 'PATCH' : 'POST', body: v }), 'Saved');
       await loadLookups(true);
       refresh();
@@ -90,15 +93,18 @@ function crudPage({ title, path, fields, columns, intro, intro2 }) {
 }
 
 export const partnersPage = crudPage({
-  title: 'Referral partners',
+  title: 'Partners & professionals',
+  singular: 'contact',
   path: '/partners',
   fields: partnerFields,
-  intro: 'Track who sends you business. Referral fees are deducted automatically from upfront commission when a referred deal settles.',
+  intro: 'Real estate agents, solicitors, conveyancers, buyer\'s agents, accountants and others you work with. Pick them on a deal as the agent or solicitor, or as the referral partner who sent you the client.',
+  intro2: 'Referral fees are deducted automatically from upfront commission when a referred deal settles.',
   columns: [
     { label: 'Name', value: (p) => h('div', h('strong', p.name), p.active ? null : badge('inactive')) },
     { label: 'Company', value: (p) => p.company || '—' },
-    { label: 'Type', value: (p) => label(p.type) },
-    { label: 'Contact', value: (p) => [p.email, p.phone].filter(Boolean).join(' · ') || '—' },
+    { label: 'Type', value: (p) => typeLabel(p.type) },
+    { label: 'Contact', value: (p) => [p.email, p.mobile || p.phone].filter(Boolean).join(' · ') || '—' },
+    { label: 'On deals', value: (p) => String(p.deals_involved), class: 'num' },
     { label: 'Referrals', value: (p) => String(p.referrals), class: 'num' },
     { label: 'Settled', value: (p) => `${p.settled_count} · ${money(p.settled_volume)}`, class: 'num' },
     { label: 'Fee', value: (p) => pct(p.referral_fee_pct), class: 'num' },

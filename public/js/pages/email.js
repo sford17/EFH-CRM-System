@@ -52,7 +52,8 @@ export async function openEmail(id) {
 }
 
 // New email to a contact, optionally starting from a template.
-export async function composeDialog({ contactId, dealId, to, subject = '', body = '' }) {
+// `toParty` is set when writing to the agent/solicitor etc. on a deal.
+export async function composeDialog({ contactId, dealId, to, subject = '', body = '', toParty = null }) {
   const [{ rows: templates }, status, members] = await Promise.all([api('/templates'), api('/outlook/status'), householdOf(contactId)]);
   let addressees = [Number(contactId)].filter(Boolean);
   const fields = [
@@ -68,13 +69,13 @@ export async function composeDialog({ contactId, dealId, to, subject = '', body 
   const mainId = () => (addressees.includes(Number(contactId)) ? contactId : addressees[0]);
   const fillTemplate = async () => {
     if (!templateSel.value) return;
-    const p = await api(`/templates/${templateSel.value}/preview`, { method: 'POST', body: { contact_id: mainId(), deal_id: dealId, addressee_ids: addressees } });
+    const p = await api(`/templates/${templateSel.value}/preview`, { method: 'POST', body: { contact_id: mainId(), deal_id: dealId, addressee_ids: addressees, recipient_role: toParty?.role } });
     form.elements.subject.value = p.subject;
     form.elements.body.value = p.body;
   };
   templateSel.addEventListener('change', fillTemplate);
   // Writing to a couple: tick who it's to, and the To line and greeting follow.
-  const picker = addresseePicker(members, addressees, (ids) => {
+  const picker = toParty ? null : addresseePicker(members, addressees, (ids) => {
     addressees = ids;
     form.elements.to_email.value = members.filter((m) => ids.includes(m.id)).map((m) => m.email).filter(Boolean).join(', ');
     fillTemplate();
@@ -88,7 +89,7 @@ export async function composeDialog({ contactId, dealId, to, subject = '', body 
     onclick: () => previewEmail({ subject: form.elements.subject.value, body: form.elements.body.value || ' ' }),
   }, 'Preview');
   form.append(h('div.actions.full', preview, send));
-  const d = modal('New email', [picker, templateSel, form, via], { wide: true });
+  const d = modal(toParty ? `Email ${toParty.name} (${toParty.role_label.toLowerCase()})` : 'New email', [picker, templateSel, form, via], { wide: true });
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     send.disabled = true;

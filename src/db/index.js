@@ -20,13 +20,23 @@ function open(file = process.env.DB_FILE || path.join(__dirname, '..', '..', 'da
 
 function migrate() {
   const version = db.prepare('PRAGMA user_version').get().user_version;
-  for (let i = version; i < MIGRATIONS.length; i++) {
-    transaction(() => {
-      const step = MIGRATIONS[i];
-      if (typeof step === 'function') step(module.exports);
-      else db.exec(step);
-      db.exec(`PRAGMA user_version = ${i + 1}`);
-    });
+  if (version >= MIGRATIONS.length) return;
+  // Foreign keys are off while upgrading so tables can be rebuilt (SQLite's
+  // documented procedure), then checked before being switched back on.
+  db.exec('PRAGMA foreign_keys = OFF');
+  try {
+    for (let i = version; i < MIGRATIONS.length; i++) {
+      transaction(() => {
+        const step = MIGRATIONS[i];
+        if (typeof step === 'function') step(module.exports);
+        else db.exec(step);
+        const broken = db.prepare('PRAGMA foreign_key_check').all();
+        if (broken.length) throw new Error(`Upgrade step ${i + 1} left ${broken.length} broken link(s), e.g. in ${broken[0].table}`);
+        db.exec(`PRAGMA user_version = ${i + 1}`);
+      });
+    }
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON');
   }
 }
 

@@ -12,18 +12,19 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Spreadsheet import** | Import existing clients and their loans from Excel (.xlsx) or CSV. Columns are matched automatically, with a preview, duplicate handling and one-click undo. Imported clients aren't sent welcome or stage messages |
 | **Pipeline** | Kanban board across New Lead → Fact Find → Pre-Approval → Application Lodged → Conditional → Unconditional → Settlement Booked → Settled / Lost. Drag and drop, or use the stage menu |
 | **Deals** | Loan amount, property value, auto-calculated LVR, lender, product, rate, fixed-rate expiry, pre-approval expiry, finance and settlement dates, co-borrower, stage history |
+| **Agent & solicitor** | Record the real estate agent, solicitor/conveyancer and buyer's agent (plus accountant, builder or planner) on each deal, straight from the New deal form. They're kept in a directory so you pick them again next time, can be emailed from the deal, appear in merge fields, and can be kept updated automatically |
 | **Document checklists** | Standard checklist built automatically by loan purpose (plus self-employed docs), with status tracking and a one-click "email the client what's outstanding" |
 | **Tasks** | Personal and team tasks, overdue/today/upcoming views, tasks auto-created by automations |
-| **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 18 ready-made automations, fully editable in the UI |
+| **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 25 ready-made automations, fully editable in the UI |
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
 | **Mortgage tracker** | A tab on each contact covering their properties, valuation history by method (full, desktop, kerbside, AVM, contract price…), loans and the properties securing them, and other assets. Shows LVR, equity, usable equity and net position, plus a lending structure diagram that flags cross-collateralisation and LVRs over 80% |
 | **Client lending reviews** | A branded review document built from the mortgage tracker, with four commentary sections (Loan Review, Actions to Consider, Broker to Action, Next Steps) pre-filled with suggestions. Preview it live, download as PDF or Word, or email it to the client with the PDF attached |
 | **Calendar (Calendly)** | Calendly bookings appear on a Calendar page, the dashboard and each client's record. Bookings are matched to clients (newcomers become leads), cancellations get a follow-up task, and a **Booking link** button copies, emails or texts a pre-filled Calendly link |
 | **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Emails are sent as formatted HTML with your logo, brand colour and each sender's own signature, with images embedded |
-| **Email templates** | 14 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
+| **Email templates** | 18 editable templates with merge fields, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
-| **Referral partners** | Agents, accountants, planners and others, with referral counts, settled volume and fee splits |
+| **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Commission rates, clawback periods, BDM contacts, settled volume, and logos (uploaded or fetched from the lender's website) shown across the pipeline, tracker, review documents and client emails |
 | **Reports** | Settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
@@ -98,6 +99,31 @@ Tick **Shares finances** for a couple (it's ticked automatically for spouses and
 - **Lending reviews:** a review is prepared for the household (for example "Mia & Tom Jones", which also appears in the PDF and Word file names). Untick a name to address it to one person only.
 
 To separate a couple's finances again, edit the relationship and untick *Shares finances*, or click **Unlink**. Both contacts and all their records are kept.
+
+## Agent, solicitor & buyer's agent
+
+When you create a deal, the **New deal** form has an *Agent, solicitor & buyer's agent* section. For each one, pick someone you've worked with before or choose **+ Add a new…** and type their name, agency or firm, email and mobile. Everything there is optional, so you can fill it in later.
+
+On the deal page, the **Agent & solicitor** card shows who's involved. Click an email address to write to them from your Outlook (the email is filed against the client and deal). Use **Change** or **Remove** to update them, and **+ Other…** to add an accountant, financial planner or builder.
+
+Everyone you add is saved under **Partners & agents**, so next time you just pick them from the list. If you type in someone who's already there (same email, or the same name and company), the CRM uses the existing record instead of making a duplicate. The same directory holds your referral partners, so an agent who refers clients to you only needs entering once.
+
+**Emailing them from templates:** on a deal, **Send template** has a *Send to* choice for the agent, solicitor and so on. Three templates are included: *Finance approved – note to agent*, *Settlement booked – note to solicitor* and *Introduction – agent & solicitor*. Merge fields:
+
+| Field | Gives |
+| --- | --- |
+| `{{recipient.first_name}}`, `{{recipient.name}}` | The agent/solicitor the email is going to |
+| `{{agent.name}}`, `{{agent.company}}`, `{{agent.email}}`, `{{agent.mobile}}` | The deal's real estate agent |
+| `{{solicitor.name}}`, `{{solicitor.company}}`, … | The client's solicitor/conveyancer |
+| `{{buyers_agent.name}}`, … | The buyer's agent |
+
+The client's companion SMS is never sent with an email that's going to an agent or solicitor.
+
+**Automations:** two ready-made automations keep them updated, and both start **switched off**. Only turn them on if your clients are happy for you to share finance updates:
+- *Unconditional approval: tell the agents* emails the real estate agent and buyer's agent that finance is approved.
+- *Settlement booked: confirm with the solicitor* emails the solicitor/conveyancer the settlement date, lender and loan amount.
+
+You can also choose *The deal's real estate agent* (or solicitor, buyer's agent…) under **Send to** in any *Send an email* action. If the deal doesn't have one, that email is skipped and the reason shows in the automation's run history.
 
 ## Importing existing clients
 

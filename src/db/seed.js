@@ -3,6 +3,7 @@ const db = require('./index');
 const { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_TEMPLATE } = require('./sms-defaults');
 const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 const { IO_EXPIRY_AUTOMATION } = require('./tracker-defaults');
+const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
 
 // Indicative commission rates; edit them on the Lenders page to match your
 // aggregator's schedule.
@@ -185,12 +186,12 @@ const AUTOMATIONS = [
   },
 ];
 
-TEMPLATES.push(RATE_REDUCTION_TEMPLATE);
+TEMPLATES.push(RATE_REDUCTION_TEMPLATE, ...PARTY_TEMPLATES);
 for (const a of AUTOMATIONS) {
   if (STAGE_SMS[a.name]) a.actions.push({ type: 'send_sms', message: STAGE_SMS[a.name] });
   if (a.name === BIRTHDAY_SMS.automation) a.actions.push({ type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });
 }
-AUTOMATIONS.push(...SMS_AUTOMATIONS, ...CALENDAR_AUTOMATIONS);
+AUTOMATIONS.push(...SMS_AUTOMATIONS, ...CALENDAR_AUTOMATIONS, ...PARTY_AUTOMATIONS.map((a) => ({ ...a, enabled: 0 })));
 
 function seedDefaults() {
   db.transaction(() => {
@@ -217,6 +218,7 @@ function seedDefaults() {
           trigger_config: JSON.stringify(a.trigger_config || {}),
           conditions: JSON.stringify(a.conditions || []),
           actions: JSON.stringify(actions),
+          enabled: a.enabled ?? 1,
         });
       }
       db.setSetting('automations_seeded', '1');

@@ -90,14 +90,15 @@ const lenders = simpleCrud(
 
 const partners = simpleCrud(
   'referral_partners',
-  ['name', 'company', 'type', 'email', 'phone', 'referral_fee_pct', 'notes', 'active'],
+  ['name', 'company', 'type', 'email', 'phone', 'mobile', 'referral_fee_pct', 'notes', 'active'],
   {
-    label: 'Referral partner',
+    label: 'Partner',
     list: () => db.all(
       `SELECT p.*,
          (SELECT COUNT(*) FROM contacts c WHERE c.referral_partner_id = p.id) AS referrals,
          (SELECT COUNT(*) FROM deals d WHERE d.referral_partner_id = p.id AND d.stage = 'settled') AS settled_count,
-         (SELECT COALESCE(SUM(loan_amount),0) FROM deals d WHERE d.referral_partner_id = p.id AND d.stage = 'settled') AS settled_volume
+         (SELECT COALESCE(SUM(loan_amount),0) FROM deals d WHERE d.referral_partner_id = p.id AND d.stage = 'settled') AS settled_volume,
+         (SELECT COUNT(*) FROM deal_parties dp WHERE dp.partner_id = p.id) AS deals_involved
        FROM referral_partners p ORDER BY p.active DESC, p.name`,
     ),
   },

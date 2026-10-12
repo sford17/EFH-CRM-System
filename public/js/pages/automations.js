@@ -93,7 +93,7 @@ function actionFieldDefs(type) {
     case 'send_email': return [
       ['template_id', 'Template', 'select', templateOpts],
       ['delay_days', 'Delay (days)', 'number'],
-      ['to', 'Send to', 'select', [['contact', 'Client (both borrowers on joint loans)'], ['main_contact', 'Main client only'], ['broker', 'Broker (internal)']]],
+      ['to', 'Send to', 'select', [['contact', 'Client (both borrowers on joint loans)'], ['main_contact', 'Main client only'], ...state.meta.party_roles.map((r) => [r.key, `The deal's ${r.label.toLowerCase()}`]), ['broker', 'Broker (internal)']]],
     ];
     case 'send_sms': return [
       ['message', 'Text message (merge fields allowed, e.g. {{contact.first_name}}, {{broker.first_name}})', 'textarea'],
@@ -211,7 +211,7 @@ export async function automationPage(id) {
       conds,
       h('button.secondary.small', { type: 'button', onclick: () => conds.append(conditionRow()) }, '+ Add condition')),
     h('section.card', h('h2', '3. Then'),
-      h('p.muted.small', 'Merge fields: {{contact.first_name}}, {{contact.full_name}}, {{deal.title}}, {{deal.loan_amount|money}}, {{deal.settlement_date|date}}, {{deal.lender_name}}, {{deal.stage_label}}, {{broker.name}}, {{broker.booking_link}}. For appointment triggers: {{event.title}}, {{event.when}}, {{event.location}}, {{event.join_url}}'),
+      h('p.muted.small', 'Merge fields: {{contact.first_name}}, {{contact.full_name}}, {{deal.title}}, {{deal.loan_amount|money}}, {{deal.settlement_date|date}}, {{deal.lender_name}}, {{deal.stage_label}}, {{broker.name}}, {{broker.booking_link}}, {{agent.name}}, {{agent.company}}, {{solicitor.name}}, {{buyers_agent.name}}, and {{recipient.first_name}} for emails sent to the agent or solicitor. For appointment triggers: {{event.title}}, {{event.when}}, {{event.location}}, {{event.join_url}}'),
       actions,
       h('button.secondary.small', { type: 'button', onclick: () => actions.append(actionRow()) }, '+ Add action')),
     isNew ? null : h('section.card', h('h2', 'Run history'), table([

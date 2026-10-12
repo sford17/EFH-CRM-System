@@ -3,7 +3,8 @@ import {
   label, userOptions, todayStr, relDays, opts, dateTime, lenderTag, lenderLogo,
 } from '../core.js';
 import { dealFields, coBorrowerField, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
-import { emailsCard } from './email.js';
+import { emailsCard, composeDialog } from './email.js';
+import { partiesCard } from './parties.js';
 import { smsCard } from './sms.js';
 
 // Moves a deal, asking for extra details where a stage needs them.
@@ -180,7 +181,7 @@ export async function dealPage(id) {
         h('div.muted', 'Borrower: ', h('a', { href: `#/contacts/${deal.contact_id}` }, deal.contact_name),
           deal.co_borrower_name ? [' & ', h('a', { href: `#/contacts/${deal.co_borrower_id}` }, deal.co_borrower_name)] : null)),
       h('div.actions',
-        h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ dealId: deal.id, contactId: deal.contact_id }) }, 'Send template'),
+        h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ dealId: deal.id, contactId: deal.contact_id, parties: deal.parties }) }, 'Send template'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
         deal.stage !== 'lost' ? h('button.secondary', { type: 'button', onclick: async () => { if (await moveDeal(deal, 'lost')) refresh(); } }, 'Mark lost') : null,
         h('button.danger.ghost', { type: 'button', onclick: remove }, 'Delete'))),
@@ -207,6 +208,7 @@ export async function dealPage(id) {
           info('App ref', deal.application_ref),
           info('Broker', deal.owner_name),
           info('Referral partner', deal.partner_name))),
+        partiesCard(deal, { compose: (p) => composeDialog({ contactId: deal.contact_id, dealId: deal.id, to: p.email, toParty: p }) }),
         h('section.card', h('h2', 'Key dates'), h('dl.info',
           info('Pre-approval expires', deal.pre_approval_expiry ? `${date(deal.pre_approval_expiry)} (${relDays(deal.pre_approval_expiry)})` : '—'),
           info('Finance due', deal.finance_due_date ? `${date(deal.finance_due_date)} (${relDays(deal.finance_due_date)})` : '—'),

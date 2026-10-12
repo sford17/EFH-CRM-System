@@ -70,11 +70,12 @@ const ACTIONS = {
   },
   send_email(a, ctx, auto) {
     const to = a.to === 'broker' ? ctx.broker?.email : undefined;
+    const recipientRole = require('./parties').isRole(a.to) ? a.to : null;
     const sendAfter = a.delay_days ? new Date(Date.now() + Number(a.delay_days) * 86400000).toISOString() : undefined;
     // Joint deals/loans: address both borrowers unless set to the main contact only.
-    const coBorrower = a.to === 'main_contact' ? null : ctx.deal?.co_borrower_id || ctx.loan?.co_borrower_id || null;
+    const coBorrower = a.to === 'main_contact' || recipientRole ? null : ctx.deal?.co_borrower_id || ctx.loan?.co_borrower_id || null;
     const { id, reason } = mailer.queueTemplate(a.template_id, {
-      contactId: ctx.contact?.id, dealId: ctx.deal?.id, loanId: ctx.loan?.id, automationId: auto.id, sendAfter, to,
+      contactId: ctx.contact?.id, dealId: ctx.deal?.id, loanId: ctx.loan?.id, automationId: auto.id, sendAfter, to, recipientRole,
       addresseeIds: coBorrower && coBorrower !== ctx.contact?.id ? [ctx.contact?.id, coBorrower] : null,
     });
     return id ? `email #${id} queued` : `email skipped: ${reason}`;

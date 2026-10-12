@@ -6,6 +6,7 @@ const documents = require('../services/documents');
 const mailer = require('../services/mailer');
 const { listEmails } = require('./outlook');
 const commissions = require('../services/commissions');
+const parties = require('../services/parties');
 const { lvr } = require('../services/templating');
 const { STAGES, STAGE_KEYS } = require('../constants');
 const { nowIso, HttpError } = require('../util');
@@ -86,6 +87,7 @@ router.get('/:id', (req, res) => {
   deal.emails = db.all("SELECT id, to_email, subject, status, send_after, sent_at FROM outbox WHERE deal_id = ? AND COALESCE(sent_via,'') != 'outlook' ORDER BY id DESC", id);
   deal.sms = db.all('SELECT id, body, status, error, from_number, send_after, sent_at FROM sms_messages WHERE deal_id = ? ORDER BY id DESC LIMIT 50', id);
   deal.mail = listEmails({ contactIds: [deal.contact_id, deal.co_borrower_id].filter(Boolean), limit: 50 });
+  deal.parties = parties.list(deal.id);
   res.json(deal);
 });
 
@@ -98,9 +100,14 @@ router.post('/', (req, res) => {
   if (row.owner_id === undefined) row.owner_id = contact.owner_id || req.user.id;
   if (row.co_borrower_id === undefined) row.co_borrower_id = require('../services/household').partnerOf(contact.id)?.id ?? null;
   if (row.referral_partner_id === undefined && contact.referral_partner_id) row.referral_partner_id = contact.referral_partner_id;
-  const id = db.insert('deals', { ...row, stage });
-  db.insert('deal_stage_history', { deal_id: id, from_stage: null, to_stage: stage, changed_by: req.user.id });
-  db.insert('activities', { contact_id: row.contact_id, deal_id: id, user_id: req.user.id, type: 'system', body: `Deal created: ${row.title}` });
+  const id = db.transaction(() => {
+    const dealId = db.insert('deals', { ...row, stage });
+    db.insert('deal_stage_history', { deal_id: dealId, from_stage: null, to_stage: stage, changed_by: req.user.id });
+    db.insert('activities', { contact_id: row.contact_id, deal_id: dealId, user_id: req.user.id, type: 'system', body: `Deal created: ${row.title}` });
+    // Agent, solicitor, buyer's agent… captured on the New deal form.
+    parties.setMany(dealId, req.body.parties, req.user.id);
+    return dealId;
+  });
   automation.emit('deal.created', { dealId: id });
   res.status(201).json(withLvr(db.one(`${SELECT} WHERE d.id = ?`, id)));
 });
@@ -116,6 +123,19 @@ router.patch('/:id', (req, res) => {
     automation.changeDealStage(id, req.body.stage, req.user.id);
   }
   res.json(withLvr(db.one(`${SELECT} WHERE d.id = ?`, id)));
+});
+
+// ---- Parties: agent, solicitor, buyer's agent… ------------------------------------
+router.put('/:id/parties/:role', (req, res) => {
+  const id = intParam(req.params.id);
+  db.transaction(() => parties.set(id, req.params.role, req.body || {}, req.user.id));
+  res.json({ parties: parties.list(id) });
+});
+
+router.delete('/:id/parties/:role', (req, res) => {
+  const id = intParam(req.params.id);
+  parties.remove(id, req.params.role);
+  res.json({ parties: parties.list(id) });
 });
 
 router.post('/:id/stage', (req, res) => {

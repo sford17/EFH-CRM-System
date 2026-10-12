@@ -46,7 +46,11 @@ function createApp() {
   app.use('/api/outlook', outlookRoutes.publicRouter);
 
   app.use('/api', auth.requireAuth);
-  app.get('/api/meta', (req, res) => res.json({ stages: STAGES, document_checklist: DOCUMENT_CHECKLIST }));
+  app.get('/api/meta', (req, res) => res.json({
+    stages: STAGES,
+    document_checklist: DOCUMENT_CHECKLIST,
+    party_roles: Object.entries(require('./services/parties').ROLES).map(([key, r]) => ({ key, label: r.label, types: r.types })),
+  }));
   app.use('/api/contacts', require('./routes/contacts'));
   app.use('/api/deals', require('./routes/deals'));
   app.use('/api/tasks', require('./routes/tasks'));

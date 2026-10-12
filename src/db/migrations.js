@@ -6,6 +6,28 @@
 const { STAGE_SMS, BIRTHDAY_SMS, SMS_AUTOMATIONS, TEMPLATE_SMS, RATE_REDUCTION_TEMPLATE } = require('./sms-defaults');
 const { CALENDAR_AUTOMATIONS } = require('./calendar-defaults');
 const { IO_EXPIRY_AUTOMATION, FIXED_RATE_TEXT_UPDATES } = require('./tracker-defaults');
+const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
+
+// Existing installs: templates and (switched-off) automations for keeping the
+// agent and solicitor up to date.
+function addPartyDefaults(db) {
+  if (db.one('SELECT 1 FROM email_templates LIMIT 1')) {
+    for (const [name, category, subject, body] of PARTY_TEMPLATES) {
+      if (!db.one('SELECT 1 FROM email_templates WHERE name = ?', name)) db.insert('email_templates', { name, category, subject, body });
+    }
+  }
+  if (db.getSetting('automations_seeded')) {
+    const templateId = (name) => db.one('SELECT id FROM email_templates WHERE name = ?', name)?.id;
+    for (const a of PARTY_AUTOMATIONS) {
+      if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
+      db.insert('automations', {
+        name: a.name, description: a.description, trigger: a.trigger, enabled: 0,
+        conditions: JSON.stringify(a.conditions || []),
+        actions: JSON.stringify(a.actions.map(({ template, ...rest }) => (template ? { ...rest, template_id: templateId(template) } : rest))),
+      });
+    }
+  }
+}
 
 // Existing installs: add SMS to the default automations and templates.
 // (Fresh installs get them from the seed data instead.)
@@ -423,8 +445,48 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 10. Deal parties (agent, solicitor, buyer's agent…), drawn from the partners
+  // directory, which gains buyer's agents, conveyancers and a mobile number.
+  (db) => {
+    db.get().exec(`
+      CREATE TABLE referral_partners_new (
+        id                   INTEGER PRIMARY KEY,
+        name                 TEXT NOT NULL,
+        company              TEXT,
+        type                 TEXT NOT NULL DEFAULT 'other'
+                             CHECK (type IN ('real_estate','buyers_agent','solicitor','conveyancer','accountant','financial_planner','builder','past_client','other')),
+        email                TEXT,
+        phone                TEXT,
+        mobile               TEXT,
+        referral_fee_pct     REAL NOT NULL DEFAULT 0,
+        notes                TEXT,
+        active               INTEGER NOT NULL DEFAULT 1,
+        created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      INSERT INTO referral_partners_new (id, name, company, type, email, phone, referral_fee_pct, notes, active, created_at)
+        SELECT id, name, company, type, email, phone, referral_fee_pct, notes, active, created_at FROM referral_partners;
+      DROP TABLE referral_partners;
+      ALTER TABLE referral_partners_new RENAME TO referral_partners;
+
+      CREATE TABLE deal_parties (
+        id          INTEGER PRIMARY KEY,
+        deal_id     INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+        role        TEXT NOT NULL CHECK (role IN ('real_estate_agent','buyers_agent','solicitor','accountant','financial_planner','builder')),
+        partner_id  INTEGER NOT NULL REFERENCES referral_partners(id) ON DELETE CASCADE,
+        notes       TEXT,
+        created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        UNIQUE (deal_id, role)
+      );
+      CREATE INDEX idx_deal_parties_partner ON deal_parties(partner_id);
+    `);
+    addPartyDefaults(db);
+  },
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;
 module.exports.addCalendarDefaults = addCalendarDefaults;
 module.exports.addTrackerDefaults = addTrackerDefaults;
+module.exports.addPartyDefaults = addPartyDefaults;

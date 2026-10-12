@@ -39,10 +39,17 @@ function queueEmail({ to, subject, body, contactId = null, dealId = null, templa
 
 // Renders a template against a contact/deal and queues it. Returns the outbox id,
 // or null with a reason when the email should not go out.
-function queueTemplate(templateId, { contactId, dealId, loanId, automationId, sendAfter, to, userId, addresseeIds } = {}) {
+function queueTemplate(templateId, { contactId, dealId, loanId, automationId, sendAfter, to, userId, addresseeIds, recipientRole } = {}) {
   const template = db.one('SELECT * FROM email_templates WHERE id = ?', templateId);
   if (!template) return { id: null, reason: `Template ${templateId} not found` };
-  const ctx = buildContext({ contactId, dealId, loanId, userId, latestDeal: true, addresseeIds });
+  const ctx = buildContext({ contactId, dealId, loanId, userId, latestDeal: true, addresseeIds, recipientRole });
+  // Going to the agent/solicitor etc. on the deal rather than the client.
+  if (recipientRole && !require('./parties').isRole(recipientRole)) return { id: null, reason: 'Unknown recipient' };
+  if (recipientRole) {
+    if (!ctx.recipient.id) return { id: null, reason: `No ${require('./parties').ROLES[recipientRole].label.toLowerCase()} on this deal` };
+    if (!ctx.recipient.email) return { id: null, reason: `${ctx.recipient.name} has no email address` };
+    to = ctx.recipient.email;
+  }
   const recipient = to || [...new Set(ctx.addressees.map((c) => c.email).filter(Boolean))].join(', ');
   if (!recipient) return { id: null, reason: 'Contact has no email address' };
   if (template.category === 'marketing' && ctx.contact && !ctx.contact.marketing_opt_in) {
@@ -59,9 +66,10 @@ function queueTemplate(templateId, { contactId, dealId, loanId, automationId, se
     sendAfter,
     senderUserId: userId || ctx.broker?.id || null,
   });
-  // Templates can carry a companion text that goes out with the email.
+  // Templates can carry a companion text that goes out with the email
+  // (to the client, so not when the email is for someone else).
   let smsId = null;
-  if (template.sms_body && ctx.contact) {
+  if (template.sms_body && ctx.contact && !to) {
     const r = sms.queueForContact({
       contactId: ctx.contact.id,
       dealId: ctx.deal?.id ?? null,
