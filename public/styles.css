@@ -906,3 +906,14 @@ p.sl-ai { display: block; }
 .pn-ideas li { padding: .3rem 0; border-bottom: 1px solid var(--border); }
 .pn-story { border-top: 1px solid var(--border); margin-top: .8rem; padding-top: .8rem; }
 .nl-section legend button { margin-left: .5rem; }
+
+/* Two-factor sign-in */
+.mfa-card { max-width: 560px; }
+.mfa-steps ol { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 1rem; }
+.mfa-qr { display: block; width: 190px; height: 190px; margin: .7rem 0; background: #fff; padding: 6px; border-radius: 8px; border: 1px solid var(--border); }
+.mfa-key { font-size: 1.05rem; letter-spacing: .05em; word-break: break-all; }
+.mfa-code input { font-size: 1.4rem; letter-spacing: .3em; max-width: 12rem; margin-top: .5rem; }
+#mfa_code { font-size: 1.3rem; letter-spacing: .2em; }
+.mfa-codes { columns: 2; font-size: 1.05rem; padding-left: 1.4rem; }
+.mfa-codes li { margin: .2rem 0; }
+.mfa-left { justify-content: flex-start; flex-wrap: wrap; }

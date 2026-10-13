@@ -8,6 +8,7 @@ import { adobeSignSettingsCard } from './signing.js';
 import { aiSettingsCard } from './settlementLetter.js';
 import { quickliSettingsCard } from './quickli.js';
 import { backupsCard } from './backups.js';
+import { mfaCard } from './mfa.js';
 
 const PARTNER_TYPES = ['real_estate', 'buyers_agent', 'solicitor', 'conveyancer', 'accountant', 'financial_planner', 'builder', 'past_client', 'other'];
 const TYPE_LABELS = { real_estate: 'Real estate agent', buyers_agent: "Buyer's agent" };
@@ -189,5 +190,6 @@ export async function settingsPage() {
         { label: 'Role', value: (u) => label(u.role) },
         { label: 'Status', value: (u) => badge(u.active ? 'active' : 'inactive', u.active ? 'ok' : '') },
       ], users, { onRow: isAdmin ? editUser : undefined })),
-    h('section.card', h('h2', 'My password'), pwForm));
+    h('section.card', h('h2', 'My password'), pwForm),
+    await mfaCard().catch(() => null));
 }

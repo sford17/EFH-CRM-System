@@ -50,15 +50,27 @@ function sessionUser(req) {
   const token = readCookie(req, COOKIE);
   if (!token) return null;
   return db.one(
-    `SELECT u.id, u.name, u.email, u.role, u.phone FROM sessions s JOIN users u ON u.id = s.user_id
+    `SELECT u.id, u.name, u.email, u.role, u.phone, (u.totp_enabled_at IS NOT NULL) AS mfa_enabled FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token = ? AND s.expires_at > ? AND u.active = 1`,
     token, new Date().toISOString(),
   ) || null;
 }
 
+// Signed in, whether or not two-factor set-up is still owed (for the set-up screens).
+function requireSession(req, res, next) {
+  const user = sessionUser(req);
+  if (!user) return next(new HttpError(401, 'Not signed in'));
+  req.user = user;
+  next();
+}
+
+// Signed in and, when the business requires it, using two-factor sign-in.
 function requireAuth(req, res, next) {
   const user = sessionUser(req);
   if (!user) return next(new HttpError(401, 'Not signed in'));
+  if (!user.mfa_enabled && db.getSetting('mfa_required', '0') === '1') {
+    return next(new HttpError(403, 'Set up two-factor sign-in to continue', 'mfa_setup_required'));
+  }
   req.user = user;
   next();
 }
@@ -70,5 +82,5 @@ const requireRole = (...roles) => (req, res, next) => {
 
 module.exports = {
   COOKIE, hashPassword, verifyPassword, createSession, readCookie, setSessionCookie,
-  clearSessionCookie, sessionUser, requireAuth, requireRole,
+  clearSessionCookie, sessionUser, requireAuth, requireSession, requireRole,
 };

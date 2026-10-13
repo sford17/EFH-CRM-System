@@ -15,6 +15,7 @@ export async function api(path, { method = 'GET', body } = {}) {
     location.hash = '#/login';
     throw new Error('Please sign in');
   }
+  if (res.status === 403 && data?.reason === 'mfa_setup_required') window.dispatchEvent(new Event('crm:mfa-setup'));
   if (!res.ok) throw new Error((data && data.error) || `Request failed (${res.status})`);
   return data;
 }

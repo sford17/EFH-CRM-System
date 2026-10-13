@@ -9,7 +9,7 @@ const { pick, requireFields, notFound, intParam } = require('./helpers');
 const users = express.Router();
 
 users.get('/', (req, res) => {
-  res.json({ rows: db.all('SELECT id, name, email, role, phone, active, created_at FROM users ORDER BY active DESC, name') });
+  res.json({ rows: db.all('SELECT id, name, email, role, phone, active, created_at, (totp_enabled_at IS NOT NULL) AS mfa_enabled FROM users ORDER BY active DESC, name') });
 });
 
 users.post('/', auth.requireRole('admin'), (req, res) => {

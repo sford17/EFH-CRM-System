@@ -131,7 +131,7 @@ function createApp() {
       console.error(err);
       message = 'Something went wrong';
     }
-    res.status(status).json({ error: message });
+    res.status(status).json({ error: message, ...(err instanceof HttpError && err.reason ? { reason: err.reason } : {}) });
   });
 
   return app;

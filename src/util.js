@@ -57,9 +57,11 @@ function parseJson(text, fallback) {
 }
 
 class HttpError extends Error {
-  constructor(status, message) {
+  // `reason` is a short code the browser can act on (e.g. 'mfa_setup_required').
+  constructor(status, message, reason = null) {
     super(message);
     this.status = status;
+    this.reason = reason;
   }
 }
 

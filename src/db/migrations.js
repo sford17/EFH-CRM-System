@@ -1024,6 +1024,28 @@ MIGRATIONS.push(
     // Usage saved before the ledger existed.
     require('../services/costs').backfill(db);
   },
+  // 31. Two-factor sign-in (authenticator app)
+  `
+  ALTER TABLE users ADD COLUMN totp_secret TEXT;
+  ALTER TABLE users ADD COLUMN totp_pending TEXT;
+  ALTER TABLE users ADD COLUMN totp_enabled_at TEXT;
+  ALTER TABLE users ADD COLUMN totp_last_step INTEGER;
+  ALTER TABLE users ADD COLUMN totp_recovery TEXT;
+  CREATE TABLE mfa_challenges (
+    token_hash TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    attempts   INTEGER NOT NULL DEFAULT 0,
+    expires_at TEXT NOT NULL
+  );
+  CREATE TABLE mfa_trusted (
+    id         INTEGER PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    label      TEXT,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  `,
 );
 
 module.exports = MIGRATIONS;

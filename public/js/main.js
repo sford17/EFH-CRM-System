@@ -1,3 +1,4 @@
+import { codeScreen, forcedSetupScreen } from './pages/mfa.js';
 import { api, h, clear, state, loadLookups, toast, attempt, dateTime, modal } from './core.js';
 import { dashboardPage } from './pages/dashboard.js';
 import { contactsPage, contactPage } from './pages/contacts.js';
@@ -117,8 +118,17 @@ function authScreen(needsSetup) {
     e.preventDefault();
     const body = Object.fromEntries(new FormData(form));
     await attempt(async () => {
-      const { user } = await api(needsSetup ? '/auth/setup' : '/auth/login', { method: 'POST', body });
-      state.user = user;
+      const r = await api(needsSetup ? '/auth/setup' : '/auth/login', { method: 'POST', body });
+      if (r.mfa_required) {
+        // Second step: a code from the authenticator app.
+        codeScreen(app, {
+          brandMark, challenge: r.challenge,
+          onSignedIn: async (user) => { state.user = user; location.hash = '#/'; await boot(); },
+          onBack: () => authScreen(false),
+        });
+        return;
+      }
+      state.user = r.user;
       location.hash = '#/';
       await boot();
     });
@@ -223,6 +233,10 @@ async function boot() {
     return;
   }
   state.user = status.user;
+  if (status.mfa_setup_required) {
+    await forcedSetupScreen(app, { brandMark, onDone: () => boot(), onLogout: logout });
+    return;
+  }
   await loadLookups(true);
   shell();
   if (location.hash === '#/login' || !location.hash) location.hash = '#/';
@@ -236,4 +250,6 @@ window.addEventListener('hashchange', () => {
 });
 // Lets pages re-render the current route after a change.
 window.addEventListener('crm:refresh', () => route());
+// The business now requires two-factor sign-in and this person hasn't set it up.
+window.addEventListener('crm:mfa-setup', () => boot());
 boot().catch((err) => toast(err.message, 'error'));

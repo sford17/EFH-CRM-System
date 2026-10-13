@@ -839,6 +839,31 @@ public/                single-page web app (no build step)
 test/                  API tests (node:test)
 ```
 
+## Two-factor sign-in
+
+After your password, the CRM asks for a 6-digit code from an authenticator app on your phone, so a stolen or guessed password isn't enough to get in. **Turn it on before the CRM goes online.**
+
+**Setting it up (each person, about 2 minutes):**
+1. Install **Microsoft Authenticator** or **Google Authenticator** on your phone (free).
+2. In the CRM, go to **Settings → Two-factor sign-in → Set up two-factor sign-in**.
+3. In the app, tap **+** and scan the QR code. If you're on the phone itself, use "Can't scan it?".
+4. Type the 6-digit code the app shows.
+5. **Save your 10 recovery codes.** Each one lets you sign in once if you lose your phone. Use Download or Copy, and keep them in a password manager or printed and filed.
+
+**Signing in:** email and password, then the code from the app. Tick **Remember this device for 30 days** on your own computer to skip the code there.
+
+**Lost your phone?**
+- Sign in with a recovery code ("Lost your phone? Use a recovery code"), then set it up on the new phone.
+- Or ask an admin to **Reset** you (Settings → Two-factor sign-in → For your team). You'll be signed out and set it up again at your next sign-in.
+
+**For admins:** tick **Require two-factor sign-in for everyone**. Anyone who hasn't set it up is taken to the set-up screen the next time they use the CRM, and can't use anything else until they have. You must set it up for yourself first. The team list shows who has it on.
+
+**Good to know:**
+- The phone needs its clock set automatically, because codes change every 30 seconds.
+- Turning it on signs you out on other devices.
+- New recovery codes need your password, and make the old ones stop working.
+- Codes can't be reused, and wrong codes are limited: 5 per sign-in, then the password is asked for again.
+
 ## Backups
 
 The CRM backs itself up. Open **Settings → Backups** (admins only).
@@ -875,6 +900,7 @@ Backups contain your clients' personal and financial information. Keep the backu
 
 ## Security notes
 
+- Optional (and recommended) two-factor sign-in with an authenticator app; admins can require it for everyone. Secrets are stored encrypted and recovery codes hashed.
 - Passwords are hashed with scrypt. Sessions use HttpOnly, SameSite=Strict cookies, and logins are rate-limited.
 - Write requests must be JSON, which blocks cross-site form posts. The app sends a strict Content-Security-Policy.
 - Assistants cannot manage users or business settings.
