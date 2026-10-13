@@ -5,6 +5,7 @@ const outlook = require('./outlook');
 const sms = require('./sms');
 const calendly = require('./calendly');
 const adobeSign = require('./adobeSign');
+const social = require('./social');
 
 let timer;
 
@@ -20,6 +21,9 @@ async function tick(log = console) {
     if (bookings) log.info(`[scheduler] ${bookings} new Calendly booking change(s)`);
     const signed = await adobeSign.syncOpen(log);
     if (signed) log.info(`[scheduler] ${signed} Adobe Sign document(s) finished`);
+    const posts = await social.publishDue(log);
+    if (posts) log.info(`[scheduler] published ${posts} scheduled social post(s)`);
+    await social.refreshTokens(log);
     const synced = await outlook.syncAll(log);
     if (synced) log.info(`[scheduler] filed ${synced} Outlook email(s) against contacts`);
   } catch (err) {

@@ -683,3 +683,60 @@ tr.val-used td { background: var(--ok-soft); }
   .pc-inline { justify-content: flex-end; }
   .pc-total-value { font-size: 1.2rem; }
 }
+
+/* Social */
+.net-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.net-card { margin: 0; display: flex; flex-direction: column; gap: .4rem; }
+.net-card p { margin: 0; }
+.net-head { display: flex; align-items: center; gap: .7rem; }
+.net-head > div { flex: 1; min-width: 0; }
+.net-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.net-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: auto; }
+.net-icon { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; color: #fff; font-weight: 700; font-size: .78rem; flex: none; }
+.net-icon.linkedin { background: #0a66c2; }
+.net-icon.instagram { background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af); }
+.social-target .net-icon, .check-pill .net-icon { width: 20px; height: 20px; font-size: .62rem; border-radius: 5px; }
+.social-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.social-grid > div { display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+.social-nets { display: flex; flex-wrap: wrap; gap: .5rem; }
+.check-pill.disabled { opacity: .5; cursor: not-allowed; }
+.social-text { width: 100%; resize: vertical; min-height: 9rem; font: inherit; }
+.social-counters { display: flex; flex-wrap: wrap; gap: .9rem; color: var(--text-2); }
+.social-pic { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.social-link { display: flex; gap: .5rem; }
+.social-link[hidden] { display: none; }
+.social-link input { flex: 1; min-width: 0; }
+.social-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); flex: none; }
+.social-thumb.blank { display: grid; place-items: center; color: var(--text-2); background: var(--surface-2, var(--accent-soft)); font-weight: 600; }
+.social-errors ul { margin: 0; padding-left: 1.1rem; }
+.social-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.social-when { display: inline-flex; gap: .4rem; align-items: center; }
+.social-when input { width: auto; }
+.pv-label { text-transform: uppercase; letter-spacing: .04em; }
+.social-previews { display: flex; flex-direction: column; gap: 1rem; }
+.pv { border: 1px solid var(--border); border-radius: 10px; background: var(--surface, #fff); overflow: hidden; font-size: .9rem; }
+.pv-head { display: flex; align-items: center; gap: .55rem; padding: .6rem .75rem; }
+.pv-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; }
+.pv-avatar.blank { background: var(--border); display: inline-block; }
+.pv-text { padding: 0 .75rem .6rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pv-ig .pv-text { padding-top: .6rem; }
+.pv-img img { display: block; width: 100%; max-height: 360px; object-fit: cover; }
+.pv-square { aspect-ratio: 1 / 1; background: var(--border); display: grid; place-items: center; overflow: hidden; }
+.pv-square img { width: 100%; height: 100%; object-fit: cover; }
+.pv-foot { padding: .5rem .75rem; border-top: 1px solid var(--border); }
+.social-posts { display: flex; flex-direction: column; }
+.social-post { display: flex; gap: .8rem; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+.social-post:last-child { border-bottom: 0; }
+.social-post-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .3rem; }
+.social-post-meta { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.social-post-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.social-targets { display: flex; flex-wrap: wrap; gap: .4rem 1rem; }
+.social-target { display: inline-flex; align-items: center; gap: .35rem; font-size: .88rem; }
+.social-post-actions { display: flex; gap: .8rem; }
+.setup-steps { margin: .2rem 0 .4rem; padding-left: 1.2rem; display: grid; gap: .3rem; }
+.setup-block h3 { margin: .4rem 0 .2rem; font-size: 1rem; }
+.copy-line { display: inline-flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.copy-line code { overflow-wrap: anywhere; }
+@media (max-width: 860px) { .social-grid { grid-template-columns: 1fr; } }
+.social-filter { flex-wrap: wrap; margin: 0; border-bottom: 0; }
+.social-filter a { padding: .35rem .6rem; }

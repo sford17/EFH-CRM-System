@@ -731,6 +731,61 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 20. Social: each broker's LinkedIn and Instagram accounts, and posts
+  // (published now or scheduled) with a result per network.
+  `
+  CREATE TABLE social_accounts (
+    id               INTEGER PRIMARY KEY,
+    user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    network          TEXT NOT NULL CHECK (network IN ('linkedin','instagram')),
+    external_id      TEXT NOT NULL,
+    name             TEXT,
+    username         TEXT,
+    picture_url      TEXT,
+    access_token     TEXT NOT NULL,
+    refresh_token    TEXT,
+    expires_at       TEXT,
+    connected_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    refreshed_at     TEXT,
+    expiry_warned_at TEXT,
+    last_error       TEXT,
+    UNIQUE (user_id, network)
+  );
+
+  CREATE TABLE social_posts (
+    id             INTEGER PRIMARY KEY,
+    user_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    body           TEXT NOT NULL DEFAULT '',
+    image_asset_id INTEGER REFERENCES assets(id) ON DELETE SET NULL,
+    image_url      TEXT,
+    alt_text       TEXT,
+    media_token    TEXT,
+    status         TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','scheduled','publishing','posted','partly_posted','failed')),
+    scheduled_at   TEXT,
+    posted_at      TEXT,
+    created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_social_posts_due ON social_posts(status, scheduled_at);
+  CREATE UNIQUE INDEX idx_social_posts_media ON social_posts(media_token) WHERE media_token IS NOT NULL;
+
+  CREATE TABLE social_post_targets (
+    id           INTEGER PRIMARY KEY,
+    post_id      INTEGER NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,
+    network      TEXT NOT NULL CHECK (network IN ('linkedin','instagram')),
+    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','posted','failed')),
+    container_id TEXT,
+    external_id  TEXT,
+    url          TEXT,
+    error        TEXT,
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    posted_at    TEXT,
+    UNIQUE (post_id, network)
+  );
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

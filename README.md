@@ -29,6 +29,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
 | **Internal refinance register** | A record of every client you've moved from one of your loans to a new one, with the existing loan beside the new loan (borrowers, lender, account, product, amounts, rates, settlement and pay-out dates, broker), plus the reason, clawback and cashback. Every field is editable. It's added automatically when a refinance deal settles, and a CSV export is there for sale or trail-book records |
+| **Social** | Connect each broker's LinkedIn profile and Instagram professional account, then write a post with a picture, see a preview for each, and post now, schedule it or save a draft. Post ideas, a general-advice disclaimer, links to the live posts, and retry if a network refuses a post |
 | **Reports** | Running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Purchase calculation (funds to complete: price, loan and LVR, deposit, stamp duty, LMI, legal and other costs, total client contribution; also saved on purchase deals), stamp duty for residential and commercial property in every state and territory (2026-27 rates, with owner-occupier and first home buyer concessions and foreign surcharges), repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
 | **Team** | Admin, broker and assistant roles, with notifications for automation alerts |
@@ -221,6 +222,35 @@ Use **Reports → Internal refinances** to keep a permanent record of clients yo
 - the full register
 
 You can filter by broker, lender and status, or search by client, borrower or account number. **Export CSV** gives a spreadsheet with one row per refinance, with every old-loan and new-loan field, plus months held, the clawback date and the old loan's upfront commission.
+
+## Social (LinkedIn and Instagram)
+
+The **Social** tab lets each broker post to their own LinkedIn profile and Instagram account.
+
+**Writing a post:**
+- Write the text. **Post ideas** has ready-made posts, and **+ Disclaimer** adds a general-advice disclaimer with your business name and credit licence number.
+- Add a picture, if you like: JPG or PNG, up to 8 MB.
+- Tick LinkedIn, Instagram or both, and check the preview for each.
+- Then **Post now**, **Schedule** (date and time) or **Save draft**.
+
+**Checks before posting:** the CRM won't let a post go out if it breaks a network's rules:
+- LinkedIn: 3,000 characters.
+- Instagram: a picture is required, captions up to 2,200 characters, up to 30 hashtags, and the picture must be between portrait 4:5 and landscape 1.91:1.
+
+**After posting:** each post shows **View on LinkedIn / Instagram** links. If a network refuses a post, the error is shown, you get a notification, and **Retry** sends it again. Scheduled posts go out within about 5 minutes of their time, while the CRM is running.
+
+### Setting it up (admin, once)
+
+Click **Set up** on the Social page. It shows each step and the exact addresses to copy.
+
+- **LinkedIn:** at linkedin.com/developers, create an app (it needs your LinkedIn company page) and add the products *Share on LinkedIn* and *Sign In with LinkedIn using OpenID Connect*. Then add the redirect URL shown, and paste the Client ID and Client Secret into the CRM. Each broker then clicks **Connect LinkedIn**. LinkedIn connections last 60 days; the CRM sends you a reminder a week before you need to reconnect.
+- **Instagram:** the account must be a **professional** (Business or Creator) account. At developers.facebook.com, create an app with the Instagram use case. Under *API setup with Instagram login*, copy the Instagram app ID and app secret into the CRM. While the app is in development mode, add each broker's account as an Instagram tester. Instagram connections are renewed automatically.
+
+**Instagram and a CRM running on your own computer:** Instagram has two rules that matter when the CRM runs on your PC (http://localhost):
+1. **Signing in** only returns to an **https** web address. Until the CRM has one, each broker clicks **Connect with a token** and pastes a token from the Meta App Dashboard (*Generate token*).
+2. **Instagram downloads the picture itself** from the internet. Use **Picture from a link**, which is a public https link straight to the JPG or PNG. Once the CRM is on a public https address (set it in Settings → Business → *CRM web address*), uploaded pictures work too, and Instagram can be connected by signing in.
+
+LinkedIn has neither limitation: it works from your PC as is.
 
 ## Google reviews
 

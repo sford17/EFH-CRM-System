@@ -14,6 +14,7 @@ import { inboxPage } from './pages/email.js';
 import { calendarPage } from './pages/calendar.js';
 import { importPage } from './pages/import.js';
 import { reviewPage } from './pages/review.js';
+import { socialPage } from './pages/social.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
@@ -29,6 +30,7 @@ const NAV = [
   ['#/commissions', 'Commissions', '¢'],
   ['#/partners', 'Partners & agents', '⇄'],
   ['#/lenders', 'Lenders', '⌂'],
+  ['#/social', 'Social', '◎'],
   ['#/reports', 'Reports', '▥'],
   ['#/calculators', 'Calculators', '±'],
   ['#/settings', 'Settings', '⚙'],
@@ -56,6 +58,7 @@ const ROUTES = [
   [/^\/lenders\/(\d+)$/, lenderPage],
   [/^\/reports$/, reportsPage],
   [/^\/calculators$/, calculatorsPage],
+  [/^\/social$/, socialPage],
   [/^\/settings$/, settingsPage],
 ];
 
