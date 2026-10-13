@@ -159,4 +159,4 @@ async function extract(files) {
   return { ...out, model: message.model, usage: { input_tokens: message.usage?.input_tokens, output_tokens: message.usage?.output_tokens } };
 }
 
-module.exports = { extract, configured, saveConfig, model, SCHEMA, DEFAULT_MODEL, MAX_FILES };
+module.exports = { extract, configured, saveConfig, model, clientFor, SCHEMA, DEFAULT_MODEL, MAX_FILES };

@@ -21,7 +21,7 @@ function getTransport() {
   return transport;
 }
 
-function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId = null, lenderId = null, internal = false, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
+function queueEmail({ to, subject, body, htmlBody = null, newsletterId = null, contactId = null, dealId = null, loanId = null, lenderId = null, internal = false, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
   if (!to) throw new Error('Recipient has no email address');
   return db.insert('outbox', {
     sender_user_id: senderUserId,
@@ -29,6 +29,8 @@ function queueEmail({ to, subject, body, contactId = null, dealId = null, loanId
     to_email: to,
     subject,
     body,
+    html_body: htmlBody,
+    newsletter_id: newsletterId,
     contact_id: contactId,
     deal_id: dealId,
     loan_id: loanId,
@@ -123,7 +125,7 @@ async function processDue() {
       // Internal reminders (to the broker) go without a signature and aren't
       // filed on the client's timeline.
       const internal = Boolean(mail.internal);
-      const email = buildEmail({ body: mail.body, senderUserId: senderId, internal, context: { contactId: mail.contact_id, dealId: mail.deal_id, loanId: mail.loan_id } });
+      const email = buildEmail({ body: mail.body, htmlBody: mail.html_body, senderUserId: senderId, internal, context: { contactId: mail.contact_id, dealId: mail.deal_id, loanId: mail.loan_id } });
       const files = mail.attachments ? JSON.parse(mail.attachments).map((a) => ({ ...a, data: Buffer.from(a.data, 'base64') })) : [];
       if (account) {
         const sent = await outlook.sendMail(account, { to: mail.to_email, subject: mail.subject, email, files });

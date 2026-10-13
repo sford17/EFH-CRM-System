@@ -6,6 +6,7 @@ const sms = require('./sms');
 const calendly = require('./calendly');
 const adobeSign = require('./adobeSign');
 const social = require('./social');
+const newsletter = require('./newsletter');
 
 let timer;
 
@@ -24,6 +25,8 @@ async function tick(log = console) {
     const posts = await social.publishDue(log);
     if (posts) log.info(`[scheduler] published ${posts} scheduled social post(s)`);
     await social.refreshTokens(log);
+    // On the chosen day each month the newsletter is written (in the background).
+    if (newsletter.tick()) log.info('[scheduler] writing this month\'s newsletter');
     const synced = await outlook.syncAll(log);
     if (synced) log.info(`[scheduler] filed ${synced} Outlook email(s) against contacts`);
   } catch (err) {

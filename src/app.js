@@ -49,6 +49,8 @@ function createApp() {
   app.use('/api/outlook', outlookRoutes.publicRouter);
   const socialRoutes = require('./routes/social');
   app.use('/api/social', socialRoutes.publicRouter);
+  const newsletterRoutes = require('./routes/newsletters');
+  app.use('/api/public', newsletterRoutes.publicRouter);
 
   app.use('/api', auth.requireAuth);
   app.get('/api/meta', (req, res) => res.json({
@@ -79,6 +81,7 @@ function createApp() {
   app.use('/api/calendly', calendar.calendlyRouter);
   app.use('/api/signing', require('./routes/signing'));
   app.use('/api/ai', require('./routes/ai'));
+  app.use('/api/newsletters', newsletterRoutes.router);
   app.use('/api/social', socialRoutes.router);
   app.use('/api/appointments', calendar.appointments);
   app.use('/api/branding', brandingRoutes.router);

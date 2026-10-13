@@ -185,16 +185,18 @@ function footerHtml(brand, colours) {
 // `context` ({ contactId, dealId, loanId }, or { sample: true } for template
 // previews) supplies the data for any graphics in the body. `reply` leaves
 // out the branded frame so it sits naturally above the quoted thread.
-function buildEmail({ body, senderUserId = null, reply = false, preview = false, context = null, internal = false }) {
+// `htmlBody` (with `body` as its plain-text version) is content built
+// elsewhere, e.g. a newsletter, placed in the same branded frame.
+function buildEmail({ body, htmlBody = null, senderUserId = null, reply = false, preview = false, context = null, internal = false }) {
   const brand = branding.getBrand();
   const colours = branding.emailColours();
   const signature = internal ? '' : signatureFor(senderUserId); // no signature on reminders to yourself
-  const rendered = renderBody(body, colours, context && { ...context, internal }, preview);
+  const rendered = htmlBody ? { html: htmlBody, text: String(body || '') } : renderBody(body, colours, context && { ...context, internal }, preview);
   const content = signature ? `${rendered.html}\n<div class="signature" style="margin-top:4px;">${signature}</div>` : rendered.html;
   const text = signature ? `${rendered.text.trim()}\n\n${htmlToText(signature)}`.trim() : rendered.text.trim();
 
   // Lenders named in the email get their logo shown (not on replies).
-  const lenderLogoList = reply ? [] : lenderLogos.mentionedIn(body).map((l) => ({ l, a: branding.getAsset(l.logo_asset_id) }));
+  const lenderLogoList = reply || htmlBody ? [] : lenderLogos.mentionedIn(body).map((l) => ({ l, a: branding.getAsset(l.logo_asset_id) }));
   const lenderImg = ({ l, a }, maxW = 120, maxH = 36, margin = 'margin-left:12px;') => {
     const { width, height } = fit(a.width, a.height, maxW, maxH);
     return `<img src="/assets/${a.id}" width="${width}" height="${height}" alt="${escape(l.name)}" style="border:0;width:${width}px;height:${height}px;vertical-align:middle;${margin}">`;

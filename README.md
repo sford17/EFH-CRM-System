@@ -30,6 +30,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
 | **Internal refinance register** | A record of every client you've moved from one of your loans to a new one, with the existing loan beside the new loan (borrowers, lender, account, product, amounts, rates, settlement and pay-out dates, broker), plus the reason, clawback and cashback. Every field is editable. It's added automatically when a refinance deal settles, and a CSV export is there for sale or trail-book records |
+| **Newsletter** | A monthly client newsletter written by AI from the month's banking, finance and property news (AFR, RBA, Cotality and more), with key-number tiles, bar charts, your branding and a "Book a meeting" button. Each client's copy compares their own interest rates with the market average. Written automatically on the 20th; you get an email to review it, then send it |
 | **Social** | Connect each broker's LinkedIn profile and Instagram professional account, then write a post with a picture, see a preview for each, and post now, schedule it or save a draft. Post ideas, a general-advice disclaimer, links to the live posts, and retry if a network refuses a post |
 | **Reports** | Running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Purchase calculation (funds to complete: price, loan and LVR, deposit, stamp duty, LMI, legal and other costs, total client contribution; also saved on purchase deals), stamp duty for residential and commercial property in every state and territory (2026-27 rates, with owner-occupier and first home buyer concessions and foreign surcharges), repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
@@ -163,6 +164,35 @@ A few items couldn't be checked against the official calculators when they were 
 - the ACT investor rates.
 
 Every result links to that state's official calculator. Land titles registration fees and off-the-plan concessions (VIC, WA) aren't included.
+
+## Monthly newsletter
+
+**Written for you:** on the **20th of each month** (you can change the day), Claude researches the month's banking, finance and property news on the web and writes the newsletter. It prefers the AFR and official and data sources such as the RBA, ABS, APRA and Cotality (CoreLogic); the list of sources can be edited. The newsletter includes:
+- a headline and introduction
+- **key-number tiles** (e.g. cash rate, home value change, average variable rate)
+- 3–5 sections (interest rates, the property market, banking and lending news, a tip for borrowers), with **bar charts** where there are figures worth showing, and links to the sources
+- the current **average home loan rates**, with their source
+
+**You review it first:** when it's ready, you get an email and a notification with a link to the **Newsletter** page.
+- Anything the AI thinks needs checking is listed at the top.
+- Every part can be edited: subject, preview line, headline, introduction, numbers, sections, charts and average rates.
+- The live preview shows exactly what a chosen client will receive.
+- **Send a test to me** emails you a copy.
+- **Rewrite with AI** starts again.
+- Nothing goes to clients until you press **Send to … clients** and confirm. You can untick anyone who shouldn't get it that month.
+
+**Each client's copy is personal:**
+- **How does your rate compare?** shows each of their active home and investment loans (from the mortgage tracker, including their partner's) as a bar against the matching market average: owner-occupier or investor, variable or fixed.
+- If they're above the average, it shows about how much extra interest that is a year, and suggests a review.
+- Clients without loans on file see the average rates instead.
+- Each copy ends with a **Book a meeting with me** button. This uses their broker's Calendly link, or else the booking link in Newsletter settings, or else your website.
+- It's sent from their broker's mailbox, in your branding (logo, colours, signature and footer), with a general-advice note and an **unsubscribe** link.
+
+**Who receives it:** clients (you can add past clients or prospects) with an email address who haven't opted out of marketing, one copy per email address.
+
+**Unsubscribing:** when the CRM has a public https web address (Settings → Business → CRM web address), the unsubscribe link works in one click. Otherwise it opens an email to you asking to unsubscribe. Either way, untick *Marketing OK* on that contact.
+
+**Needs:** the Anthropic API key (Settings → AI). Writing a newsletter uses web searches and typically costs well under a dollar on your Anthropic account. Charts are built from plain email tables, so they show in every email program, including Outlook, even when pictures are blocked.
 
 ## Settlement letters
 

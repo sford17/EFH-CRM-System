@@ -807,6 +807,31 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 22. Monthly client newsletter: written with AI from the month's news, checked
+  // by the broker, then sent to each client with their own rate comparison.
+  `
+  CREATE TABLE newsletters (
+    id           INTEGER PRIMARY KEY,
+    month        TEXT NOT NULL UNIQUE,
+    status       TEXT NOT NULL DEFAULT 'generating' CHECK (status IN ('generating','ready','failed','sent')),
+    content      TEXT,
+    error        TEXT,
+    model        TEXT,
+    usage        TEXT,
+    generated_at TEXT,
+    edited_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sent_at      TEXT,
+    sent_by      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sent_count   INTEGER NOT NULL DEFAULT 0,
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  ALTER TABLE outbox ADD COLUMN html_body TEXT;
+  ALTER TABLE outbox ADD COLUMN newsletter_id INTEGER REFERENCES newsletters(id) ON DELETE SET NULL;
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

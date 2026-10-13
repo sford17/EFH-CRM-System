@@ -145,4 +145,4 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
   };
 }
 
-module.exports = { render, buildContext, lvr };
+module.exports = { render, buildContext, lvr, bookingLinkFor };
