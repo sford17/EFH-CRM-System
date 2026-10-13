@@ -441,8 +441,11 @@ const fmtValue = (v, unit) => (unit === '%' ? `${Number(v).toFixed(Math.abs(v) <
 // Horizontal bar chart (tables only, so it shows in every email program).
 function barChart(chart, c) {
   const max = Math.max(...chart.items.map((i) => Math.abs(i.value)), 0.0001);
+  // An optional floor (e.g. for prices) makes differences between bars visible.
+  const floor = chart.floor > 0 && chart.floor < max ? chart.floor : 0;
   const rows = chart.items.map((i) => {
-    const w = Math.max(2, Math.round((Math.abs(i.value) / max) * 100));
+    // Up to 78% wide, leaving room for the figure beside the longest bar.
+    const w = Math.max(floor ? 8 : 2, Math.round(((Math.abs(i.value) - floor) / (max - floor)) * 78));
     const colour = i.value < 0 ? '#c0392b' : c.primary;
     return `<tr><td width="30%" style="padding:4px 8px 4px 0;font-family:${FONT};font-size:13px;color:${TEXT};white-space:nowrap;">${esc(i.label)}</td>
 <td style="padding:4px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>

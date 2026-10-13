@@ -195,6 +195,35 @@ Claude searches the web (agency sites, business directories, professional listin
 
 Each search costs roughly a dollar on your Anthropic account (web searches plus reading).
 
+## Property reports
+
+Send a client a report on how their properties have performed, with the latest market data and news for their area.
+
+**Creating one:**
+1. Open the client, go to the **Mortgage tracker** tab, and click **📈 Property report** (under Properties).
+2. Tick the properties to include. Each one needs a suburb and state, either in its address (e.g. "3 Park Ave, Ryde NSW 2112") or in the property's fields.
+3. Claude researches each area on the web while you carry on working, usually in 2–5 minutes. You get a notification when it's ready.
+
+**What's in it, for each property:**
+- **Current value, growth** since purchase (or the first valuation), **growth per year, equity and LVR**
+- A plain-English paragraph you can edit
+- A **valuation history chart** and table, built from the valuations on the tracker tab plus the purchase price
+- **About the area:**
+  - a summary of the local market
+  - headline figures (median price, 12-month change, rents, yield, days on market and so on), each with its period and source
+  - a price trend
+  - local developments (transport, rezoning, schools)
+- A closing note, a **Book a time to chat** button (from Calendly or your newsletter booking link), the sources and a general-information disclaimer
+
+**Reviewing and sending:**
+- Everything is editable: title, introduction, each property's paragraph, area summaries, figures, local news and the closing. Anything the AI wasn't sure about is listed at the top.
+- The preview switches between the **Email** (with charts) and the **PDF document**.
+- **Email to client** sends it from your mailbox with the PDF attached and logs it on the client's timeline. **Download PDF** saves a copy.
+- **Refresh area data** researches the areas again. Your own wording is kept.
+- Past reports are listed on the client's tracker tab.
+
+Each report costs roughly 50c–$1 on your Anthropic account, depending on how many areas it covers. Area figures come from third-party sites, so check them before sending.
+
 ## AI assistant
 
 Open **Assistant** in the menu (or **✧ Ask AI** at the top of any page) and type a question or a task.

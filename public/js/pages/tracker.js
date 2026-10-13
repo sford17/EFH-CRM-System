@@ -3,6 +3,7 @@
 import {
   api, h, attempt, formModal, modal, confirmDialog, field, readForm, money, date, pct, label, opts, badge, lenderOptions, todayStr, lenderLogo,
 } from '../core.js';
+import { propertyReportsCard } from './propertyReports.js';
 
 const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 const compactMoney = (n) => (n === null || n === undefined ? '—' : n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/\.?0+$/, '')}m` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : money(n));
@@ -377,6 +378,7 @@ export async function trackerTab(contact) {
           h('td', h('button.link.small', { type: 'button', onclick: (e) => { e.stopPropagation(); remove(a); } }, 'Delete'))))))) : h('p.empty', 'Savings, super, shares, vehicles and other assets go here.'));
   }
 
+  const reportsCard = await propertyReportsCard(contact).catch(() => null);
   return h('div.tracker',
     joint ? h('div.alert.info.household-note', h('strong', `Combined finances for ${data.household_name}. `),
       'Everything below is shared with ', memberOptions.filter(([id]) => id !== contact.id).map(([id, name], i) => [i ? ', ' : '', h('a', { href: `#/contacts/${id}?tab=tracker` }, name)]),
@@ -390,6 +392,7 @@ export async function trackerTab(contact) {
     structure.warnings.length ? h('div.alert.warn-box', h('strong', 'Worth a look'), h('ul', structure.warnings.map((w) => h('li', w)))) : null,
     lendingStructure(structure, contact),
     propertiesCard(contact, properties, methods),
+    reportsCard,
     loansCard(contact, loans, properties),
     assetsCard(contact, assets));
 }

@@ -26,6 +26,12 @@ function locationOf(p) {
   const postcode = p.postcode || m?.[3] || null;
   return { suburb: suburb ? suburb.replace(/\b\w/g, (c) => c.toUpperCase()).trim() : null, state: STATES.includes(state) ? state : null, postcode };
 }
+// A baseline for price charts, so growth shows (bars from $0 all look alike).
+const chartFloor = (values) => {
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  return Math.max(0, min - (max - min) * 0.6 - max * 0.05);
+};
 const kindOf = (t) => (t === 'unit' ? 'unit' : 'house');
 const areaKey = (loc, kind) => `${(loc.suburb || '').toLowerCase()}|${loc.state || ''}|${kind}`;
 
@@ -63,7 +69,7 @@ function performanceNote(perf) {
   const parts = [];
   if (perf.start && perf.start.label === 'purchase') parts.push(`You bought this property for ${money(perf.start.amount)} in ${monthYear(perf.start.date)}`);
   else if (perf.start) parts.push(`It was valued at ${money(perf.start.amount)} in ${monthYear(perf.start.date)}`);
-  if (perf.current_valuation) parts.push(`${parts.length ? 'and it' : 'It'} is now valued at ${money(perf.current_value)} (${perf.current_valuation.method.toLowerCase()}, ${monthYear(perf.current_valuation.date)})`);
+  if (perf.current_valuation) parts.push(`${parts.length ? 'and it' : 'It'} is now valued at ${money(perf.current_value)} (${perf.current_valuation.method.replace(/ valuation$/i, '')}, ${monthYear(perf.current_valuation.date)})`);
   let text = `${parts.join(' ')}.`;
   if (perf.growth !== null && perf.start) {
     text += ` That's ${perf.growth >= 0 ? 'up' : 'down'} ${money(Math.abs(perf.growth))}, or ${pct(Math.abs(perf.growth_pct))}${perf.growth_per_year !== null ? ` (about ${pct(perf.growth_per_year)} a year)` : ''}.`;
@@ -330,6 +336,7 @@ function get(id) {
     id: r.id, contact_id: r.contact_id, contact_name: contactName(r.contact_id), status: r.status, error: r.error, usage: r.usage ? JSON.parse(r.usage) : null,
     created_at: r.created_at, updated_at: r.updated_at, sent_at: r.sent_at, sent_to: r.sent_to, content: r.content,
     performance: perfs, to: db.one('SELECT email FROM contacts WHERE id = ?', r.contact_id)?.email || null,
+    booking_ready: Boolean(bookingUrl(r.contact_id, r.created_by)),
   };
 }
 
@@ -347,8 +354,7 @@ function valuationSvg(points, colour) {
   const H = 210;
   const pad = { l: 8, r: 8, t: 22, b: 34 };
   const max = Math.max(...points.map((p) => p.amount));
-  const min = Math.min(...points.map((p) => p.amount));
-  const floor = Math.max(0, min - (max - min) * 0.6 - max * 0.05);
+  const floor = chartFloor(points.map((p) => p.amount));
   const n = points.length;
   const slot = (W - pad.l - pad.r) / n;
   const bw = Math.min(56, slot * 0.62);
@@ -362,7 +368,7 @@ function valuationSvg(points, colour) {
 <text x="${(x + bw / 2).toFixed(1)}" y="${H - pad.b + 13}" text-anchor="middle" font-family="Helvetica" font-size="8.5" fill="#4b5563">${esc(monthYear(p.date))}</text>
 <text x="${(x + bw / 2).toFixed(1)}" y="${H - pad.b + 25}" text-anchor="middle" font-family="Helvetica" font-size="7.5" fill="#6b7280">${esc(p.method.replace(' valuation', '').slice(0, 16))}</text>`;
   }).join('\n');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;height:auto">
 <line x1="${pad.l}" y1="${H - pad.b}" x2="${W - pad.r}" y2="${H - pad.b}" stroke="#d1d5db" stroke-width="1"/>
 ${bars}
 </svg>`;
@@ -436,6 +442,11 @@ function model(report) {
   return { title: c.title, prepared_for: [contact.first_name, contact.last_name].filter(Boolean).join(' '), date: formatDate(today()), broker: owner, business: business(), blocks };
 }
 
+function bookingUrl(contactId, senderId) {
+  const contact = db.one('SELECT id, first_name, last_name, email, owner_id FROM contacts WHERE id = ?', contactId);
+  return require('./templating').bookingLinkFor(contact.owner_id || senderId, contact) || db.getSetting('newsletter_booking_url', '');
+}
+
 function emailHtml(report, senderId) {
   const { emailParts: E } = require('./newsletter');
   const col = branding.emailColours();
@@ -456,7 +467,7 @@ function emailHtml(report, senderId) {
     ].filter((k) => k.value !== '–'), col));
     if (pp.note) { html.push(E.para(pp.note, col)); txt.push(pp.note); }
     if (perf.points.length >= 2) {
-      html.push(E.barChart({ title: 'Valuation history', unit: '$', items: perf.points.map((p) => ({ label: `${monthYear(p.date)} · ${p.method.replace(' valuation', '')}`, value: p.amount })) }, col));
+      html.push(E.barChart({ title: 'Valuation history', unit: '$', floor: chartFloor(perf.points.map((p) => p.amount)), items: perf.points.map((p) => ({ label: `${monthYear(p.date)} · ${p.method.replace(' valuation', '')}`, value: p.amount })) }, col));
       txt.push(perf.points.map((p) => `${monthYear(p.date)} (${p.method}): ${money(p.amount)}`).join('\n'));
     }
     const area = c.areas.find((a) => a.key === pp.area_key);
@@ -471,7 +482,7 @@ function emailHtml(report, senderId) {
         txt.push(area.stats.map((s) => `${s.label}: ${s.value}${s.period ? ` (${s.period})` : ''}`).join('\n'));
       }
       if (area.trend) {
-        html.push(E.barChart({ title: area.trend.title || 'Trend', unit: area.trend.unit, items: area.trend.items }, col));
+        html.push(E.barChart({ title: area.trend.title || 'Trend', unit: area.trend.unit, floor: area.trend.unit === '$' ? chartFloor(area.trend.items.map((i) => i.value)) : 0, items: area.trend.items }, col));
       }
       if (area.highlights.length) {
         html.push(`<p style="margin:0 0 6px 0;font-weight:bold;">What's happening locally</p>`, E.para(area.highlights.map((h) => `- ${h}`).join('\n'), col));
@@ -481,8 +492,7 @@ function emailHtml(report, senderId) {
       html.push(E.sourceLine(srcs, col));
     }
   }
-  const contact = db.one('SELECT id, first_name, last_name, email, owner_id FROM contacts WHERE id = ?', report.contact_id);
-  const bookUrl = require('./templating').bookingLinkFor(contact.owner_id || senderId, contact) || db.getSetting('newsletter_booking_url', '');
+  const bookUrl = bookingUrl(report.contact_id, senderId);
   if (c.closing) { html.push(E.heading('Let\'s talk', col), E.para(c.closing, col)); txt.push(c.closing); }
   if (bookUrl) { html.push(E.button('Book a time to chat', bookUrl, col)); txt.push(`Book a time: ${bookUrl}`); }
   html.push(`<p style="margin:16px 0 0 0;font-size:11px;line-height:1.5;color:${E.MUTED};">Valuations are estimates and aren't formal valuations. Area data comes from the third-party sources shown. This is general information only and doesn't take into account your objectives, financial situation or needs. The full report is attached as a PDF.</p>`);

@@ -874,3 +874,7 @@ p.sl-ai { display: block; }
 .lg-done summary { cursor: pointer; margin: .5rem 0; color: var(--text-2); }
 @media (max-width: 480px) { .lg-grid { grid-template-columns: 1fr; } }
 .lg-examples button { white-space: normal; text-align: left; max-width: 100%; }
+
+/* Property reports */
+.pr-views { display: flex; gap: .3rem; }
+.pr-views button[aria-pressed="false"] { background: transparent; color: var(--accent); border: 1px solid var(--border); }

@@ -18,6 +18,7 @@ import { socialPage } from './pages/social.js';
 import { newslettersPage, newsletterPage } from './pages/newsletters.js';
 import { assistantPage } from './pages/assistant.js';
 import { leadsPage, leadSearchPage } from './pages/leads.js';
+import { propertyReportPage } from './pages/propertyReports.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
@@ -67,6 +68,7 @@ const ROUTES = [
   [/^\/social$/, socialPage],
   [/^\/leads$/, leadsPage],
   [/^\/leads\/(\d+)$/, leadSearchPage],
+  [/^\/property-reports\/(\d+)$/, propertyReportPage],
   [/^\/assistant$/, assistantPage],
   [/^\/assistant\/(\d+)$/, assistantPage],
   [/^\/newsletters$/, newslettersPage],

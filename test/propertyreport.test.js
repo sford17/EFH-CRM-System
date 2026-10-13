@@ -142,6 +142,7 @@ test('a report researches the areas in the background', async () => {
   assert.equal(rep.usage.web_searches, 5);
   assert.equal(rep.performance.length, 2);
   assert.equal(rep.to, 'mia.report@example.com');
+  assert.equal(rep.booking_ready, false);
   assert.ok(db.one("SELECT 1 FROM notifications WHERE message = 'Property report ready to review for Mia Report' AND link = ?", `#/property-reports/${reportId}`));
   assert.equal((await api.get(`/property-reports/contact/${mia.id}`)).data.rows[0].property_count, 2);
 });
@@ -170,7 +171,10 @@ test('editing, the document preview, the email preview and the PDF', async () =>
     assert.ok(html.includes(s), `document shows ${s}`);
   }
   assert.ok(!html.includes('<script>alert'), 'escaped');
+  await api.put('/newsletters/settings', { booking_url: 'https://calendly.com/efh/30min' });
+  assert.equal((await api.get(`/property-reports/${reportId}`)).data.booking_ready, true);
   const email = await (await get('email-preview')).text();
+  assert.ok(email.includes('https://calendly.com/efh/30min'), 'booking button');
   for (const s of ['Valuation history', 'Edited summary for Ryde.', '$2.05m', 'Metro West station', 'The full report is attached']) assert.ok(email.includes(s), `email shows ${s}`);
   assert.ok(!email.includes('<script>alert'));
   const pdf = await get('pdf');
