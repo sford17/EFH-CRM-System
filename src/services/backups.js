@@ -21,7 +21,13 @@ const dataDir = () => {
   return f && f !== ':memory:' ? path.dirname(path.resolve(f)) : null;
 };
 const defaultFolder = () => (dataDir() ? path.join(dataDir(), 'backups') : null);
-const folder = () => setting('backup_folder') || defaultFolder();
+// A saved folder that doesn't make sense on this computer (e.g. a Windows
+// path after moving to a Linux server) is ignored in favour of the default.
+const customFolder = () => {
+  const f = setting('backup_folder');
+  return f && path.isAbsolute(f) && !(process.platform !== 'win32' && /^[a-z]:[\\/]/i.test(f)) ? f : '';
+};
+const folder = () => customFolder() || defaultFolder();
 
 // Local time (HH:MM) in the business time zone.
 const localTime = (now = new Date()) => new Intl.DateTimeFormat('en-AU', { timeZone: TZ(), hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
@@ -33,9 +39,10 @@ function settings() {
   return {
     enabled: setting('backup_enabled') !== '0',
     time: /^\d{2}:\d{2}$/.test(setting('backup_time')) ? setting('backup_time') : DEFAULTS.backup_time,
-    folder: dir, custom_folder: Boolean(setting('backup_folder')), default_folder: defaultFolder(),
+    folder: dir, custom_folder: Boolean(customFolder()), default_folder: defaultFolder(),
+    ignored_folder: setting('backup_folder') && !customFolder() ? setting('backup_folder') : null,
     // A copy on the same drive won't survive the computer being lost or failing.
-    same_drive: Boolean(dir && data && path.parse(path.resolve(dir)).root.toLowerCase() === path.parse(data).root.toLowerCase() && !setting('backup_folder')),
+    same_drive: Boolean(dir && data && path.parse(path.resolve(dir)).root.toLowerCase() === path.parse(data).root.toLowerCase() && !customFolder()),
     keep_days: Number(setting('backup_keep_days')) || 14,
     keep_months: Number(setting('backup_keep_months')) || 0,
     last_ok_at: db.getSetting('backup_last_ok_at', '') || null,
@@ -99,7 +106,7 @@ function verify(file) {
 async function run({ kind = 'daily', userId = null } = {}) {
   const dir = folder();
   if (!dir) throw new HttpError(400, 'There\'s no database file to back up');
-  const name = `crm-backup-${stamp()}${kind === 'manual' ? '-manual' : ''}`;
+  const name = `crm-backup-${stamp()}${kind === 'manual' || kind === 'update' ? `-${kind}` : ''}`;
   const target = path.join(dir, name);
   db.setSetting('backup_last_attempt_at', nowIso());
   try {
@@ -120,7 +127,7 @@ async function run({ kind = 'daily', userId = null } = {}) {
     ].join('\r\n'));
     db.setSetting('backup_last_ok_at', nowIso());
     db.setSetting('backup_last_error', '');
-    if (kind !== 'manual') prune();
+    if (kind === 'daily') prune();
     return { name, folder: target, size: sizeOf(target), contacts };
   } catch (err) {
     try { fs.rmSync(target, { recursive: true, force: true }); } catch { /* nothing to tidy */ }
@@ -234,4 +241,101 @@ async function tick(now = new Date()) {
   }
 }
 
-module.exports = { settings, saveSettings, run, list, prune, file, tick, beforeUpdate, verify, NAME };
+// ---- Restoring a backup (e.g. moving to a new computer or server) ---------------------------------------
+
+const crypto = require('node:crypto');
+const STAGED = ['crm.db', 'secret.key'];
+const stagingDir = () => path.join(dataDir(), 'restore-staging');
+
+// Saves an uploaded file (streamed) ready to restore.
+async function stage(which, req) {
+  if (!STAGED.includes(which)) throw new HttpError(404, 'Not found');
+  if (!dataDir()) throw new HttpError(400, 'There\'s no database file to restore into');
+  fs.mkdirSync(stagingDir(), { recursive: true });
+  const target = path.join(stagingDir(), which);
+  await require('node:stream/promises').pipeline(req, fs.createWriteStream(target));
+  const size = fs.statSync(target).size;
+  if (!size) throw new HttpError(400, 'That file is empty');
+  if (which === 'crm.db' && fs.readFileSync(target, { encoding: null }).subarray(0, 15).toString() !== 'SQLite format 3') {
+    fs.unlinkSync(target);
+    throw new HttpError(400, 'That isn\'t a CRM database file (crm.db)');
+  }
+  if (which === 'secret.key' && !/^[0-9a-f]{64}$/i.test(fs.readFileSync(target, 'utf8').trim())) {
+    fs.unlinkSync(target);
+    throw new HttpError(400, 'That isn\'t a CRM secret.key file');
+  }
+  return { file: which, size };
+}
+
+// Can this key open what's encrypted in the database? (null = nothing to check)
+function keyFits(dbPath, keyHex) {
+  const check = new sqlite.DatabaseSync(dbPath, { readOnly: true });
+  try {
+    const row = check.prepare("SELECT value FROM settings WHERE value LIKE 'v1:%' LIMIT 1").get();
+    if (!row) return null;
+    const [, iv, tag, data] = row.value.split(':');
+    const d = crypto.createDecipheriv('aes-256-gcm', Buffer.from(keyHex, 'hex'), Buffer.from(iv, 'base64'));
+    d.setAuthTag(Buffer.from(tag, 'base64'));
+    Buffer.concat([d.update(Buffer.from(data, 'base64')), d.final()]);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    check.close();
+  }
+}
+
+// Swaps the uploaded backup in (after backing up what's there now).
+async function restore(userId) {
+  const dir = stagingDir();
+  const stagedDb = path.join(dir, 'crm.db');
+  const stagedKey = path.join(dir, 'secret.key');
+  if (!fs.existsSync(stagedDb)) throw new HttpError(400, 'Upload the crm.db file first');
+  let users;
+  const check = new sqlite.DatabaseSync(stagedDb);
+  try {
+    check.exec('PRAGMA journal_mode = DELETE');
+    if (Object.values(check.prepare('PRAGMA quick_check').get())[0] !== 'ok') throw new HttpError(400, 'That database file is damaged. Try another backup.');
+    users = check.prepare('SELECT COUNT(*) AS n FROM users').get().n;
+  } catch (err) {
+    throw err instanceof HttpError ? err : new HttpError(400, 'That file isn\'t a CRM database');
+  } finally {
+    check.close();
+  }
+  if (!users) throw new HttpError(400, 'That database has no users, so nobody could sign in. Try another backup.');
+  if (!process.env.ENCRYPTION_KEY) {
+    if (fs.existsSync(stagedKey)) {
+      if (keyFits(stagedDb, fs.readFileSync(stagedKey, 'utf8').trim()) === false) throw new HttpError(400, 'That secret.key doesn\'t belong to that database. Use the two files from the same backup folder.');
+    } else if (keyFits(stagedDb, '0'.repeat(64)) !== null) {
+      throw new HttpError(400, 'This database has saved passwords and connections, so it needs its secret.key too. Upload both files from the same backup folder.');
+    }
+  }
+  // A copy of what's here now, just in case.
+  await run({ kind: 'update', userId });
+  const live = path.resolve(db.file());
+  const liveKey = path.join(dataDir(), 'secret.key');
+  const aside = `${live}.before-restore`;
+  db.close();
+  try {
+    fs.renameSync(live, aside);
+    for (const extra of ['-wal', '-shm']) fs.rmSync(`${live}${extra}`, { force: true });
+    fs.renameSync(stagedDb, live);
+    if (fs.existsSync(stagedKey)) fs.renameSync(stagedKey, liveKey);
+    require('../secrets').resetKey();
+    db.open(live);
+    fs.rmSync(aside, { force: true });
+  } catch (err) {
+    // Put things back as they were.
+    try { if (fs.existsSync(aside)) { fs.rmSync(live, { force: true }); fs.renameSync(aside, live); } } catch { /* best effort */ }
+    require('../secrets').resetKey();
+    db.open(live);
+    throw new HttpError(500, `The restore didn't work, so nothing was changed: ${err.message}`);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  return { users, contacts: db.one('SELECT COUNT(*) AS n FROM contacts').n };
+}
+
+const discardStaged = () => (dataDir() ? fs.rmSync(stagingDir(), { recursive: true, force: true }) : null);
+
+module.exports = { settings, saveSettings, run, list, prune, file, tick, beforeUpdate, verify, NAME, stage, restore, discardStaged, keyFits };

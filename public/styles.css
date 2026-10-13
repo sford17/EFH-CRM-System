@@ -917,3 +917,4 @@ p.sl-ai { display: block; }
 .mfa-codes { columns: 2; font-size: 1.05rem; padding-left: 1.4rem; }
 .mfa-codes li { margin: .2rem 0; }
 .mfa-left { justify-content: flex-start; flex-wrap: wrap; }
+.restore-box { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .9rem; margin: .8rem 0; }

@@ -311,13 +311,15 @@ Clients can take photos with their phone or upload PDF, Word or Excel files (up 
 
 Clients open their fact find from their own phone or computer, so the CRM has to be reachable from the internet over **https**. While it only runs on this PC (`http://localhost:3000`), the CRM warns you that clients can't open links yet.
 
-Options:
-- **Host it on a server** (a small cloud server, or a host such as Render or Railway) with an https address like `https://crm.yourbusiness.com.au`. Your IT person or web developer can set this up. Set `COOKIE_SECURE=true`, and `TRUST_PROXY=true` if it sits behind a proxy.
-- **Use a secure tunnel from this PC**, such as Cloudflare Tunnel (free). It gives an https address that forwards to the CRM while this PC is on and the CRM is running. A named tunnel on your own domain keeps the same address.
+**The ready-made way: Fly.io in Sydney.** Follow **[docs/GO-LIVE.md](docs/GO-LIVE.md)**, a step-by-step guide that takes about an hour, once. It's set up so your data stays in Australia, the CRM runs 24/7, and updates go live when you approve them on GitHub (after the tests pass). It costs about US$6–10 a month.
+
+Other options:
+- Another host, using the included `Dockerfile` (keep `/data` on persistent storage; set `COOKIE_SECURE=true` and `TRUST_PROXY=true`).
+- A secure tunnel from this PC, such as Cloudflare Tunnel. This only works while the PC is on and the CRM is running.
 
 Then go to **Settings → Business → CRM web address** and enter the https address. Links in fact finds, reminders and emails use it.
 
-Once the CRM is online, anyone can reach its sign-in page, so give every user a strong password.
+Once the CRM is online, anyone can reach its sign-in page. Give every user a strong password and **require two-factor sign-in** (Settings → Two-factor sign-in).
 
 ## AI assistant
 
@@ -890,7 +892,9 @@ Folders the CRM didn't create are never touched.
 
 **If something goes wrong:** admins get a notification and an email when a nightly backup fails, and it's retried an hour later. The dashboard shows a warning when backups are off, failing, or haven't run for more than 3 days.
 
-**Restoring a backup:**
+**Restoring a backup:** in **Settings → Backups → Restore from a backup**, choose the `crm.db` and `secret.key` from one backup folder. The CRM checks them, saves a copy of what's there now, and swaps them in. Everyone then signs in again. This is also how you move the CRM to a new computer or server.
+
+If the CRM won't start, restore by hand:
 1. Stop the CRM (close the window running `npm start`).
 2. In the `data` folder, rename `crm.db` to `crm-old.db` and `secret.key` to `secret-old.key`, just in case.
 3. Copy `crm.db` and `secret.key` from the backup folder into the `data` folder. Delete any `crm.db-wal` or `crm.db-shm` files left in the `data` folder.

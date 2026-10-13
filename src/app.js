@@ -38,7 +38,9 @@ function createApp() {
   // without a CORS preflight, which this app never grants.)
   app.use('/api', (req, res, next) => {
     const bodylessDelete = req.method === 'DELETE' && !req.headers['content-type'] && !Number(req.headers['content-length'] || 0) && !req.headers['transfer-encoding'];
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !bodylessDelete && !req.is('application/json')) {
+    // Restoring a backup uploads the raw file. A cross-site form can't send this type either.
+    const restoreUpload = req.method === 'PUT' && /^\/api\/backups\/restore\/[\w.]+$/.test(req.originalUrl) && req.is('application/octet-stream');
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !bodylessDelete && !restoreUpload && !req.is('application/json')) {
       return res.status(415).json({ error: 'Requests must be sent as application/json' });
     }
     next();

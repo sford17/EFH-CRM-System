@@ -151,3 +151,60 @@ test('a copy is made before the database is updated', () => {
   assert.equal(fs.readFileSync(path.join(saved, 'secret.key'), 'utf8'), 'abc');
   assert.equal(backups.beforeUpdate(file, null, 0), null, 'not for a brand-new database');
 });
+
+test('restoring a backup by upload: checked, swapped in, with a copy of what was there', async () => {
+  const crypto = require('node:crypto');
+  const keyHex = 'a'.repeat(64);
+  // Something encrypted with this database's key, so the key check has work to do.
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', Buffer.from(keyHex, 'hex'), iv);
+  const data = Buffer.concat([c.update('secret'), c.final()]);
+  db.setSetting('test_encrypted', `v1:${iv.toString('base64')}:${c.getAuthTag().toString('base64')}:${data.toString('base64')}`);
+  db.setSetting('backup_folder', path.join(dir, 'restore-test'));
+  const made = await backups.run({ kind: 'manual' });
+  db.insert('contacts', { first_name: 'Zed', last_name: 'After' });
+
+  const cookie = (await fetch(`${srv.base}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@test.local', password: 'password123' }) })).headers.get('set-cookie').split(';')[0];
+  const put = (file, body) => fetch(`${srv.base}/backups/restore/${file}`, { method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/octet-stream' }, body });
+  const apply = () => fetch(`${srv.base}/backups/restore/apply`, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: '{}' }).then(async (r) => ({ status: r.status, data: await r.json() }));
+  const backupDb = fs.readFileSync(path.join(made.folder, 'crm.db'));
+
+  assert.equal((await put('crm.db', 'not a database')).status, 400);
+  assert.equal((await put('notes.txt', 'x')).status, 404);
+  assert.equal((await fetch(`${srv.base}/contacts`, { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/octet-stream' }, body: '{}' })).status, 415, 'raw uploads only for restoring');
+
+  // Without its key, or with the wrong one, it's refused.
+  assert.equal((await put('crm.db', backupDb)).status, 200);
+  let r = await apply();
+  assert.equal(r.status, 400);
+  assert.match(r.data.error, /needs its secret.key too/);
+  assert.equal((await put('crm.db', backupDb)).status, 200);
+  assert.equal((await put('secret.key', 'b'.repeat(64))).status, 200);
+  r = await apply();
+  assert.match(r.data.error, /doesn't belong to that database/);
+  assert.ok(db.one("SELECT 1 FROM contacts WHERE first_name = 'Zed'"), 'nothing changed');
+
+  assert.equal((await put('crm.db', backupDb)).status, 200);
+  assert.equal((await put('secret.key', keyHex)).status, 200);
+  r = await apply();
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(db.one("SELECT 1 FROM contacts WHERE first_name = 'Zed'"), undefined, 'back to the backup');
+  assert.ok(db.one("SELECT 1 FROM contacts WHERE first_name = 'Mia'"));
+  assert.equal(r.data.contacts, db.one('SELECT COUNT(*) AS n FROM contacts').n);
+  assert.equal(fs.readFileSync(path.join(dir, 'data', 'secret.key'), 'utf8'), keyHex);
+  // What was there before is kept as a backup.
+  const before = backups.list().find((b) => b.kind === 'update');
+  const copy = new DatabaseSync(path.join(backups.settings().folder, before.name, 'crm.db'), { readOnly: true });
+  assert.ok(copy.prepare("SELECT 1 FROM contacts WHERE first_name = 'Zed'").get());
+  copy.close();
+  assert.ok(!fs.existsSync(path.join(dir, 'data', 'restore-staging')), 'uploads tidied away');
+});
+
+test('a Windows backup folder carried over to a Linux server falls back to the standard folder', () => {
+  if (process.platform === 'win32') return;
+  db.setSetting('backup_folder', 'C:\\Users\\sam\\OneDrive\\CRM Backups');
+  const s = backups.settings();
+  assert.equal(s.folder, path.join(dir, 'data', 'backups'));
+  assert.equal(s.ignored_folder, 'C:\\Users\\sam\\OneDrive\\CRM Backups');
+  assert.equal(s.custom_folder, false);
+});
