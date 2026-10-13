@@ -846,3 +846,31 @@ p.sl-ai { display: block; }
   .ai-chat { height: calc(100vh - 13rem); }
   .ask-ai { display: none; }
 }
+
+/* Lead generator */
+.lg-intro { margin-top: 0; }
+.lg-form { display: flex; flex-direction: column; gap: .6rem; }
+.lg-label { font-weight: 600; }
+.lg-form textarea { width: 100%; font: inherit; }
+.lg-row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; }
+.lg-row label { display: flex; flex-direction: column; gap: .2rem; font-size: .82rem; color: var(--text-2); flex: 1; min-width: 150px; }
+.lg-row button { flex: none; }
+.lg-examples { display: flex; flex-wrap: wrap; gap: .2rem .8rem; align-items: center; }
+.lg-rules summary { cursor: pointer; }
+.lg-rules ul { margin: .6rem 0 0; padding-left: 1.2rem; display: grid; gap: .3rem; }
+.lg-history { display: flex; flex-direction: column; }
+.lg-history-row { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem .2rem; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; flex-wrap: wrap; }
+.lg-history-row:hover { background: var(--accent-soft); text-decoration: none; }
+.lg-summary h2 { margin: .1rem 0 .2rem; }
+.lg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.lg-lead { margin: 0; display: flex; flex-direction: column; gap: .45rem; }
+.lg-lead.dismissed { opacity: .6; }
+.lg-lead-head { display: flex; justify-content: space-between; gap: .6rem; align-items: flex-start; }
+.lg-lead h3 { margin: 0; font-size: 1.05rem; }
+.lg-why { margin: 0; }
+.lg-contact { display: flex; flex-wrap: wrap; gap: .3rem .9rem; overflow-wrap: anywhere; }
+.lg-tip { margin: 0; background: var(--accent-soft); border-radius: 6px; padding: .4rem .55rem; }
+.lg-actions { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: auto; padding-top: .3rem; }
+.lg-done summary { cursor: pointer; margin: .5rem 0; color: var(--text-2); }
+@media (max-width: 480px) { .lg-grid { grid-template-columns: 1fr; } }
+.lg-examples button { white-space: normal; text-align: left; max-width: 100%; }

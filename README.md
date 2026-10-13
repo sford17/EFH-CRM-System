@@ -8,6 +8,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | --- | --- |
 | **AI assistant** | Ask questions about your clients, deals, loans, tasks and reports in plain English, or give it tasks: create tasks, add notes, create contacts, update deals, email or text clients. It looks things up itself; anything that changes the CRM or contacts someone waits for your approval (emails and texts can be edited first) |
 | **Dashboard** | Open pipeline, settlements against a monthly target, commission, overdue tasks, upcoming finance/settlement/expiry dates, recent activity |
+| **Lead Generator** | Describe the leads you want (e.g. "real estate agents in Parramatta who sell a lot of first homes") and AI searches the web for matching businesses and professionals, with why they fit, how to approach them, their published contact details and the source. Add the good ones as leads or referral partners in one click |
 | **Contacts** | Leads → prospects → clients, with owner, lead source, referral partner, tags, income and employment details, marketing opt-in, review date. Full activity timeline (calls, emails, meetings, notes). CSV export |
 | **Related contacts & households** | Link partners, family, guarantors and advisers. Couples who share finances see one combined mortgage tracker on both profiles, keep a shared address, become joint borrowers on new deals by default, and can have emails, templates and lending reviews addressed to one or both of them |
 | **Spreadsheet import** | Import existing clients and their loans from Excel (.xlsx) or CSV. Columns are matched automatically, with a preview, duplicate handling and one-click undo. Imported clients aren't sent welcome or stage messages |
@@ -166,6 +167,33 @@ A few items couldn't be checked against the official calculators when they were 
 - the ACT investor rates.
 
 Every result links to that state's official calculator. Land titles registration fees and off-the-plan concessions (VIC, WA) aren't included.
+
+## Lead Generator
+
+**Searching:** describe who you're looking for, optionally with an area, the type (referral partners, business clients or either) and how many results you want. For example:
+- "Real estate agents in Parramatta who sell a lot of first homes"
+- "Accountants in Penrith who look after small businesses"
+- "Builders offering house and land packages in Western Sydney"
+
+Claude searches the web (agency sites, business directories, professional listings) and returns a card for each match. Each card shows:
+- name, role and business, category and location
+- **why they fit**, plus a suggested **first approach**
+- website, published email and phone
+- the **source page**
+
+**Using the results:**
+- If someone is already in the CRM (matched by email, phone, website or name), the card says so.
+- **Add as lead** creates a contact with status *Lead*, tagged *lead-generator*, with the reasons and source in their background notes.
+- **Add as referral partner** adds them to Partners & agents with the right type (agent, accountant, builder…).
+- **Dismiss** hides a result.
+- Searches take a few minutes and run in the background; you get a notification when one finishes. Past searches are kept on the Lead Generator page.
+
+**Privacy and spam rules:**
+- The generator only collects contact details businesses publish themselves for enquiries. It never collects personal mobiles or emails from social media, forums or people-search sites, and it skips private individuals.
+- Added leads have **no marketing consent**, so they don't get newsletters or marketing texts until they agree to.
+- Before reaching out: email only about their business role, identify yourself and offer an opt-out, check phone numbers against the Do Not Call Register before cold calling, and check details on the source page.
+
+Each search costs roughly a dollar on your Anthropic account (web searches plus reading).
 
 ## AI assistant
 

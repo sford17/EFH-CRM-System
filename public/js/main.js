@@ -17,12 +17,14 @@ import { reviewPage } from './pages/review.js';
 import { socialPage } from './pages/social.js';
 import { newslettersPage, newsletterPage } from './pages/newsletters.js';
 import { assistantPage } from './pages/assistant.js';
+import { leadsPage, leadSearchPage } from './pages/leads.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
   ['#/assistant', 'Assistant', '✧'],
   ['#/pipeline', 'Pipeline', '▤'],
   ['#/contacts', 'Contacts', '☺'],
+  ['#/leads', 'Lead Generator', '⌕'],
   ['#/deals', 'Deals', '$'],
   ['#/calendar', 'Calendar', '▦'],
   ['#/tasks', 'Tasks', '✓'],
@@ -63,6 +65,8 @@ const ROUTES = [
   [/^\/reports$/, reportsPage],
   [/^\/calculators$/, calculatorsPage],
   [/^\/social$/, socialPage],
+  [/^\/leads$/, leadsPage],
+  [/^\/leads\/(\d+)$/, leadSearchPage],
   [/^\/assistant$/, assistantPage],
   [/^\/assistant\/(\d+)$/, assistantPage],
   [/^\/newsletters$/, newslettersPage],

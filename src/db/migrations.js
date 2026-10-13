@@ -875,6 +875,29 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 25. Lead generator: AI web searches for potential leads and referral partners.
+  `
+  CREATE TABLE lead_searches (
+    id           INTEGER PRIMARY KEY,
+    user_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    request      TEXT NOT NULL,
+    lead_type    TEXT NOT NULL DEFAULT 'any' CHECK (lead_type IN ('any','referral_partner','business')),
+    location     TEXT,
+    max_results  INTEGER NOT NULL DEFAULT 15,
+    status       TEXT NOT NULL DEFAULT 'searching' CHECK (status IN ('searching','ready','failed')),
+    results      TEXT,
+    notes        TEXT,
+    error        TEXT,
+    model        TEXT,
+    usage        TEXT,
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    completed_at TEXT
+  );
+  CREATE INDEX idx_lead_searches_user ON lead_searches(user_id, created_at);
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;
