@@ -26,6 +26,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Email templates** | 18 editable templates with merge fields, headings and bullet points, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
 | **Email graphics** | Charts and diagrams built from each client's details, in your brand colours: loan progress tracker, loan details card, key dates, document checklist, position summary, lending structure diagram, equity chart, property value chart and fixed-rate countdown. Also branded buttons (e.g. "Book a time") and your own images. They show even when a client's email blocks pictures |
 | **Settlement letters** | A branded letter and email for the client when their loan settles: borrowers, loan amount and splits, interest rate, repayments, direct debit account and first repayment date, with the letter attached as a PDF. Fill it in by hand, or upload the loan documents and AI (Claude) fills it in for you to check |
+| **Quickli** | Send a deal's borrowers, household, income, properties, existing loans, debts and the new loan to Quickli as a servicing scenario in one click (and update it later), see what Quickli still needs, link existing scenarios, and record the results (max borrowing, lenders passing, best lender, surplus) on the deal |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
@@ -223,6 +224,30 @@ Every deal at *Settlement Booked* or later (and any deal with a letter started) 
 2. Paste it into **Settings → AI document reading & settlement letters**. It's stored encrypted.
 
 Reading a set of loan documents typically costs a few cents on your Anthropic account. You can choose a different Claude model there. If a request is declined, the API automatically retries it on a fallback model.
+
+## Quickli (servicing)
+
+The **Quickli servicing** card on each deal sends the deal to Quickli as a scenario, so nothing is typed twice.
+
+**What's sent** (open *What will be sent to Quickli* on the card to see it first):
+- **Household:** the borrowers, married or de facto (a partner sharing finances counts as the second adult even when they aren't borrowing), dependants and postcode.
+- **Income:** each borrower's income (PAYG, pension or other) and any HECS balance.
+- **Properties:** everything in the mortgage tracker (value, home or investment, rent, who owns it), plus the property being bought.
+- **Existing loans:** lender, balance, limit, rate, repayments and fixed or interest-only terms, each linked to its security. Loans being refinanced by this deal are marked as paid out.
+- **Other debts:** credit cards, car loans and personal loans.
+- **The new loan:** amount, term, owner-occupied or investment, variable or fixed, interest-only and LVR, linked to its security.
+
+**Using it:**
+- **Send to Quickli** creates the scenario. **Update Quickli** sends changes to the same scenario.
+- **Link existing** connects a scenario you already started in Quickli: paste its ID or link.
+- The card shows the scenario ID (with *Open in Quickli* if you've set the scenario link), and whether Quickli says it's **ready to calculate** or what it still needs.
+- The card also lists what to add in Quickli, because the CRM doesn't hold it: living expenses, self-employed financials and expected rent on a new investment.
+- **Record results** keeps the headline outcome on the deal: maximum borrowing, lenders that pass, best lender and monthly surplus.
+
+**Setting it up** (Settings → Quickli). This uses the Quickli External API (v3), which signs every request with a key registered with Quickli.
+1. **Admin:** click **Make a key**. The CRM creates a key pair and keeps the private key encrypted.
+2. **Admin:** send the **public key** to Quickli (support@quickli.com.au or your Quickli contact) and ask to connect the CRM to their External API. They give you a **partner ID** and a **key ID**; enter them in Settings. Optionally add the scenario link pattern (e.g. the address of a scenario in Quickli with the ID replaced by `{id}`).
+3. **Each broker:** copy your access token from Quickli (*Settings → Integrations*) into **Your connection** and click **Connect**. The CRM checks it with Quickli straight away.
 
 ## Purchase calculation (funds to complete)
 

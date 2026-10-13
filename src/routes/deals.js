@@ -246,6 +246,49 @@ router.post('/:id/settlement-letter/email', async (req, res) => {
   res.json({ ...letterResponse(id), outbox: { id: r.id, status: r.status, sent_via: r.sent_via } });
 });
 
+// ---- Quickli (servicing) --------------------------------------------------------------------
+const quickli = require('../services/quickli');
+
+const quickliResponse = (id, req) => {
+  const built = quickli.buildScenario(id);
+  return {
+    configured: quickli.configured(),
+    connected: Boolean(quickli.tokenStatus(req.user.id)),
+    link: quickli.linkFor(id),
+    summary: built.summary,
+    warnings: built.warnings,
+    scenario: built.scenario,
+  };
+};
+
+router.get('/:id/quickli', (req, res) => res.json(quickliResponse(intParam(req.params.id), req)));
+router.post('/:id/quickli/push', async (req, res) => {
+  const id = intParam(req.params.id);
+  await quickli.push(id, req.user.id);
+  res.json(quickliResponse(id, req));
+});
+router.post('/:id/quickli/link', async (req, res) => {
+  const id = intParam(req.params.id);
+  notFound(db.one('SELECT 1 FROM deals WHERE id = ?', id), 'Deal');
+  await quickli.link(id, req.body?.scenario_id, req.user.id);
+  res.json(quickliResponse(id, req));
+});
+router.post('/:id/quickli/refresh', async (req, res) => {
+  const id = intParam(req.params.id);
+  await quickli.refresh(id, req.user.id);
+  res.json(quickliResponse(id, req));
+});
+router.put('/:id/quickli/results', (req, res) => {
+  const id = intParam(req.params.id);
+  quickli.saveResults(id, req.body || {}, req.user.id);
+  res.json(quickliResponse(id, req));
+});
+router.delete('/:id/quickli', (req, res) => {
+  const id = intParam(req.params.id);
+  quickli.unlink(id);
+  res.json(quickliResponse(id, req));
+});
+
 // ---- Parties: agent, solicitor, buyer's agent… ------------------------------------
 router.put('/:id/parties/:role', (req, res) => {
   const id = intParam(req.params.id);

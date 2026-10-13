@@ -786,3 +786,12 @@ p.sl-ai { display: block; }
 @media (prefers-reduced-motion: reduce) { .nl-spinner { animation: none; } }
 @media (max-width: 1100px) { .nl-layout { grid-template-columns: 1fr; } .nl-preview { position: static; } .nl-frame { height: 70vh; } }
 @media (max-width: 560px) { .nl-rates { grid-template-columns: 1fr; } .nl-row { flex-wrap: wrap; } }
+
+/* Quickli */
+.ql-key pre { background: var(--accent-soft); border-radius: 8px; padding: .6rem .8rem; font-size: .72rem; overflow-x: auto; margin: .4rem 0; white-space: pre; }
+.ql-admin { border-bottom: 1px solid var(--border); padding-bottom: .8rem; margin-bottom: .8rem; }
+.ql-mine h3 { font-size: 1rem; margin: .2rem 0 .4rem; }
+.ql-results { margin: .6rem 0; }
+.ql-sent { margin-top: .6rem; }
+.ql-sent summary { cursor: pointer; color: var(--text-2); }
+.ql-sent ul { margin: .3rem 0; padding-left: 1.1rem; }

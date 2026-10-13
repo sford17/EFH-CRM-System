@@ -832,6 +832,31 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 23. Quickli: each broker's access token, and the scenario linked to each deal.
+  `
+  CREATE TABLE quickli_tokens (
+    user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    token       TEXT NOT NULL,
+    verified_at TEXT,
+    whoami      TEXT,
+    last_error  TEXT,
+    updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE TABLE quickli_scenarios (
+    deal_id     INTEGER PRIMARY KEY REFERENCES deals(id) ON DELETE CASCADE,
+    scenario_id TEXT NOT NULL,
+    pushed_at   TEXT,
+    pushed_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    calc_ready  INTEGER,
+    issues      TEXT,
+    response    TEXT,
+    results     TEXT,
+    updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

@@ -11,6 +11,7 @@ import { signingCard } from './signing.js';
 import { smsCard } from './sms.js';
 import { dealPurchaseCard } from './purchaseCalc.js';
 import { settlementLetterCard } from './settlementLetter.js';
+import { quickliCard } from './quickli.js';
 
 // Moves a deal, asking for extra details where a stage needs them.
 export async function moveDeal(deal, stage) {
@@ -234,6 +235,7 @@ export async function dealPage(id) {
           h('div.muted', `${dateTime(s.changed_at)}${s.user_name ? ` · ${s.user_name}` : ''}`)))))),
       h('div.col-main',
         await settlementLetterCard(deal),
+        await quickliCard(deal),
         await dealPurchaseCard(deal),
         documentsCard(deal),
         h('section.card',
