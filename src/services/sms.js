@@ -147,7 +147,13 @@ async function clicksendSend({ to, from, body, ref }) {
   }
   const m = data.data?.messages?.[0];
   if (!m || m.status !== 'SUCCESS') throw new Error(`ClickSend: ${(m?.status || 'message rejected').replace(/_/g, ' ').toLowerCase()}`);
-  return m.message_id;
+  // What ClickSend charged (for Reports → Running costs), when it says.
+  const price = Number(m.message_price);
+  return {
+    id: m.message_id, parts: Number(m.message_parts) || null,
+    price: m.message_price !== undefined && m.message_price !== null && Number.isFinite(price) ? price : null,
+    currency: data.data?.currency?.currency_name_short || null,
+  };
 }
 
 function logActivity(msg, text) {
@@ -171,8 +177,10 @@ async function processDue() {
     const from = senderFor(msg);
     try {
       if (live) {
-        const providerId = await clicksendSend({ to: msg.to_number, from, body: msg.body, ref: `sms-${msg.id}` });
-        db.update('sms_messages', msg.id, { status: 'sent', from_number: from, provider_id: providerId, sent_at: nowIso(), error: null });
+        const r = await clicksendSend({ to: msg.to_number, from, body: msg.body, ref: `sms-${msg.id}` });
+        db.update('sms_messages', msg.id, {
+          status: 'sent', from_number: from, provider_id: r.id, sent_at: nowIso(), error: null, parts: r.parts || segments(msg.body), price: r.price, currency: r.currency,
+        });
         logActivity(msg, `SMS sent${from ? ` from ${from}` : ''}`);
       } else {
         db.update('sms_messages', msg.id, { status: 'logged', from_number: from, sent_at: nowIso(), error: null });

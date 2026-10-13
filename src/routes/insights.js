@@ -314,4 +314,11 @@ router.post('/calculators/:type', (req, res) => {
   }
 });
 
+// Running costs: Anthropic (Claude) usage and SMS.
+router.get('/reports/costs', (req, res) => {
+  const period = periods.resolve(req.query);
+  res.json({ period, ...require('../services/costs').report(period) });
+});
+router.put('/reports/costs/settings', require('../auth').requireRole('admin'), (req, res) => res.json(require('../services/costs').saveSettings(req.body || {})));
+
 module.exports = router;

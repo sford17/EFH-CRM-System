@@ -998,6 +998,32 @@ MIGRATIONS.push(
   ALTER TABLE outbox ADD COLUMN partner_id INTEGER REFERENCES referral_partners(id) ON DELETE SET NULL;
   ALTER TABLE outbox ADD COLUMN partner_newsletter_id INTEGER REFERENCES partner_newsletters(id) ON DELETE SET NULL;
   `,
+  // 30. Running costs: every Claude request, and what each text cost.
+  (db) => {
+    db.get().exec(`
+      CREATE TABLE ai_usage (
+        id                 INTEGER PRIMARY KEY,
+        feature            TEXT NOT NULL,
+        model              TEXT,
+        user_id            INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        input_tokens       INTEGER NOT NULL DEFAULT 0,
+        output_tokens      INTEGER NOT NULL DEFAULT 0,
+        cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+        cache_read_tokens  INTEGER NOT NULL DEFAULT 0,
+        web_searches       INTEGER NOT NULL DEFAULT 0,
+        web_fetches        INTEGER NOT NULL DEFAULT 0,
+        cost_usd           REAL NOT NULL DEFAULT 0,
+        estimated          INTEGER NOT NULL DEFAULT 0,
+        created_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      CREATE INDEX idx_ai_usage_created ON ai_usage(created_at);
+      ALTER TABLE sms_messages ADD COLUMN parts INTEGER;
+      ALTER TABLE sms_messages ADD COLUMN price REAL;
+      ALTER TABLE sms_messages ADD COLUMN currency TEXT;
+    `);
+    // Usage saved before the ledger existed.
+    require('../services/costs').backfill(db);
+  },
 );
 
 module.exports = MIGRATIONS;

@@ -137,7 +137,7 @@ Today is ${formatDate(today())}.`;
 }
 
 async function research(areas) {
-  const client = ai.clientFor();
+  const client = ai.clientFor('property_report');
   const tools = [
     { type: 'web_search_20260209', name: 'web_search', max_uses: 8 + areas.length * 4, user_location: { type: 'approximate', country: 'AU', timezone: 'Australia/Sydney' } },
     { type: 'web_fetch_20260209', name: 'web_fetch', max_uses: 6 + areas.length * 4 },

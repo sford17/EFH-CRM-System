@@ -332,7 +332,7 @@ ul.errors { color: var(--danger); font-size: .85rem; }
   .menu-toggle { display: inline-flex; }
   .topbar { padding: .6rem 1rem; }
   main#view { padding: 1rem; }
-  .grid-2, .grid-form { grid-template-columns: 1fr; }
+  .grid-2, .grid-form { grid-template-columns: minmax(0, 1fr); }
   .builder-row.condition { grid-template-columns: 1fr 1fr; }
   .bar-row { grid-template-columns: 100px 1fr auto; }
   .filters > * { flex: 1 1 140px; min-width: 0; }
@@ -421,6 +421,8 @@ iframe.email-frame { width: 100%; height: 560px; border: 1px solid var(--border)
 
 /* Tabs */
 .tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--border); margin: -.25rem 0 1rem; }
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs a { white-space: nowrap; }
 .tabs a { padding: .55rem .9rem; color: var(--text-2); border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 600; }
 .tabs a:hover { text-decoration: none; color: var(--text); }
 .tabs a.active { color: var(--accent); border-bottom-color: var(--accent); }

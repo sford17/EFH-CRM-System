@@ -146,7 +146,7 @@ function matchExisting(l) {
 // ---- Running a search -----------------------------------------------------------------------
 
 async function search(s) {
-  const client = ai.clientFor();
+  const client = ai.clientFor('lead_generator');
   const business = db.getSetting('business_name', '');
   const tools = [
     { type: 'web_search_20260209', name: 'web_search', max_uses: 15, user_location: { type: 'approximate', country: 'AU', timezone: 'Australia/Sydney' } },

@@ -37,7 +37,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Newsletter** | A monthly client newsletter written by AI from the month's banking, finance and property news (AFR, RBA, Cotality and more), with key-number tiles, bar charts, your branding and a "Book a meeting" button. Each client's copy compares their own interest rates with the market average. Written automatically on the 20th; you get an email to review it, then send it |
 | **Partner newsletter** | A monthly newsletter for your referral partners (agents, accountants, solicitors and others): a client story you write in your own words (AI can tidy it into a short, anonymous case study, with ideas from your recent settlements) and industry updates researched by AI, each with "what it means for your clients". Written on the 20th; you get a reminder a few days before to add the story, then an email when it's ready to review and send. Includes a "Refer a client" button and an unsubscribe link |
 | **Social** | Connect each broker's LinkedIn profile and Instagram professional account, then write a post with a picture, see a preview for each, and post now, schedule it or save a draft. Post ideas, a general-advice disclaimer, links to the live posts, and retry if a network refuses a post |
-| **Reports** | Running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
+| **Reports** | Running costs (what Claude and SMS have cost, month by month and in total), running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Purchase calculation (funds to complete: price, loan and LVR, deposit, stamp duty, LMI, legal and other costs, total client contribution; also saved on purchase deals), stamp duty for residential and commercial property in every state and territory (2026-27 rates, with owner-occupier and first home buyer concessions and foreign surcharges), repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
 | **Team** | Admin, broker and assistant roles, with notifications for automation alerts |
 
@@ -501,6 +501,30 @@ Stamp duty and LMI are estimates: type over either one to use your own figure, a
 - **Commission** is the upfront commission after any referral fee. For settled loans it comes from the commission ledger (✓ = received). For expected loans it's an estimate (≈) from the lender's upfront rate.
 
 Choose a single broker at the top to see just their loans, and use **Export CSV** to open the report in Excel.
+
+## Running costs (Claude and SMS)
+
+**Reports → Running costs** shows what the CRM's AI features and text messages have cost: this month, the chosen period and a running total since you started, plus a month-by-month table and chart.
+
+**Claude (Anthropic):**
+- Every request the CRM makes to Claude is recorded with its tokens, web searches and cost, and which feature made it:
+  - AI assistant
+  - client and partner newsletters
+  - lead generator
+  - property reports
+  - settlement letter document reading
+- Costs are worked out at Anthropic's published prices for the model that actually answered, plus US$10 per 1,000 web searches. Web page reading is free.
+- Usage saved before this report existed (newsletters, property reports, lead searches and assistant chats) is included as an estimate. Settlement-letter document reading before this update wasn't recorded.
+- Anthropic charges in **US dollars**. Add an exchange rate under **Settings** on the report (A$ per US$1, from your bank or card statement) to see Claude and SMS together in Australian dollars.
+
+**SMS (ClickSend):**
+- Texts record the price ClickSend reports when it sends them.
+- For texts where it didn't report a price (including texts sent before this update), add your **price per SMS part**. A text over 160 characters goes as two or more parts.
+- Texts that were only logged (ClickSend not connected) didn't go anywhere and cost nothing.
+
+**By feature and by sender:** see which features use the most AI (requests, web searches, tokens and cost) and who sent the most texts.
+
+These are close estimates. Your invoices can differ slightly (GST, credits, rounding), so check the Anthropic Console (Billing) and your ClickSend dashboard for exact amounts. ≈ marks estimated and converted figures.
 
 ## Internal refinance register
 

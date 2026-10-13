@@ -117,7 +117,7 @@ async function runTool(block, ctx) {
 
 // Runs the model until it answers, or stops to ask for approval.
 async function loop(c, user, emit) {
-  const client = ai.clientFor();
+  const client = ai.clientFor('assistant', { userId: user.id });
   const ctx = { user };
   const defs = [...tools.definitions(), { type: 'web_search_20260209', name: 'web_search', max_uses: 5, user_location: { type: 'approximate', country: 'AU', timezone: 'Australia/Sydney' } }];
   c.usage = c.usage || { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0 };

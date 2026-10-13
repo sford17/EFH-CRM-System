@@ -228,7 +228,7 @@ function clean(c = {}) {
 }
 
 async function write(month) {
-  const client = ai.clientFor();
+  const client = ai.clientFor('newsletter');
   const business = db.getSetting('business_name', '');
   const domains = sourceDomains();
   const webConfig = domains.length ? { allowed_domains: domains } : {};

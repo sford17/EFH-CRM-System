@@ -100,10 +100,19 @@ Rules:
 - Where documents disagree, prefer the most recent document (settlement documents over the original offer), and say so in notes.
 - Add any field you're not confident about to "uncertain".`;
 
-function clientFor() {
+// `feature` labels the requests in the running-costs report (Reports → Running costs).
+function clientFor(feature = 'other', { userId = null } = {}) {
   const key = apiKey();
   if (!key) throw new HttpError(400, 'AI document reading isn\'t set up yet. An admin needs to add an Anthropic API key in Settings → AI.');
-  return new Anthropic({ apiKey: key, baseURL: process.env.ANTHROPIC_BASE_URL || undefined, maxRetries: 2, timeout: 5 * 60 * 1000 });
+  const client = new Anthropic({ apiKey: key, baseURL: process.env.ANTHROPIC_BASE_URL || undefined, maxRetries: 2, timeout: 5 * 60 * 1000 });
+  // Record each finished response's usage and cost.
+  const stream = client.beta.messages.stream.bind(client.beta.messages);
+  client.beta.messages.stream = (...args) => {
+    const s = stream(...args);
+    s.on('finalMessage', (message) => require('./costs').record(feature, message, { userId }));
+    return s;
+  };
+  return client;
 }
 
 // files: [{ name, mime, data (base64) }]
@@ -124,7 +133,7 @@ async function extract(files) {
   }
   if (total > MAX_TOTAL_BYTES) throw new HttpError(400, 'Those files are too large together (24 MB at most). Leave out pages that aren\'t needed, like terms and conditions.');
 
-  const client = clientFor();
+  const client = clientFor('loan_documents');
   let message;
   try {
     const stream = client.beta.messages.stream({

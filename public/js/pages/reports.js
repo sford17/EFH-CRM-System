@@ -56,11 +56,13 @@ const monthName = (m) => new Date(`${m}-01T00:00:00`).toLocaleString('en-AU', { 
 const tabs = (active) => h('nav.tabs.report-tabs', { 'aria-label': 'Report sections' },
   h(`a${active === 'overview' ? '.active' : ''}`, { href: '#/reports', 'aria-current': active === 'overview' ? 'page' : undefined }, 'Overview'),
   h(`a${active === 'settlements' ? '.active' : ''}`, { href: '#/reports?tab=settlements', 'aria-current': active === 'settlements' ? 'page' : undefined }, 'Settlements'),
-  h(`a${active === 'refinances' ? '.active' : ''}`, { href: '#/reports?tab=refinances', 'aria-current': active === 'refinances' ? 'page' : undefined }, 'Internal refinances'));
+  h(`a${active === 'refinances' ? '.active' : ''}`, { href: '#/reports?tab=refinances', 'aria-current': active === 'refinances' ? 'page' : undefined }, 'Internal refinances'),
+  h(`a${active === 'costs' ? '.active' : ''}`, { href: '#/reports?tab=costs', 'aria-current': active === 'costs' ? 'page' : undefined }, 'Running costs'));
 
 export async function reportsPage() {
   if (window.routeQuery?.get('tab') === 'settlements') return settlementsReport();
   if (window.routeQuery?.get('tab') === 'refinances') return refinancesReport();
+  if (window.routeQuery?.get('tab') === 'costs') return costsReport();
   const r = await api(`/reports?${new URLSearchParams(periodQuery())}`);
   const totalSettled = r.settlements_by_month.reduce((s, m) => s + m.volume, 0);
   const totalCount = r.settlements_by_month.reduce((s, m) => s + m.count, 0);
@@ -267,4 +269,88 @@ async function refinancesReport() {
         { label: 'Broker', value: (x) => x.new_broker_name || x.old_broker_name || '—' },
         { label: 'Status', value: (x) => h('div', badge(x.status_label, STATUS_KIND[x.status]), x.source === 'auto' ? h('div.muted.small', 'auto') : null) },
       ], r.rows, { onRow: (x) => refinanceDialog(x), empty: `No internal refinances in ${r.period.label}. Use "+ Record refinance" to add one, or choose "All dates".` })));
+}
+
+// ---- Running costs: Anthropic (Claude) and SMS ----------------------------------------------------------
+
+const usd = (n) => (n === null || n === undefined ? '—' : `US$${Number(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+const aud = (n, est = false) => (n === null || n === undefined ? '—' : `${est ? '≈ ' : ''}${money2(n)}`);
+
+function costSettingsForm(s, onSaved) {
+  const rate = h('input', { type: 'number', step: '0.0001', min: '0', value: s.usd_to_aud ?? '', placeholder: 'e.g. 1.52', 'aria-label': 'US dollar to Australian dollar rate' });
+  const part = h('input', { type: 'number', step: '0.0001', min: '0', value: s.sms_price_per_part ?? '', placeholder: 'e.g. 0.07', 'aria-label': 'Price per SMS part' });
+  const save = h('button', { type: 'submit' }, 'Save');
+  const form = h('form.grid-form',
+    h('label.field', h('span', 'Exchange rate: A$ per US$1'), rate, h('span.small.muted', 'Anthropic charges in US dollars. Add the rate (from your bank or card statement) to see everything in Australian dollars.')),
+    h('label.field', h('span', 'Your ClickSend price per SMS part (A$)'), part, h('span.small.muted', 'Used for texts where ClickSend didn\'t report a price. A text over 160 characters is sent in parts.')),
+    state.user.role === 'admin' ? h('div.actions.full', save) : h('p.small.muted.full', 'An admin can change these.'));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    save.disabled = true;
+    try {
+      await api('/reports/costs/settings', { method: 'PUT', body: { usd_to_aud: rate.value || null, sms_price_per_part: part.value || null } });
+      toast('Saved');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      save.disabled = false;
+    }
+  });
+  return form;
+}
+
+async function costsReport() {
+  const r = await api(`/reports/costs?${new URLSearchParams(periodQuery())}`);
+  const s = r.settings;
+  const t = r.totals;
+  const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
+  const tile = (l, v, sub) => h('div.tile', h('div.tile-label', l), h('div.tile-value', v), sub ? h('div.tile-sub', sub) : null);
+  const both = (k) => (t[`${k}_total_aud`] !== null ? aud(t[`${k}_total_aud`], true) : `${usd(t[`${k}_ai_usd`])} + ${money2(t[`${k}_sms_aud`])}`);
+  const split = (k) => `Claude ${s.usd_to_aud ? `${aud(t[`${k}_ai_aud`], true)} (${usd(t[`${k}_ai_usd`])})` : usd(t[`${k}_ai_usd`])} · SMS ${money2(t[`${k}_sms_aud`])} (${t[`${k}_sms_count`]} text${t[`${k}_sms_count`] === 1 ? '' : 's'})`;
+  const monthLabel = (m) => new Date(`${m}-01T00:00:00`).toLocaleString('en-AU', { month: 'short', year: r.months.length > 12 ? '2-digit' : undefined });
+  const chart = s.usd_to_aud
+    ? stackedColumns(r.months.map((m) => ({ label: monthLabel(m.month), parts: [m.ai_aud, m.sms_aud], tip: `${m.month}: Claude ${aud(m.ai_aud, true)}, SMS ${money2(m.sms_aud)}` })), { names: ['Claude (Anthropic)', 'SMS'], format: money2, empty: 'No costs in this period yet.' })
+    : h('div.grid-2',
+      h('div', h('h3', 'Claude (US$)'), columns(r.months.map((m) => ({ label: monthLabel(m.month), value: m.ai_usd, tip: usd(m.ai_usd) })), { format: usd, empty: 'No Claude usage in this period yet.' })),
+      h('div', h('h3', 'SMS (A$)'), columns(r.months.map((m) => ({ label: monthLabel(m.month), value: m.sms_aud, tip: money2(m.sms_aud) })), { format: money2, empty: 'No texts sent in this period yet.' })));
+  return h('div',
+    pageHeader('Reports', await periodPicker(r.period)),
+    tabs('costs'),
+    !s.usd_to_aud ? h('div.alert.info', h('strong', 'Tip: '), 'add a US$ → A$ exchange rate below to see Claude and SMS costs together in Australian dollars.') : null,
+    r.notes.sms_unpriced ? h('div.alert.warn-box', `${r.notes.sms_unpriced} text${r.notes.sms_unpriced === 1 ? '' : 's'} in this period ha${r.notes.sms_unpriced === 1 ? 's' : 've'} no price from ClickSend. Add your price per SMS part below to include ${r.notes.sms_unpriced === 1 ? 'it' : 'them'}.`) : null,
+    h('div.tiles',
+      tile('This month', both('month'), split('month')),
+      tile(r.period.label, both('period'), split('period')),
+      tile('Running total', both('all'), `${split('all')}${t.since ? ` · since ${date(t.since)}` : ''}`)),
+    h('section.card', h('h2', `Costs by month – ${r.period.label}`), chart),
+    h('section.card', h('h2', 'Month by month'), h('p.small.muted', 'Most recent first. The running total adds up each month from the start of the period.'),
+      table([
+        { label: 'Month', value: (m) => new Date(`${m.month}-01T00:00:00`).toLocaleString('en-AU', { month: 'long', year: 'numeric' }) },
+        { label: 'Claude requests', value: (m) => String(m.ai_requests), class: 'num' },
+        { label: 'Claude (US$)', value: (m) => `${m.ai_estimated ? '≈ ' : ''}${usd(m.ai_usd)}`, class: 'num' },
+        s.usd_to_aud ? { label: 'Claude (A$)', value: (m) => aud(m.ai_aud, true), class: 'num' } : null,
+        { label: 'Texts', value: (m) => `${m.sms_count}${m.sms_parts > m.sms_count ? ` (${m.sms_parts} parts)` : ''}`, class: 'num' },
+        { label: 'SMS (A$)', value: (m) => `${m.sms_estimated ? '≈ ' : ''}${money2(m.sms_aud)}${m.sms_unpriced ? ' +?' : ''}`, class: 'num' },
+        s.usd_to_aud ? { label: 'Month total (A$)', value: (m) => h('strong', aud(m.total_aud, true)), class: 'num' } : null,
+        { label: 'Running total', value: (m) => (s.usd_to_aud ? aud(m.running_aud, true) : usd(m.running_usd)), class: 'num' },
+      ].filter(Boolean), r.months.filter((m) => m.month <= new Date().toISOString().slice(0, 7)).reverse(), { empty: 'No months in this period yet.' })),
+    h('div.grid-2',
+      h('section.card', h('h2', 'Claude by feature'),
+        table([
+          { label: 'Feature', value: (f) => f.label },
+          { label: 'Requests', value: (f) => String(f.requests), class: 'num' },
+          { label: 'Web searches', value: (f) => String(f.searches), class: 'num' },
+          { label: 'Tokens in / out', value: (f) => `${Math.round(f.tokens_in / 1000).toLocaleString('en-AU')}k / ${Math.round(f.tokens_out / 1000).toLocaleString('en-AU')}k`, class: 'num' },
+          { label: s.usd_to_aud ? 'Cost' : 'Cost (US$)', value: (f) => (s.usd_to_aud ? [h('div', aud(f.aud, true)), h('div.small.muted', usd(f.usd))] : usd(f.usd)), class: 'num' },
+        ], r.by_feature, { empty: 'No Claude usage in this period.' })),
+      h('section.card', h('h2', 'SMS by sender'),
+        table([
+          { label: 'Sent by', value: (x) => x.name },
+          { label: 'Texts', value: (x) => String(x.count), class: 'num' },
+          { label: 'Parts', value: (x) => String(x.parts), class: 'num' },
+          { label: 'Cost (A$)', value: (x) => money2(x.aud), class: 'num' },
+        ], r.sms_by_sender, { empty: 'No texts sent in this period.' }))),
+    h('section.card', h('h2', 'Settings'), costSettingsForm(s, refresh)),
+    h('p.small.muted', 'Claude costs are worked out from each request\'s usage at Anthropic\'s list prices for the model that answered (plus US$10 per 1,000 web searches), so your invoice may differ slightly (GST, credits, rounding). ≈ marks estimates, including converted amounts and usage from before this report existed. SMS costs use the price ClickSend reports for each text when it does; logged texts (ClickSend not connected) cost nothing. For exact figures, check the Anthropic Console (Billing) and your ClickSend dashboard.'));
 }

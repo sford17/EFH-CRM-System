@@ -176,7 +176,7 @@ Rules:
 }
 
 async function callClaude({ system, user, tool, web = false, effort = 'high' }) {
-  const client = ai.clientFor();
+  const client = ai.clientFor('partner_newsletter');
   const domains = [...new Set([...newsletter.settings().sources, ...EXTRA_SOURCES])];
   const tools = [
     ...(web ? [
