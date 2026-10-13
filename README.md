@@ -15,9 +15,10 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Pipeline** | Kanban board across New Lead → Fact Find → Pre-Approval → Application Lodged → Conditional → Unconditional → Settlement Booked → Settled / Lost. Drag and drop, or use the stage menu |
 | **Deals** | Loan amount, property value, auto-calculated LVR, lender, product, rate, fixed-rate expiry, pre-approval expiry, finance and settlement dates, co-borrower, stage history |
 | **Agent & solicitor** | Record the real estate agent, solicitor/conveyancer and buyer's agent (plus accountant, builder or planner) on each deal, straight from the New deal form. They're kept in a directory so you pick them again next time, can be emailed from the deal, appear in merge fields, and can be kept updated automatically |
+| **Online fact find** | A branded fact find you send to clients, with your logo and colours on every page, that works on a phone. It's pre-filled with what the CRM knows, and the questions adapt to the answers: a partner's section when applying together, previous addresses and jobs only when needed, income questions that match how each person works, and different questions for buying, refinancing, building or using equity. It works out which documents to ask for (payslips, tax returns, visa, statements for each account and debt…) for the client to upload, saves as they go and sends reminders. You review the answers and documents, then import everything into the contact, household, mortgage tracker and deal in one click. There's also a **documents-only** request for clients whose details you already have |
 | **Document checklists** | Standard checklist built automatically by loan purpose (plus self-employed docs), with status tracking and a one-click "email the client what's outstanding" |
 | **Tasks** | Personal and team tasks, overdue/today/upcoming views, tasks auto-created by automations |
-| **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 28 ready-made automations, fully editable in the UI |
+| **Automations** | Rules engine: *when* (event or schedule) → *only if* (conditions) → *then* (actions). 30 ready-made automations, fully editable in the UI |
 | **Outlook email sync** | Each team member connects their Microsoft 365 / Outlook mailbox. Emails to and from clients are filed against the client automatically (in both directions), and you can read, reply and send from inside the CRM. Everything the CRM sends goes out from your own mailbox |
 | **SMS** | Texts at every deal stage, on birthdays, and alongside the Annual Review and Rate Reduction emails, sent through ClickSend from each broker's own mobile number. Manual texts from any contact, with opt-out handling for marketing texts |
 | **Mortgage tracker** | A tab on each contact covering their properties, valuation history by method (full, desktop, kerbside, AVM, contract price…), loans and the properties securing them, and other assets. Shows LVR, equity, usable equity and net position, plus a lending structure diagram that flags cross-collateralisation and LVRs over 80% |
@@ -223,6 +224,99 @@ Send a client a report on how their properties have performed, with the latest m
 - Past reports are listed on the client's tracker tab.
 
 Each report costs roughly 50c–$1 on your Anthropic account, depending on how many areas it covers. Area figures come from third-party sites, so check them before sending.
+
+## Online fact find & document requests
+
+Send clients a branded online fact find, or just ask for documents.
+
+**Sending one:**
+- On a client's page, click **📝 Fact find** (top of the page, or in the "Fact finds & documents" card). On a deal, use **📝 Fact find** or **📎 Upload link** in the Documents card.
+- Choose:
+  - **Full fact find**: their details, finances and plans, plus documents.
+  - **Request documents only**: tick documents from the list or type your own.
+- Pick the deal and how long the link works (30 days by default). Then either **email it** (from your mailbox, with a branded button) or **just create the link** to send another way.
+- To send it automatically when a deal reaches **Fact Find**, switch on the automation "Fact Find stage: send the online fact find" in **Automations**. It's off until you do.
+
+**What the client sees:**
+- Your logo, brand colours and contact details on every page, on a phone or a computer.
+- Nine short steps: About you · Where you live · Work & income · Your plans · What you own · What you owe · Living expenses · Documents · Review & submit.
+- It's pre-filled from the CRM (and from their last fact find), so returning clients only check and update.
+- Everything saves as they go. They can leave and come back using the same link.
+
+**How the questions adapt:**
+- **"Me and my partner"** adds a second applicant. If you've linked them as a household, the partner is pre-filled.
+- **Temporary visa holders** are asked for their visa subclass and expiry.
+- **Moved in the last 3 years?** It asks for previous addresses until 3 years are covered.
+- **In their job less than 2 years?** It asks for previous work until 2 years are covered.
+- **Employment type changes the questions:**
+  - employees: employer, start date and salary, plus overtime, commission, bonuses or allowances if they tick them
+  - casuals: hours
+  - parental leave: their return-to-work date
+  - self-employed: business, structure and two years of profit (plus wages if it's a company or trust)
+- **Dependants** bring in childcare and school costs, and Centrelink options.
+- **What they want to do changes the questions:**
+  - buying: found a property, price, contract, finance and settlement dates, deposit and where it's from (a gift asks the amount), first home schemes
+  - refinancing: reasons, cash-out amount and what it's for
+  - building: land and build price
+  - using equity: how much and what for
+- **Owning their home** adds it to "What you own", plus a home loan to fill in if it has a mortgage.
+- **Aged 50 or over:** applicants are asked how they'd repay after retirement, and everyone is asked about expected changes (responsible lending).
+- **Living expenses** use the same categories as Quickli, with rent filled in from their living situation and a running monthly total.
+
+**Documents adapt too.** The list is built from their answers, with each person's name:
+- ID and Medicare (passport and visa instead, for visa holders)
+- payslips from each employer (and the contract if they're new or contracting)
+- income statements if they're casual or get bonuses or commission
+- tax returns, financials and the ATO portal statement for self-employed applicants
+- Centrelink and child support statements
+- the account their pay goes into
+- statements for each savings account and each debt (6 months for the home loan when refinancing)
+- leases for investment properties, and rates notices when refinancing
+- the contract of sale, gift letter, building contract and plans, or renovation quotes
+
+Clients can take photos with their phone or upload PDF, Word or Excel files (up to 15 MB each), and add documents after submitting. Each file's type is checked from its contents. When a file arrives for a deal, the matching checklist item is ticked off and links to it.
+
+**Reviewing it:**
+- You get a notification and an email when the client submits. The "Fact find completed: review it" automation also creates a task.
+- **Fact finds** in the menu lists everything you've sent: waiting on the client, to review, and done. Each one shows its progress and documents received.
+- Open one to see:
+  - the answers, set out by section
+  - the documents, with each file to view or download
+  - when the link was sent, opened, saved and completed
+- From there you can:
+  - **Copy the link**, **Send a reminder**, **Extend** an expired link or **Cancel** it
+  - **Let them make changes** (reopens a submitted fact find)
+  - **Download PDF** (the answers and declaration, for your file)
+- **Import into CRM** fills in:
+  - the contact's details, employment and income
+  - their partner, added or updated and linked as a household
+  - properties (with the client's estimate of value), debts and assets in the mortgage tracker
+  - the deal's purpose, property, amounts and co-borrower
+
+  Anything the client wrote in "Anything else" or about upcoming changes goes on the timeline. Importing again updates the same records.
+- **Quickli:** after importing, sending the deal to Quickli includes:
+  - their declared living expenses
+  - their income broken down (base, overtime, bonus, Centrelink and so on)
+  - business profits for self-employed applicants
+
+**Reminders:** if the client hasn't finished, they're emailed a reminder after 3 days, then 4 days later. You can switch this off in Settings → Business. Expired or cancelled links stop working.
+
+**Privacy:**
+- Each link is a long random code, kept encrypted.
+- The client agrees to a privacy consent and declares their answers are true before submitting.
+- Uploaded documents are stored in the CRM's database in the `data` folder, so keep that folder (and its backups) secure.
+
+### Putting the CRM online for clients
+
+Clients open their fact find from their own phone or computer, so the CRM has to be reachable from the internet over **https**. While it only runs on this PC (`http://localhost:3000`), the CRM warns you that clients can't open links yet.
+
+Options:
+- **Host it on a server** (a small cloud server, or a host such as Render or Railway) with an https address like `https://crm.yourbusiness.com.au`. Your IT person or web developer can set this up. Set `COOKIE_SECURE=true`, and `TRUST_PROXY=true` if it sits behind a proxy.
+- **Use a secure tunnel from this PC**, such as Cloudflare Tunnel (free). It gives an https address that forwards to the CRM while this PC is on and the CRM is running. A named tunnel on your own domain keeps the same address.
+
+Then go to **Settings → Business → CRM web address** and enter the https address. Links in fact finds, reminders and emails use it.
+
+Once the CRM is online, anyone can reach its sign-in page, so give every user a strong password.
 
 ## AI assistant
 
@@ -689,7 +783,8 @@ test/                  API tests (node:test)
 - Assistants cannot manage users or business settings.
 - CSV exports neutralise spreadsheet formulas. Document links must be http(s).
 - Outlook tokens and the Microsoft client secret are encrypted (AES-256-GCM) with a key kept in `data/secret.key`, or in `ENCRYPTION_KEY` if set.
-- Back up the `data` folder regularly. It holds personal and financial information, so store backups securely.
+- Back up the `data` folder regularly. It holds personal and financial information, including documents clients upload through the online fact find, so store backups securely.
+- Online fact-find links are long random codes, stored encrypted. They expire (30 days by default) and can be cancelled. Uploaded files are checked by their contents, and only PDFs, photos, and Word and Excel files are accepted.
 
 ## Updating to a new version
 

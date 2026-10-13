@@ -240,15 +240,40 @@ function buildScenario(dealId) {
   const postcode = postcodeOf(applicants.find(postcodeOf));
   if (!postcode) warnings.push('No postcode on the borrower\'s address (used for living expense benchmarks).');
   const households = [{ id: 'crm-household-1', status, num_adults: adults, num_dependants: dependants, shared_with_households: [], ...(postcode ? { postcode } : {}) }];
-  const living_expenses = [{ id: 'crm-household-1', simple_basic_expense: 0, use_detailed_basic_expense: false }];
-  warnings.push('Living expenses aren\'t recorded in the CRM: enter them in Quickli.');
+  // Living expenses from the client's online fact find (monthly, Quickli's categories).
+  const parsed = (v) => { try { return v ? JSON.parse(v) : null; } catch { return null; } };
+  const declared = [...applicants, ...(partner && !applicants.includes(partner) ? [db.one('SELECT living_expenses FROM contacts WHERE id = ?', partner.id) || {}] : [])]
+    .map((a) => parsed(a.living_expenses)).find((e) => e && Object.keys(e).length);
+  const living_expenses = [declared
+    ? { id: 'crm-household-1', use_detailed_basic_expense: true, simple_basic_expense: 0, ...Object.fromEntries(Object.entries(declared).map(([k, v]) => [k, Math.round(Number(v) * 100) / 100])) }
+    : { id: 'crm-household-1', simple_basic_expense: 0, use_detailed_basic_expense: false }];
+  if (!declared) warnings.push('Living expenses aren\'t recorded in the CRM: send the online fact find, or enter them in Quickli.');
 
   // Income, one entry per borrower.
   const hecs = new Map();
+  const self_employed_income = [];
   const income = applicants.map((a) => {
     const row = { id: `crm-income-${a.id}`, name: [a.first_name, a.last_name].filter(Boolean).join(' '), which_household: 0 };
     const type = String(a.employment_type || '').toLowerCase();
-    if (!a.annual_income) warnings.push(`No income recorded for ${a.first_name}.`);
+    const detail = parsed(a.income_details);
+    const business = parsed(a.self_employed) || [];
+    if ((detail && Object.keys(detail).length) || business.length) {
+      // From the fact find: annual amounts by Quickli income type.
+      for (const [k, v] of Object.entries(detail || {})) {
+        row[k] = v;
+      }
+      // One year's bonus is used as is; two years let the lender average them.
+      if (row.recent_year_bonus || row.previous_year_bonus) row.use_simple_bonus = !row.previous_year_bonus;
+      for (const b of business) {
+        self_employed_income.push({
+          id: `crm-business-${a.id}-${self_employed_income.length + 1}`, name: b.business || `${a.first_name}'s business`, entity_type: b.entity || 'sole_trader', calculation_method: 'lender_default',
+          most_recent_year_details: { net_profit_before_tax: b.recent || 0, personal_wages_before_tax: applicants.map((x) => (x.id === a.id ? b.wages_recent || 0 : 0)) },
+          previous_year_details: { net_profit_before_tax: b.previous || 0, personal_wages_before_tax: applicants.map((x) => (x.id === a.id ? b.wages_prev || 0 : 0)) },
+          applicant_ownership: applicants.map((x) => (x.id === a.id ? 100 : 0)), business_liabilities: [],
+        });
+      }
+      if (business.length) warnings.push(`${a.first_name}'s business profits come from the fact find: add-backs (depreciation, interest and so on) still need entering in Quickli.`);
+    } else if (!a.annual_income) warnings.push(`No income recorded for ${a.first_name}.`);
     else if (type === 'self_employed') warnings.push(`${a.first_name} is self-employed: add their business financials in Quickli.`);
     else if (type === 'retired') row.pension = a.annual_income;
     else if (type === 'other') row.other_taxed = a.annual_income;
@@ -357,7 +382,7 @@ function buildScenario(dealId) {
   else if (!purchasing) warnings.push('The property being refinanced isn\'t in the mortgage tracker, so link the new loan to its security in Quickli.');
 
   const scenario = {
-    households, income, self_employed_income: [], securities, home_loan_security_links: links,
+    households, income, self_employed_income, securities, home_loan_security_links: links,
     proposed_home_loans: [proposed], existing_home_loans, liabilities, living_expenses,
     additional_info: { source: 'EFH CRM', crm_deal_id: deal.id },
   };

@@ -7,6 +7,7 @@ const { PARTY_TEMPLATES, PARTY_AUTOMATIONS } = require('./party-defaults');
 const { applyTemplateGraphics } = require('./graphics-defaults');
 const { REFERRAL_AUTOMATIONS } = require('./referral-defaults');
 const { REVIEW_REMINDER_AUTOMATIONS } = require('./review-defaults');
+const { FACT_FIND_AUTOMATIONS } = require('./factfind-defaults');
 const { REVIEW_SUBJECT, REVIEW_BODY, REVIEW_SMS, REVIEW_AUTOMATION } = require('./google-review-defaults');
 
 // Indicative commission rates; edit them on the Lenders page to match your
@@ -193,7 +194,7 @@ for (const a of AUTOMATIONS) {
   if (STAGE_SMS[a.name]) a.actions.push({ type: 'send_sms', message: STAGE_SMS[a.name] });
   if (a.name === BIRTHDAY_SMS.automation) a.actions.push({ type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });
 }
-AUTOMATIONS.push(...SMS_AUTOMATIONS, ...CALENDAR_AUTOMATIONS, ...REFERRAL_AUTOMATIONS, REVIEW_AUTOMATION, ...REVIEW_REMINDER_AUTOMATIONS, ...PARTY_AUTOMATIONS.map((a) => ({ ...a, enabled: 0 })));
+AUTOMATIONS.push(...SMS_AUTOMATIONS, ...CALENDAR_AUTOMATIONS, ...REFERRAL_AUTOMATIONS, REVIEW_AUTOMATION, ...REVIEW_REMINDER_AUTOMATIONS, ...PARTY_AUTOMATIONS.map((a) => ({ ...a, enabled: 0 })), ...FACT_FIND_AUTOMATIONS);
 
 function seedDefaults() {
   db.transaction(() => {

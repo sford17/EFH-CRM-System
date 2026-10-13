@@ -27,9 +27,13 @@ function chooseProperties(contact, data) {
     const ids = boxes.map((b) => b.querySelector('input')).filter((b) => b.checked).map((b) => Number(b.value));
     if (!ids.length) { toast('Choose at least one property', 'error'); return; }
     go.disabled = true;
-    const r = await attempt(() => api('/property-reports', { method: 'POST', body: { contact_id: contact.id, property_ids: ids } }));
-    go.disabled = false;
-    if (r) { d.close(); location.hash = `#/property-reports/${r.id}`; }
+    try {
+      const r = await attempt(() => api('/property-reports', { method: 'POST', body: { contact_id: contact.id, property_ids: ids } }));
+      d.close();
+      location.hash = `#/property-reports/${r.id}`;
+    } catch {
+      go.disabled = false;
+    }
   });
 }
 

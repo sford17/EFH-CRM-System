@@ -15,6 +15,7 @@ import { refinancesCard } from './refinances.js';
 import { relatedCard } from './household.js';
 import { googleReviewInfo, requestReviewDialog } from './googleReview.js';
 import { signingCard } from './signing.js';
+import { factFindsCard, sendFactFindDialog } from './factFinds.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
 const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
@@ -89,6 +90,7 @@ export async function contactPage(id) {
         c.mobile ? h('button.secondary', { type: 'button', onclick: () => smsDialog({ contactId: c.id, mobile: c.mobile, name: c.first_name }) }, 'SMS') : null,
         h('button.secondary', { type: 'button', onclick: () => bookingLinkDialog({ contact: c }) }, 'Booking link'),
         h('button.secondary', { type: 'button', onclick: () => startReview(c.id) }, 'Lending review'),
+        h('button.secondary', { type: 'button', onclick: () => sendFactFindDialog({ contact: c }) }, '📝 Fact find'),
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ contactId: c.id }) }, 'Send template'),
         h('button.secondary', { type: 'button', onclick: () => requestReviewDialog({ contact: c }) }, '⭐ Review request'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
@@ -116,6 +118,7 @@ export async function contactPage(id) {
           info('Tags', c.tags ? c.tags.split(',').map((t) => h('span.tag', t)) : null)),
         c.background ? h('div.background', h('h3', 'Background'), h('p.pre', c.background)) : null),
         relatedCard(c),
+        await factFindsCard(c).catch(() => null),
         h('section.card',
           h('div.card-head', h('h2', 'Deals'), h('button.small', { type: 'button', onclick: () => newDeal(c.id) }, '+ Deal')),
           c.deals.length

@@ -12,6 +12,7 @@ import { smsCard } from './sms.js';
 import { dealPurchaseCard } from './purchaseCalc.js';
 import { settlementLetterCard } from './settlementLetter.js';
 import { quickliCard } from './quickli.js';
+import { sendFactFindDialog } from './factFinds.js';
 
 // Moves a deal, asking for extra details where a stage needs them.
 export async function moveDeal(deal, stage) {
@@ -133,6 +134,8 @@ function documentsCard(deal) {
     h('div.card-head', h('h2', `Documents (${done}/${deal.documents.length})`),
       h('div.actions',
         h('button.small.secondary', { type: 'button', onclick: async () => { await attempt(() => api(`/deals/${deal.id}/documents/checklist`, { method: 'POST', body: {} }), 'Checklist updated'); refresh(); } }, 'Add standard checklist'),
+        h('button.small.secondary', { type: 'button', onclick: () => sendFactFindDialog({ contact: { id: deal.contact_id, first_name: String(deal.contact_name || '').trim().split(' ')[0] }, dealId: deal.id, kind: 'documents' }) }, '📎 Upload link'),
+        h('button.small.secondary', { type: 'button', onclick: () => sendFactFindDialog({ contact: { id: deal.contact_id, first_name: String(deal.contact_name || '').trim().split(' ')[0] }, dealId: deal.id, kind: 'full' }) }, '📝 Fact find'),
         h('button.small.secondary', { type: 'button', onclick: async () => { await attempt(() => api(`/deals/${deal.id}/documents/request`, { method: 'POST', body: {} }), 'Document request emailed'); refresh(); } }, 'Email request'),
         h('button.small', { type: 'button', onclick: addDoc }, '+ Add'))),
     deal.documents.length ? h('div.meter', h('div.meter-fill', { style: { width: `${(done / deal.documents.length) * 100}%` } })) : null,

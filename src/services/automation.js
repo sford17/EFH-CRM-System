@@ -154,6 +154,19 @@ const ACTIONS = {
     if (!ctx.deal) return 'no deal';
     return `${documents.createChecklist(ctx.deal.id)} documents added`;
   },
+  // Sends the client an online fact find (or a request for documents).
+  send_fact_find(a, ctx) {
+    if (!ctx.contact) return 'no contact';
+    const kind = a.kind === 'documents' ? 'documents' : 'full';
+    const open = db.one("SELECT id FROM fact_finds WHERE contact_id = ? AND kind = ? AND status IN ('sent','in_progress') AND expires_at > ?", ctx.contact.id, kind, nowIso());
+    if (open) return `skipped: an open ${kind === 'full' ? 'fact find' : 'document request'} (#${open.id}) was already sent`;
+    if (!ctx.contact.email) return 'skipped: the client has no email address';
+    const requests = kind === 'documents' ? String(a.documents || '').split('\n').map((x) => x.trim()).filter(Boolean) : null;
+    const id = require('./factFind').create({
+      contact_id: ctx.contact.id, deal_id: ctx.deal?.id ?? null, kind, requests, message: a.message ? render(a.message, ctx) : '', expires_days: a.expires_days,
+    }, ctx.broker?.id ?? null);
+    return `${kind === 'full' ? 'fact find' : 'document request'} #${id} sent`;
+  },
   generate_commissions(a, ctx) {
     if (!ctx.deal) return 'no deal';
     return `${commissions.generateForDeal(ctx.deal.id)} commission entries created`;

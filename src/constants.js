@@ -60,6 +60,7 @@ const EVENT_TRIGGERS = [
   { key: 'appointment.booked', label: 'Appointment booked (Calendly)' },
   { key: 'appointment.cancelled', label: 'Appointment cancelled (Calendly)' },
   { key: 'document.signed', label: 'Document signed (Adobe Sign)' },
+  { key: 'fact_find.submitted', label: 'Client completed their online fact find or documents' },
 ];
 const SCHEDULED_TRIGGERS = [
   { key: 'schedule.fixed_rate_expiry', label: 'Fixed rate expiring (days_before)' },
@@ -78,6 +79,7 @@ const SCHEDULED_TRIGGERS = [
 const ACTION_TYPES = [
   'create_task', 'send_email', 'send_sms', 'add_note', 'add_tag', 'remove_tag',
   'set_contact_status', 'set_deal_stage', 'notify', 'email_broker', 'create_document_checklist', 'generate_commissions',
+  'send_fact_find',
 ];
 
 module.exports = {

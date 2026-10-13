@@ -919,6 +919,62 @@ MIGRATIONS.push(
   );
   CREATE INDEX idx_property_reports_contact ON property_reports(contact_id);
   `,
+  // 27. Online fact find and document requests (clients fill in and upload via a private link)
+  `
+  CREATE TABLE fact_finds (
+    id            INTEGER PRIMARY KEY,
+    contact_id    INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    deal_id       INTEGER REFERENCES deals(id) ON DELETE SET NULL,
+    kind          TEXT NOT NULL DEFAULT 'full' CHECK (kind IN ('full','documents')),
+    token_hash    TEXT NOT NULL UNIQUE,
+    token_enc     TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('sent','in_progress','submitted','reviewed','cancelled')),
+    answers       TEXT,
+    step          TEXT,
+    requests      TEXT,
+    message       TEXT,
+    sent_to       TEXT,
+    created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    expires_at    TEXT NOT NULL,
+    opened_at     TEXT,
+    last_saved_at TEXT,
+    submitted_at  TEXT,
+    imported_at   TEXT,
+    import_result TEXT,
+    reminded_at   TEXT,
+    reminders     INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_fact_finds_contact ON fact_finds(contact_id);
+  CREATE INDEX idx_fact_finds_status ON fact_finds(status);
+  CREATE TABLE fact_find_files (
+    id           INTEGER PRIMARY KEY,
+    fact_find_id INTEGER NOT NULL REFERENCES fact_finds(id) ON DELETE CASCADE,
+    doc_key      TEXT NOT NULL,
+    doc_label    TEXT NOT NULL,
+    filename     TEXT NOT NULL,
+    mime         TEXT NOT NULL,
+    size         INTEGER NOT NULL,
+    data         BLOB NOT NULL,
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_fact_find_files ON fact_find_files(fact_find_id);
+  ALTER TABLE contacts ADD COLUMN income_details TEXT;
+  ALTER TABLE contacts ADD COLUMN self_employed TEXT;
+  ALTER TABLE contacts ADD COLUMN living_expenses TEXT;
+  `,
+  // 28. Existing installs: fact find automations
+  (db) => {
+    if (!db.getSetting('automations_seeded')) return;
+    const { FACT_FIND_AUTOMATIONS } = require('./factfind-defaults');
+    for (const a of FACT_FIND_AUTOMATIONS) {
+      if (db.one('SELECT 1 FROM automations WHERE name = ?', a.name)) continue;
+      db.insert('automations', {
+        name: a.name, description: a.description, trigger: a.trigger, conditions: JSON.stringify(a.conditions), actions: JSON.stringify(a.actions), enabled: a.enabled ?? 1,
+      });
+    }
+  },
 );
 
 module.exports = MIGRATIONS;

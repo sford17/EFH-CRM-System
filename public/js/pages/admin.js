@@ -131,6 +131,7 @@ export async function settingsPage() {
       options: [['highest_recent', 'Highest recent valuation (latest of each method – full, desktop, kerbside, AVM… – take the highest)'], ['latest', 'Most recent valuation only']] },
     { name: 'valuation_recent_months', label: 'Count valuations from the last … months (0 = no limit)', type: 'number', step: 1 },
     { name: 'valuation_ignore_estimates', label: 'Ignore client estimates unless there\'s nothing else', type: 'checkbox' },
+    { name: 'fact_find_reminders', label: 'Remind clients about unfinished fact finds and document requests (after 3 days, then 4 days later)', type: 'checkbox', full: true },
   ];
   const bizForm = h('form.grid-form', bizFields.map((f) => field(f, settings[f.name])), isAdmin ? h('div.actions.full', h('button', { type: 'submit' }, 'Save')) : null);
   if (!isAdmin) for (const el of bizForm.elements) el.disabled = true;

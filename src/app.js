@@ -26,6 +26,7 @@ function createApp() {
   app.use('/api/social/images', express.json({ limit: '12mb' })); // pictures up to 8 MB, sent as base64
   app.use('/api/deals/:id/settlement-letter/read', express.json({ limit: '34mb' })); // loan documents up to 24 MB, sent as base64
   app.use('/api/signing/requests', express.json({ limit: '15mb' })); // documents up to 10 MB, sent as base64
+  app.use('/api/public/fact-find', express.json({ limit: '22mb' })); // client documents up to 15 MB, sent as base64
   app.use('/api', express.json({ limit: '5mb' }));
 
   const brandingRoutes = require('./routes/branding');
@@ -51,6 +52,8 @@ function createApp() {
   app.use('/api/social', socialRoutes.publicRouter);
   const newsletterRoutes = require('./routes/newsletters');
   app.use('/api/public', newsletterRoutes.publicRouter);
+  const factFindRoutes = require('./routes/factFinds');
+  app.use('/api/public/fact-find', factFindRoutes.publicRouter);
 
   app.use('/api', auth.requireAuth);
   app.get('/api/meta', (req, res) => res.json({
@@ -85,6 +88,7 @@ function createApp() {
   app.use('/api/agent', require('./routes/agent'));
   app.use('/api/leads', require('./routes/leads'));
   app.use('/api/property-reports', require('./routes/propertyReports'));
+  app.use('/api/fact-finds', factFindRoutes.router);
   app.use('/api/newsletters', newsletterRoutes.router);
   app.use('/api/social', socialRoutes.router);
   app.use('/api/appointments', calendar.appointments);
@@ -95,6 +99,13 @@ function createApp() {
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
+  // The client's fact-find page (its own branded page, not the CRM).
+  app.get('/f/:token', (req, res) => {
+    res.set('Referrer-Policy', 'no-referrer');
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(path.join(__dirname, '..', 'public', 'factfind.html'));
+  });
   app.use(express.static(path.join(__dirname, '..', 'public')));
   app.get(/^\/(?!api\/).*/, (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 

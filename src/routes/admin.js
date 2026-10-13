@@ -39,8 +39,8 @@ users.patch('/:id', auth.requireRole('admin'), (req, res) => {
 
 // ---- Settings -----------------------------------------------------------------
 const SETTING_KEYS = ['business_name', 'business_phone', 'business_email', 'business_website', 'acl_number', 'monthly_settlement_target', 'app_url', 'google_review_link',
-  'valuation_rule', 'valuation_recent_months', 'valuation_ignore_estimates', 'settlement_letter_auto_send'];
-const SETTING_DEFAULTS = { valuation_rule: 'highest_recent', valuation_recent_months: '12', valuation_ignore_estimates: '1', settlement_letter_auto_send: '0' };
+  'valuation_rule', 'valuation_recent_months', 'valuation_ignore_estimates', 'settlement_letter_auto_send', 'fact_find_reminders'];
+const SETTING_DEFAULTS = { valuation_rule: 'highest_recent', valuation_recent_months: '12', valuation_ignore_estimates: '1', settlement_letter_auto_send: '0', fact_find_reminders: '1' };
 const settingValues = () => Object.fromEntries(SETTING_KEYS.map((k) => [k, db.getSetting(k, SETTING_DEFAULTS[k] ?? '')]));
 const settings = express.Router();
 

@@ -15,7 +15,7 @@ const OP_LABELS = {
 const ACTION_LABELS = {
   create_task: 'Create a task', send_email: 'Send an email', send_sms: 'Send an SMS', add_note: 'Add a note to the timeline', add_tag: 'Add a tag',
   remove_tag: 'Remove a tag', set_contact_status: 'Set contact status', set_deal_stage: 'Move deal to stage',
-  notify: 'Notify the owner', email_broker: 'Email me (the broker) a reminder', create_document_checklist: 'Add standard document checklist', generate_commissions: 'Generate commission entries',
+  notify: 'Notify the owner', email_broker: 'Email me (the broker) a reminder', create_document_checklist: 'Add standard document checklist', generate_commissions: 'Generate commission entries', send_fact_find: 'Send the client an online fact find / document request',
 };
 
 let meta;
@@ -108,6 +108,12 @@ function actionFieldDefs(type) {
       ['message', 'Message (blank for the standard wording; merge fields allowed, e.g. {{contact.full_name}}, {{event.review_date|date}}, {{event.when}})', 'textarea'],
       ['details', 'Include', 'select', [['', 'Client snapshot, position summary, lending structure and a link'], ['none', 'Just the message and a link']]],
       ['delay_days', 'Delay (days)', 'number'],
+    ];
+    case 'send_fact_find': return [
+      ['kind', 'Send', 'select', [['full', 'Online fact find (with documents)'], ['documents', 'Request documents only']]],
+      ['documents', 'Documents to request, one per line (for "Request documents only")', 'textarea'],
+      ['message', 'Message (blank for the standard wording; merge fields allowed)', 'textarea'],
+      ['expires_days', 'Link works for (days, default 30)', 'number'],
     ];
     case 'add_note': return [['body', 'Note', 'text']];
     case 'add_tag': case 'remove_tag': return [['tag', 'Tag', 'text']];
