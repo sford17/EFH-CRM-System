@@ -192,7 +192,7 @@ Every deal at *Settlement Booked* or later (and any deal with a letter started) 
 1. Create an API key at console.anthropic.com.
 2. Paste it into **Settings → AI document reading & settlement letters**. It's stored encrypted.
 
-Reading a set of loan documents typically costs a few cents on your Anthropic account. The model is Claude Opus 5.5 by default; you can change it there. If a request is declined, the API automatically retries it on a fallback model.
+Reading a set of loan documents typically costs a few cents on your Anthropic account. You can choose a different Claude model there. If a request is declined, the API automatically retries it on a fallback model.
 
 ## Purchase calculation (funds to complete)
 
