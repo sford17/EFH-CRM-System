@@ -668,4 +668,5 @@ module.exports = {
   emailParts,
   SETTING_KEYS, DEFAULT_SOURCES, NEWSLETTER_SCHEMA, RATE_KEYS, RATE_LABELS, settings, saveSettings, reviewers, generate, write, tick, clean,
   recipients, rateCheck, render, get, list, save, send, sendTest, stats, unsubscribe, unsubscribeLink, monthLabel, currentMonth, running,
+  publicBase, secretKey, friendly,
 };

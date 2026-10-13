@@ -35,6 +35,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
 | **Internal refinance register** | A record of every client you've moved from one of your loans to a new one, with the existing loan beside the new loan (borrowers, lender, account, product, amounts, rates, settlement and pay-out dates, broker), plus the reason, clawback and cashback. Every field is editable. It's added automatically when a refinance deal settles, and a CSV export is there for sale or trail-book records |
 | **Newsletter** | A monthly client newsletter written by AI from the month's banking, finance and property news (AFR, RBA, Cotality and more), with key-number tiles, bar charts, your branding and a "Book a meeting" button. Each client's copy compares their own interest rates with the market average. Written automatically on the 20th; you get an email to review it, then send it |
+| **Partner newsletter** | A monthly newsletter for your referral partners (agents, accountants, solicitors and others): a client story you write in your own words (AI can tidy it into a short, anonymous case study, with ideas from your recent settlements) and industry updates researched by AI, each with "what it means for your clients". Written on the 20th; you get a reminder a few days before to add the story, then an email when it's ready to review and send. Includes a "Refer a client" button and an unsubscribe link |
 | **Social** | Connect each broker's LinkedIn profile and Instagram professional account, then write a post with a picture, see a preview for each, and post now, schedule it or save a draft. Post ideas, a general-advice disclaimer, links to the live posts, and retry if a network refuses a post |
 | **Reports** | Running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Purchase calculation (funds to complete: price, loan and LVR, deposit, stamp duty, LMI, legal and other costs, total client contribution; also saved on purchase deals), stamp duty for residential and commercial property in every state and territory (2026-27 rates, with owner-occupier and first home buyer concessions and foreign surcharges), repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
@@ -373,6 +374,44 @@ Open **Assistant** in the menu (or **✧ Ask AI** at the top of any page) and ty
 **Unsubscribing:** when the CRM has a public https web address (Settings → Business → CRM web address), the unsubscribe link works in one click. Otherwise it opens an email to you asking to unsubscribe. Either way, untick *Marketing OK* on that contact.
 
 **Needs:** the Anthropic API key (Settings → AI). Writing a newsletter uses web searches and usually costs around a dollar or two on your Anthropic account (web searches plus the reading and writing). Charts are built from plain email tables, so they show in every email program, including Outlook, even when pictures are blocked.
+
+## Partner newsletter
+
+A monthly email to your referral partners with two parts:
+- **A client story:** a scenario where you helped a client.
+- **Industry updates:** what's happening in lending and property.
+
+Open **Newsletter** in the menu and choose the **Referral partners** tab.
+
+**The client story (free text):**
+- Write it any time during the month: click **Write the [month] client story**. Notes are fine, for example the situation, the challenge, what you did and the result.
+- **✨ Tidy up with AI** turns your notes into a short, anonymous story with a headline and highlight tiles (e.g. "Deposit: 5%", "Approved in 6 days"). Names, addresses and employers are left out. You can edit the result, or use your own words as they are.
+- **Ideas from your recent settlements** lists recently settled deals as starting points (purpose, amount, lender and days to settle, with no names or street addresses), so you just add the challenge and the result.
+- Check the client is happy to be featured if they could be recognised.
+
+**Industry updates:**
+- On the **20th** of each month (you can change the day), Claude researches the month's news and writes 3 or 4 updates for your partners. Topics include rates and the RBA, lender policy, government schemes and stamp duty, and the property market.
+- Each update has a **"For your clients"** line, plus sources.
+- If you've written your notes, the client story is written up at the same time.
+- The news sources are the ones in the client newsletter settings, plus a few industry sites (Mortgage Professional Australia, Australian Broker, Real Estate Business).
+
+**Reminders:**
+- **3 days before**, if you haven't written a client story yet, you get an email and a notification asking for one.
+- **On the day**, you get an email when the newsletter is ready to review. If the story is still missing, the subject says so.
+- It goes to the people set in the client newsletter settings (all admins if none are chosen).
+
+**Reviewing and sending:**
+- Edit anything: the subject, headline, introduction, key numbers, the story, each update and the closing. A live preview shows the email as a partner sees it.
+- Use **Send a test to me** to check it in your inbox.
+- **Send to N partners** goes from your mailbox, addressed to each partner by first name. You can untick anyone for this month. It won't send until there's a client story and at least one update.
+- Each email ends with a **Refer a client** button (an email to you, ready to fill in), a link to book a catch-up (your Calendly link, or the newsletter booking link), a general-information note and an **unsubscribe** link.
+
+**Who gets it:**
+- Active partners on the **Partners & agents** page with an email address. One copy is sent per email address.
+- Switch it off for anyone with the "Send them the monthly partner newsletter" box on their record. The list shows who it's on for.
+- Unsubscribing switches it off for them automatically. Settings let you choose which kinds of partner receive it.
+
+**Without AI:** the newsletter is still started on the day (with your client story) and you get the reminder. You write the updates yourself in the editor.
 
 ## Settlement letters
 

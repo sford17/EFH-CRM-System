@@ -21,7 +21,7 @@ function getTransport() {
   return transport;
 }
 
-function queueEmail({ to, subject, body, htmlBody = null, newsletterId = null, contactId = null, dealId = null, loanId = null, lenderId = null, internal = false, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null }) {
+function queueEmail({ to, subject, body, htmlBody = null, newsletterId = null, contactId = null, dealId = null, loanId = null, lenderId = null, internal = false, templateId = null, automationId = null, sendAfter = null, senderUserId = null, attachments = null, partnerId = null, partnerNewsletterId = null }) {
   if (!to) throw new Error('Recipient has no email address');
   return db.insert('outbox', {
     sender_user_id: senderUserId,
@@ -35,6 +35,8 @@ function queueEmail({ to, subject, body, htmlBody = null, newsletterId = null, c
     deal_id: dealId,
     loan_id: loanId,
     lender_id: lenderId,
+    partner_id: partnerId,
+    partner_newsletter_id: partnerNewsletterId,
     internal: internal ? 1 : 0,
     template_id: templateId,
     automation_id: automationId,

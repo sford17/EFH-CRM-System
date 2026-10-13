@@ -21,6 +21,7 @@ const partnerFields = [
   { name: 'phone', label: 'Office phone' },
   { name: 'referral_fee_pct', label: 'Referral fee (% of upfront)', type: 'number', default: 0, required: true },
   { name: 'sms_updates', label: 'Text them when a client they referred settles (needs a mobile number)', type: 'checkbox', default: true, full: true },
+  { name: 'newsletter_opt_in', label: 'Send them the monthly partner newsletter (needs an email address)', type: 'checkbox', default: true, full: true },
   { name: 'active', label: 'Active', type: 'checkbox', default: true },
   { name: 'notes', label: 'Notes', type: 'textarea', full: true },
 ];
@@ -108,6 +109,7 @@ export const partnersPage = crudPage({
     { label: 'On deals', value: (p) => String(p.deals_involved), class: 'num' },
     { label: 'Referrals', value: (p) => String(p.referrals), class: 'num' },
     { label: 'Settlement texts', value: (p) => (p.sms_updates ? (p.mobile || p.phone ? `On${p.texts_sent ? ` · ${p.texts_sent} sent` : ''}` : h('span.text-warn', 'On – no mobile')) : h('span.muted', 'Off')) },
+    { label: 'Newsletter', value: (p) => (p.newsletter_opt_in ? (p.email ? 'On' : h('span.text-warn', 'On – no email')) : h('span.muted', 'Off')) },
     { label: 'Settled', value: (p) => `${p.settled_count} · ${money(p.settled_volume)}`, class: 'num' },
     { label: 'Fee', value: (p) => pct(p.referral_fee_pct), class: 'num' },
   ],

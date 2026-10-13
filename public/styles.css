@@ -896,3 +896,11 @@ p.sl-ai { display: block; }
 .ff-answers h3 { margin: 1rem 0 .3rem; font-size: .95rem; color: var(--accent); }
 .ff-answers h3:first-of-type { margin-top: .2rem; }
 @media (max-width: 640px) { .ff-picks { grid-template-columns: 1fr; } }
+
+/* Partner newsletter */
+.pn-actions { justify-content: flex-start; align-items: flex-start; flex-wrap: wrap; margin: .6rem 0; }
+.pn-ideas { flex: 1; min-width: 220px; font-size: .9rem; }
+.pn-ideas summary { cursor: pointer; color: var(--accent); }
+.pn-ideas li { padding: .3rem 0; border-bottom: 1px solid var(--border); }
+.pn-story { border-top: 1px solid var(--border); margin-top: .8rem; padding-top: .8rem; }
+.nl-section legend button { margin-left: .5rem; }

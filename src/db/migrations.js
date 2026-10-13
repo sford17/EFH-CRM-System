@@ -975,6 +975,29 @@ MIGRATIONS.push(
       });
     }
   },
+  // 29. Monthly newsletter for referral partners
+  `
+  CREATE TABLE partner_newsletters (
+    id             INTEGER PRIMARY KEY,
+    month          TEXT NOT NULL UNIQUE,
+    status         TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','generating','ready','failed','sent')),
+    scenario_notes TEXT,
+    content        TEXT,
+    error          TEXT,
+    model          TEXT,
+    usage          TEXT,
+    generated_at   TEXT,
+    edited_by      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sent_at        TEXT,
+    sent_by        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sent_count     INTEGER NOT NULL DEFAULT 0,
+    created_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at     TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  ALTER TABLE referral_partners ADD COLUMN newsletter_opt_in INTEGER NOT NULL DEFAULT 1;
+  ALTER TABLE outbox ADD COLUMN partner_id INTEGER REFERENCES referral_partners(id) ON DELETE SET NULL;
+  ALTER TABLE outbox ADD COLUMN partner_newsletter_id INTEGER REFERENCES partner_newsletters(id) ON DELETE SET NULL;
+  `,
 );
 
 module.exports = MIGRATIONS;

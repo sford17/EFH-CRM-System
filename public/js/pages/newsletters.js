@@ -2,6 +2,7 @@
 // chosen day, reviewed and edited here, then sent to clients (each with
 // their own rate comparison).
 import { api, h, pageHeader, table, badge, date, dateTime, attempt, toast, modal, confirmDialog, state, field, readForm } from '../core.js';
+import { newsletterTabs } from './partnerNewsletters.js';
 
 const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 const STATUS = { generating: ['being written…', 'info'], ready: ['ready to review', 'warn'], failed: ['failed', 'danger'], sent: ['sent', 'ok'] };
@@ -50,6 +51,7 @@ export async function newslettersPage() {
     pageHeader('Newsletter',
       isAdmin ? h('button.secondary', { type: 'button', onclick: () => settingsDialog(data) }, 'Settings') : null,
       !thisMonth && data.ai_configured ? h('button', { type: 'button', onclick: generate }, `Write the ${data.current_month_label} newsletter now`) : null),
+    newsletterTabs('clients'),
     !s.booking_ready ? h('div.alert.warn-box', h('strong', 'No booking link yet. '), 'The "Book a meeting with me" button needs one: connect Calendly in Settings, or add a booking link in Newsletter settings.') : null,
     !data.ai_configured ? h('div.alert.warn-box', h('strong', 'AI isn\'t set up yet. '), 'An admin needs to add an Anthropic API key in Settings → AI document reading. The newsletter is written with it.') : null,
     h('section.card.nl-summary',
@@ -77,7 +79,7 @@ function contentEditor(c, onChange) {
   };
   const root = h('div.nl-editor');
   const draw = () => {
-    root.replaceChildren(
+    root.replaceChildren(...[
       h('div.grid-form',
         inp(x, 'subject', { label: 'Email subject', full: true }),
         inp(x, 'preheader', { label: 'Inbox preview line', full: true }),
@@ -107,7 +109,7 @@ function contentEditor(c, onChange) {
         sec.sources.length ? h('div.small.nl-sources', 'Sources: ', sec.sources.map((src, j) => h('span',
           h('a', { href: src.url, target: '_blank', rel: 'noopener noreferrer' }, src.publisher || src.title),
           h('button.link.small', { type: 'button', 'aria-label': 'Remove source', onclick: () => { sec.sources.splice(j, 1); changed(); draw(); } }, '×'), ' '))) : null)),
-      h('button.link.small', { type: 'button', onclick: () => { x.sections.push({ title: '', body: '', chart: null, sources: [] }); draw(); } }, '+ Add a section'));
+      h('button.link.small', { type: 'button', onclick: () => { x.sections.push({ title: '', body: '', chart: null, sources: [] }); draw(); } }, '+ Add a section')].flat().filter(Boolean));
   };
   draw();
   return { el: root, value: () => x };

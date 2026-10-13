@@ -52,6 +52,8 @@ function createApp() {
   app.use('/api/social', socialRoutes.publicRouter);
   const newsletterRoutes = require('./routes/newsletters');
   app.use('/api/public', newsletterRoutes.publicRouter);
+  const partnerNewsletterRoutes = require('./routes/partnerNewsletters');
+  app.use('/api/public', partnerNewsletterRoutes.publicRouter);
   const factFindRoutes = require('./routes/factFinds');
   app.use('/api/public/fact-find', factFindRoutes.publicRouter);
 
@@ -90,6 +92,7 @@ function createApp() {
   app.use('/api/property-reports', require('./routes/propertyReports'));
   app.use('/api/fact-finds', factFindRoutes.router);
   app.use('/api/newsletters', newsletterRoutes.router);
+  app.use('/api/partner-newsletters', partnerNewsletterRoutes.router);
   app.use('/api/social', socialRoutes.router);
   app.use('/api/appointments', calendar.appointments);
   app.use('/api/branding', brandingRoutes.router);

@@ -27,6 +27,7 @@ async function tick(log = console) {
     await social.refreshTokens(log);
     // On the chosen day each month the newsletter is written (in the background).
     if (newsletter.tick()) log.info('[scheduler] writing this month\'s newsletter');
+    if (require('./partnerNewsletter').tick()) log.info('[scheduler] writing this month\'s partner newsletter');
     const nudged = require('./factFind').tick();
     if (nudged) log.info(`[scheduler] sent ${nudged} fact find reminder(s)`);
     const synced = await outlook.syncAll(log);

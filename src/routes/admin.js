@@ -158,7 +158,7 @@ lenders.delete('/accreditations/:accId', (req, res) => {
 
 const partners = simpleCrud(
   'referral_partners',
-  ['name', 'company', 'type', 'email', 'phone', 'mobile', 'referral_fee_pct', 'sms_updates', 'notes', 'active'],
+  ['name', 'company', 'type', 'email', 'phone', 'mobile', 'referral_fee_pct', 'sms_updates', 'newsletter_opt_in', 'notes', 'active'],
   {
     label: 'Partner',
     list: () => db.all(

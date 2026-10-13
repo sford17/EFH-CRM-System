@@ -20,6 +20,7 @@ import { assistantPage } from './pages/assistant.js';
 import { leadsPage, leadSearchPage } from './pages/leads.js';
 import { propertyReportPage } from './pages/propertyReports.js';
 import { factFindsPage, factFindPage } from './pages/factFinds.js';
+import { partnerNewslettersPage, partnerNewsletterPage } from './pages/partnerNewsletters.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
@@ -72,6 +73,8 @@ const ROUTES = [
   [/^\/leads\/(\d+)$/, leadSearchPage],
   [/^\/property-reports\/(\d+)$/, propertyReportPage],
   [/^\/fact-finds$/, factFindsPage],
+  [/^\/partner-newsletters$/, partnerNewslettersPage],
+  [/^\/partner-newsletters\/(\d+)$/, partnerNewsletterPage],
   [/^\/fact-finds\/(\d+)$/, factFindPage],
   [/^\/assistant$/, assistantPage],
   [/^\/assistant\/(\d+)$/, assistantPage],
@@ -194,7 +197,8 @@ async function route() {
   if (!view) return;
   for (const a of document.querySelectorAll('[data-nav]')) {
     const href = a.dataset.nav.slice(1);
-    a.classList.toggle('active', href === '/' ? path === '/' : path.startsWith(href));
+    const section = path.startsWith('/partner-newsletters') ? '/newsletters' : path;
+    a.classList.toggle('active', href === '/' ? path === '/' : section.startsWith(href));
   }
   const match = ROUTES.find(([re]) => re.test(path));
   clear(view).append(h('div.loading', 'Loading…'));
