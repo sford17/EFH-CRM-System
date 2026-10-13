@@ -786,6 +786,27 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 21. Settlement letters: the loan summary sent to the client at settlement.
+  `
+  CREATE TABLE settlement_letters (
+    id            INTEGER PRIMARY KEY,
+    deal_id       INTEGER NOT NULL UNIQUE REFERENCES deals(id) ON DELETE CASCADE,
+    details       TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','sent')),
+    ai_read_at    TEXT,
+    ai_files      TEXT,
+    created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    sent_at       TEXT,
+    sent_to       TEXT,
+    sent_by       INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  ALTER TABLE lenders ADD COLUMN customer_phone TEXT;
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

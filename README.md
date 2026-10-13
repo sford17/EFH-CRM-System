@@ -25,6 +25,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Branding & signatures** | Your logo and colours across the CRM (light and dark mode) and on the sign-in page. Every email has your logo on a band of your brand colour, a footer with your business details and disclaimer, and each sender's own signature, with images embedded |
 | **Email templates** | 18 editable templates with merge fields, headings and bullet points, previews, an outbox with delayed sending, cancel/retry, and SMTP delivery as a fallback |
 | **Email graphics** | Charts and diagrams built from each client's details, in your brand colours: loan progress tracker, loan details card, key dates, document checklist, position summary, lending structure diagram, equity chart, property value chart and fixed-rate countdown. Also branded buttons (e.g. "Book a time") and your own images. They show even when a client's email blocks pictures |
+| **Settlement letters** | A branded letter and email for the client when their loan settles: borrowers, loan amount and splits, interest rate, repayments, direct debit account and first repayment date, with the letter attached as a PDF. Fill it in by hand, or upload the loan documents and AI (Claude) fills it in for you to check |
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
@@ -162,6 +163,36 @@ A few items couldn't be checked against the official calculators when they were 
 - the ACT investor rates.
 
 Every result links to that state's official calculator. Land titles registration fees and off-the-plan concessions (VIC, WA) aren't included.
+
+## Settlement letters
+
+Every deal at *Settlement Booked* or later (and any deal with a letter started) has a **Settlement letter** card.
+
+**Prepare letter** opens the letter, already filled in from the deal: borrowers, lender, settlement date, property, loan amount, rate, product and account number. Then add what the deal doesn't have:
+- **Loan accounts:** one per split, each with its amount, rate (variable, or fixed until a date), repayment type (P&I, or interest only until a date), repayment amount and frequency, **first repayment date**, loan term and offset account. **+ Add a loan split** adds another.
+- **Direct debit account:** bank, account name, BSB and account number. The letter shows only the last 4 digits unless you tick *Show the full account number*.
+- **Lender phone:** the lender's customer service number. It's remembered for that lender next time.
+- **Letter wording:** the opening and the *What happens next* section are editable.
+
+**Filling it in with AI:** upload up to 6 files: the loan contract or offer, the settlement letter and the direct debit form (PDF, JPG or PNG). Then click **Read documents**.
+- Claude reads them and fills in the details.
+- Anything it wasn't sure about is **highlighted in yellow**, with notes (for example, where two documents disagree).
+- It only uses what the documents say. Blank means it wasn't there.
+- The documents are sent to Anthropic to be read and aren't kept in the CRM.
+- Always check the details before sending.
+
+**Sending:**
+- **Save & preview** shows the branded letter, and **Download PDF** saves it.
+- **Email to client** sends a branded email with a summary and the letter attached as a PDF, from your connected mailbox.
+- The send is logged on the client and the deal, and the card shows when it was sent and to whom.
+
+**At settlement:** when a deal moves to *Settled*, you get a high-priority task to send the letter, listing anything still missing. The task is ticked off when the letter is sent. To send it automatically instead, tick *email the settlement letter automatically* in **Settings → AI document reading & settlement letters**. A complete letter is then emailed as soon as the deal settles. If anything is missing, you get the task instead.
+
+**Setting up AI reading (admin, once):**
+1. Create an API key at console.anthropic.com.
+2. Paste it into **Settings → AI document reading & settlement letters**. It's stored encrypted.
+
+Reading a set of loan documents typically costs a few cents on your Anthropic account. The model is Claude Opus 5.5 by default; you can change it there. If a request is declined, the API automatically retries it on a fallback model.
 
 ## Purchase calculation (funds to complete)
 

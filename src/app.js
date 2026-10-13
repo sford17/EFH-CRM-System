@@ -24,6 +24,7 @@ function createApp() {
   // Spreadsheet uploads arrive as base64 JSON and can be larger.
   app.use('/api/import', express.json({ limit: '30mb' }));
   app.use('/api/social/images', express.json({ limit: '12mb' })); // pictures up to 8 MB, sent as base64
+  app.use('/api/deals/:id/settlement-letter/read', express.json({ limit: '34mb' })); // loan documents up to 24 MB, sent as base64
   app.use('/api/signing/requests', express.json({ limit: '15mb' })); // documents up to 10 MB, sent as base64
   app.use('/api', express.json({ limit: '5mb' }));
 
@@ -77,6 +78,7 @@ function createApp() {
   const calendar = require('./routes/calendar');
   app.use('/api/calendly', calendar.calendlyRouter);
   app.use('/api/signing', require('./routes/signing'));
+  app.use('/api/ai', require('./routes/ai'));
   app.use('/api/social', socialRoutes.router);
   app.use('/api/appointments', calendar.appointments);
   app.use('/api/branding', brandingRoutes.router);

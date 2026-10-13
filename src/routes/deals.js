@@ -192,6 +192,60 @@ router.delete('/:id/purchase-calc', (req, res) => {
   res.json(purchaseCalcFor(id));
 });
 
+// ---- Settlement letter -------------------------------------------------------------------
+const settlementLetter = require('../services/settlementLetter');
+const loanDocsAI = require('../services/loanDocsAI');
+
+const letterResponse = (id) => {
+  const letter = settlementLetter.get(id);
+  return { ...letter, email: settlementLetter.emailDraft(id, letter.details), ai_configured: loanDocsAI.configured() };
+};
+
+router.get('/:id/settlement-letter', (req, res) => res.json(letterResponse(intParam(req.params.id))));
+
+router.put('/:id/settlement-letter', (req, res) => {
+  const id = intParam(req.params.id);
+  settlementLetter.save(id, req.body?.details || {}, req.user.id);
+  res.json(letterResponse(id));
+});
+
+// Reads uploaded loan documents with AI and fills in what it finds (saved as a
+// draft for the broker to check). Body: { files: [{ name, mime, data }], details }.
+router.post('/:id/settlement-letter/read', async (req, res) => {
+  const id = intParam(req.params.id);
+  const current = settlementLetter.clean(req.body?.details || settlementLetter.get(id).details);
+  const found = await loanDocsAI.extract(req.body?.files);
+  const read = settlementLetter.fromAI(found);
+  const merged = settlementLetter.mergeExtracted(current, read);
+  merged.uncertain = read.uncertain;
+  settlementLetter.save(id, merged, req.user.id, { ai: { files: (req.body.files || []).map((f) => String(f.name || 'document').slice(0, 120)) } });
+  res.json({ ...letterResponse(id), ai: { notes: found.notes || [], uncertain: read.uncertain, loans_found: read.loans.length } });
+});
+
+router.get('/:id/settlement-letter/preview', (req, res) => {
+  const id = intParam(req.params.id);
+  const html = require('../services/review').renderHtml(settlementLetter.model(id, settlementLetter.get(id).details, { userId: req.user.id }));
+  res.set('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; frame-ancestors 'self'");
+  res.set('X-Frame-Options', 'SAMEORIGIN');
+  res.type('html').send(html);
+});
+
+router.get('/:id/settlement-letter/pdf', async (req, res) => {
+  const id = intParam(req.params.id);
+  const { details } = settlementLetter.get(id);
+  const pdf = await require('../services/review').renderPdf(settlementLetter.model(id, details, { userId: req.user.id }));
+  const name = settlementLetter.fileName(details);
+  res.set('Content-Type', 'application/pdf');
+  res.set('Content-Disposition', `attachment; filename="${name.replace(/[^\x20-\x7e]/g, '-').replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(name)}`);
+  res.send(pdf);
+});
+
+router.post('/:id/settlement-letter/email', async (req, res) => {
+  const id = intParam(req.params.id);
+  const r = await settlementLetter.send(id, pick(req.body, ['to', 'subject', 'body']), req.user.id);
+  res.json({ ...letterResponse(id), outbox: { id: r.id, status: r.status, sent_via: r.sent_via } });
+});
+
 // ---- Parties: agent, solicitor, buyer's agent… ------------------------------------
 router.put('/:id/parties/:role', (req, res) => {
   const id = intParam(req.params.id);

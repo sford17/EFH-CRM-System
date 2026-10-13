@@ -235,6 +235,8 @@ function changeDealStage(dealId, toStage, userId, extra = {}) {
     require('./tracker').createFromDeal(dealId);
     // Moving a client off a loan we arranged is logged as an internal refinance.
     require('./internalRefinances').detectFromDeal(dealId);
+    // Start the client's settlement letter (sent now if set to, else a task).
+    require('./settlementLetter').onSettled(dealId).catch((err) => console.error('[settlement letter]', err));
   }
   emit('deal.stage_changed', { dealId, from_stage: deal.stage, to_stage: toStage });
   return db.one('SELECT * FROM deals WHERE id = ?', dealId);

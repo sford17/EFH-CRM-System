@@ -740,3 +740,21 @@ tr.val-used td { background: var(--ok-soft); }
 @media (max-width: 860px) { .social-grid { grid-template-columns: 1fr; } }
 .social-filter { flex-wrap: wrap; margin: 0; border-bottom: 0; }
 .social-filter a { padding: .35rem .6rem; }
+
+/* Settlement letter */
+dialog.modal.sl-dialog { width: min(980px, calc(100vw - 32px)); }
+.sl-ai { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem 1rem; align-items: center; padding: .75rem .9rem; border-radius: 10px; background: var(--accent-soft); margin-bottom: .8rem; }
+.sl-ai p { margin: .2rem 0 0; }
+p.sl-ai { display: block; }
+.sl-ai-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: flex-end; }
+.sl-ai-notes ul { margin: .3rem 0 0; padding-left: 1.1rem; }
+.sl-body h3 { margin: 1.1rem 0 .5rem; font-size: 1rem; }
+.sl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sl-loan { border: 1px solid var(--border); border-radius: 8px; padding: .5rem .8rem .8rem; margin: .8rem 0 .4rem; }
+.sl-loan legend { font-weight: 600; padding: 0 .3rem; }
+.field.ai-check input, .field.ai-check select, .field.ai-check textarea { background: var(--warn-soft); border-color: var(--warn); }
+.ai-hint { font-size: .75rem; color: var(--warn); }
+.sl-actions { margin-top: 1rem; justify-content: flex-end; }
+.sl-frame { width: 100%; height: min(70vh, 900px); border: 1px solid var(--border); border-radius: 8px; background: #f3f4f6; }
+@media (max-width: 760px) { .sl-grid { grid-template-columns: 1fr 1fr; } .sl-ai { grid-template-columns: 1fr; } .sl-ai-actions { justify-content: flex-start; } }
+@media (max-width: 480px) { .sl-grid { grid-template-columns: 1fr; } }
