@@ -192,7 +192,7 @@ Every result links to that state's official calculator. Land titles registration
 
 **Unsubscribing:** when the CRM has a public https web address (Settings → Business → CRM web address), the unsubscribe link works in one click. Otherwise it opens an email to you asking to unsubscribe. Either way, untick *Marketing OK* on that contact.
 
-**Needs:** the Anthropic API key (Settings → AI). Writing a newsletter uses web searches and typically costs well under a dollar on your Anthropic account. Charts are built from plain email tables, so they show in every email program, including Outlook, even when pictures are blocked.
+**Needs:** the Anthropic API key (Settings → AI). Writing a newsletter uses web searches and usually costs around a dollar or two on your Anthropic account (web searches plus the reading and writing). Charts are built from plain email tables, so they show in every email program, including Outlook, even when pictures are blocked.
 
 ## Settlement letters
 
