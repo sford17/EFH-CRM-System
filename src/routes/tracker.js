@@ -41,8 +41,12 @@ router.post('/properties', (req, res) => {
 router.patch('/properties/:id', (req, res) => {
   const id = intParam(req.params.id);
   notFound(db.one('SELECT 1 FROM properties WHERE id = ?', id), 'Property');
-  const row = pick(req.body, PROPERTY_FIELDS.filter((f) => f !== 'contact_id'));
+  const row = pick(req.body, [...PROPERTY_FIELDS.filter((f) => f !== 'contact_id'), 'valuation_id']);
   if (row.address === null) throw new HttpError(400, 'A property needs an address');
+  // The valuation to use for this property's value (null = choose automatically).
+  if (row.valuation_id != null && !db.one('SELECT 1 FROM valuations WHERE id = ? AND property_id = ?', Number(row.valuation_id), id)) {
+    throw new HttpError(400, 'That valuation isn\'t one of this property\'s');
+  }
   db.update('properties', id, { ...row, updated_at: nowIso() });
   res.json(db.one('SELECT * FROM properties WHERE id = ?', id));
 });

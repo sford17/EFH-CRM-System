@@ -13,6 +13,9 @@ const ASSET_TYPES = ['savings', 'superannuation', 'shares', 'vehicle', 'business
 const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP' };
 const loanType = (t) => LOAN_LABELS[t] || label(t);
 const shortAddress = (a) => String(a || '').split(',')[0];
+// "highest of 3" / "chosen" beside the valuation a property's value uses.
+const basisShort = (p) => (p.valuation_basis?.type === 'chosen' ? 'chosen by you'
+  : p.valuation_basis?.type === 'highest_recent' && p.valuation_basis.compared_ids.length > 1 ? `highest of ${p.valuation_basis.compared_ids.length}` : null);
 
 let methodFilter = '';
 
@@ -60,7 +63,8 @@ export async function trackerTab(contact) {
         const kind = lvrKind(p.lvr);
         const el = h('div.ls-prop', { tabindex: 0, dataset: { prop: p.id } },
           h('div.ls-loan-top', h('strong', shortAddress(p.address)), h('span', compactMoney(p.current_value))),
-          h('div.small.muted', [label(p.usage), p.current_valuation ? `${p.current_valuation.method_label}, ${date(p.current_valuation.valuation_date)}` : 'No valuation'].join(' · ')),
+          h('div.small.muted', { title: p.valuation_basis?.note || '' }, [label(p.usage), p.current_valuation ? `${p.current_valuation.method_label}, ${date(p.current_valuation.valuation_date)}` : p.current_value ? 'Purchase price' : 'No valuation',
+            basisShort(p)].filter(Boolean).join(' · ')),
           p.loan_ids.length
             ? h('div',
               h('div.lvr-meter', { role: 'img', 'aria-label': `LVR ${p.lvr ?? 'unknown'}%` },
@@ -207,6 +211,12 @@ export async function trackerTab(contact) {
     await attempt(() => api(`/tracker/valuations/${v.id}`, { method: 'PATCH', body: vals }), 'Saved');
     refresh();
   });
+  // Fix the valuation used for a property's value, or go back to the automatic choice.
+  const useValuation = async (p, v) => {
+    await attempt(() => api(`/tracker/properties/${p.id}`, { method: 'PATCH', body: { valuation_id: v ? v.id : null } }),
+      v ? `Using the ${v.method_label.toLowerCase()} of ${money(v.amount)}` : 'Back to the automatic choice');
+    refresh();
+  };
   const deleteValuation = async (v) => {
     if (!(await confirmDialog(`Delete the ${v.method_label.toLowerCase()} of ${money(v.amount)} from ${date(v.valuation_date)}?`))) return;
     await attempt(() => api(`/tracker/valuations/${v.id}`, { method: 'DELETE' }), 'Deleted');
@@ -236,23 +246,27 @@ export async function trackerTab(contact) {
               h('button.icon.small', { type: 'button', 'aria-label': `Delete ${p.address}`, onclick: () => deleteProperty(p) }, '×'))),
           h('div.prop-facts',
             h('div', h('span.muted', 'Current value'), h('strong', money(p.current_value)),
-              p.current_valuation ? h('span.muted.small', `${p.current_valuation.method_label} · ${date(p.current_valuation.valuation_date)}`) : null),
+              p.current_valuation ? h('span.muted.small', `${p.current_valuation.method_label} · ${date(p.current_valuation.valuation_date)}`) : null,
+              p.valuation_basis ? h('span.muted.small.basis-note', p.valuation_basis.note,
+                p.valuation_basis.type === 'chosen' ? [' · ', h('button.link.small', { type: 'button', onclick: () => useValuation(p, null) }, 'Choose automatically')] : null) : null),
             p.purchase_price ? h('div', h('span.muted', 'Purchased'), h('strong', money(p.purchase_price)), h('span.muted.small', p.purchase_date ? date(p.purchase_date) : '')) : null,
             p.purchase_price && p.current_value ? h('div', h('span.muted', 'Growth'), h('strong', `${Math.round(((p.current_value - p.purchase_price) / p.purchase_price) * 1000) / 10}%`), h('span.muted.small', money(p.current_value - p.purchase_price))) : null,
             p.rental_income_weekly ? h('div', h('span.muted', 'Rent'), h('strong', `${money(p.rental_income_weekly)}/wk`), h('span.muted.small', `${money(p.rental_income_weekly * 52)} p.a.`)) : null),
           p.latest_by_method.length > 1 ? h('div.method-chips', h('span.muted.small', 'Latest by method:'),
-            p.latest_by_method.map((v) => h('span.method-chip', h('span', v.method_label), h('strong', compactMoney(v.amount)), h('span.muted', date(v.valuation_date))))) : null,
+            p.latest_by_method.map((v) => h(`span.method-chip${v.id === p.current_valuation?.id ? '.used' : ''}`, { title: v.id === p.current_valuation?.id ? 'Used for the current value' : '' },
+              h('span', v.method_label), h('strong', compactMoney(v.amount)), h('span.muted', date(v.valuation_date)), v.id === p.current_valuation?.id ? h('span.used-tick', { 'aria-label': 'used' }, '✓') : null))) : null,
           vals.length
             ? h('div.table-wrap', h('table.val-table',
               h('thead', h('tr', ['Date', 'Method', 'Value', 'Change', 'Provider', 'Lender', ''].map((t) => h('th', t)))),
-              h('tbody', vals.map((v) => h('tr',
-                h('td', date(v.valuation_date)),
+              h('tbody', vals.map((v) => h(`tr${v.id === p.current_valuation?.id ? '.val-used' : ''}`,
+                h('td', date(v.valuation_date), v.id === p.current_valuation?.id ? h('div', badge(p.valuation_basis?.type === 'chosen' ? 'used (chosen)' : 'used for value', 'ok')) : null),
                 h('td', h(`span.method.m-${v.method}`, v.method_label)),
                 h('td.num', money(v.amount)),
                 h('td.small', change(v)),
                 h('td.small', [v.provider, v.reference].filter(Boolean).join(' · ') || '—'),
                 h('td.small', v.lender_name || '—'),
                 h('td', h('div.row-actions',
+                  v.id !== p.current_valuation?.id ? h('button.link.small', { type: 'button', title: 'Use this valuation for the property\'s value, LVR and equity', onclick: () => useValuation(p, v) }, 'Use this') : null,
                   h('button.link.small', { type: 'button', onclick: () => editValuation(v) }, 'Edit'),
                   h('button.link.small', { type: 'button', onclick: () => deleteValuation(v) }, 'Delete'))))))))
             : h('p.empty', methodFilter ? 'No valuations of this type.' : 'No valuations yet.'));

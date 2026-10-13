@@ -3,7 +3,7 @@
 // facilities and what secures them, and other assets. Also builds the
 // lending-structure view: per-property LVR, equity and usable equity.
 const db = require('../db');
-const { today, nowIso } = require('../util');
+const { today, nowIso, addMonths } = require('../util');
 
 const VALUATION_METHODS = [
   { key: 'full', label: 'Full valuation' },
@@ -86,6 +86,7 @@ const methodLabel = (key) => VALUATION_METHODS.find((m) => m.key === key)?.label
 const inList = (ids) => ids.map(() => '?').join(',');
 
 function propertiesFor(ids) {
+  const rules = valuationRules();
   const props = db.all(
     `SELECT p.*, o.first_name || ' ' || COALESCE(o.last_name,'') AS co_owner_name, w.first_name || ' ' || COALESCE(w.last_name,'') AS owner_name
      FROM properties p LEFT JOIN contacts o ON o.id = p.co_owner_id LEFT JOIN contacts w ON w.id = p.contact_id
@@ -105,14 +106,55 @@ function propertiesFor(ids) {
       v.change = prev ? v.amount - prev.amount : null;
       v.change_pct = prev && prev.amount ? Math.round(((v.amount - prev.amount) / prev.amount) * 1000) / 10 : null;
     });
-    p.current_value = p.valuations[0]?.amount ?? p.purchase_price ?? null;
-    p.current_valuation = p.valuations[0] || null;
     // Most recent figure from each method, for side-by-side comparison.
     const latest = new Map();
     for (const v of p.valuations) if (!latest.has(v.method)) latest.set(v.method, v);
     p.latest_by_method = [...latest.values()];
+    const chosen = chooseValuation(p, rules);
+    p.current_valuation = chosen.valuation;
+    p.current_value = chosen.valuation?.amount ?? p.purchase_price ?? null;
+    p.valuation_basis = chosen.basis;
   }
   return props;
+}
+
+// How a property's value is chosen (Settings → Property valuations).
+function valuationRules() {
+  const months = Number(db.getSetting('valuation_recent_months', '12'));
+  return {
+    rule: db.getSetting('valuation_rule', 'highest_recent') === 'latest' ? 'latest' : 'highest_recent',
+    months: Number.isFinite(months) && months >= 0 ? months : 12,
+    ignoreEstimates: db.getSetting('valuation_ignore_estimates', '1') !== '0',
+  };
+}
+
+// The valuation a property's value (and so its LVR and equity) is based on:
+// one the broker has chosen; otherwise the highest of the latest valuation of
+// each method (full, desktop, kerbside, AVM…) dated within `months` of the
+// newest one; or simply the newest, if that's the setting. Client estimates
+// only count when there's nothing else (unless the setting says otherwise).
+function chooseValuation(p, rules = valuationRules()) {
+  const vals = p.valuations;
+  if (!vals.length) {
+    return { valuation: null, basis: p.purchase_price ? { type: 'purchase_price', note: 'Purchase price (no valuations yet)' } : null };
+  }
+  const pinned = p.valuation_id && vals.find((v) => v.id === p.valuation_id);
+  if (pinned) return { valuation: pinned, basis: { type: 'chosen', note: 'Chosen by you', compared_ids: [pinned.id] } };
+  if (rules.rule === 'latest') return { valuation: vals[0], basis: { type: 'latest', note: 'Most recent valuation', compared_ids: [vals[0].id] } };
+
+  let candidates = p.latest_by_method;
+  if (rules.ignoreEstimates && candidates.some((v) => v.method !== 'client_estimate')) candidates = candidates.filter((v) => v.method !== 'client_estimate');
+  const newest = candidates.reduce((m, v) => (v.valuation_date && v.valuation_date > m ? v.valuation_date : m), '');
+  if (rules.months > 0 && newest) {
+    const from = addMonths(newest, -rules.months);
+    candidates = candidates.filter((v) => (v.valuation_date || '') >= from);
+  }
+  const best = candidates.reduce((b, v) => (!b || v.amount > b.amount || (v.amount === b.amount && v.valuation_date > b.valuation_date) ? v : b), null);
+  const window = rules.months > 0 ? ` (within ${rules.months} month${rules.months === 1 ? '' : 's'} of the newest)` : '';
+  const note = candidates.length > 1
+    ? `Highest of ${candidates.length} recent valuations: ${candidates.map((v) => v.method_label).join(', ')}${window}`
+    : 'Most recent valuation';
+  return { valuation: best, basis: { type: 'highest_recent', note, compared_ids: candidates.map((v) => v.id) } };
 }
 
 function loansFor(ids) {
@@ -242,4 +284,4 @@ function touch(table, id) {
   db.run(`UPDATE ${table} SET updated_at = ? WHERE id = ?`, nowIso(), id);
 }
 
-module.exports = { createFromDeal, summary, structure, VALUATION_METHODS, methodLabel, touch };
+module.exports = { createFromDeal, summary, structure, chooseValuation, valuationRules, VALUATION_METHODS, methodLabel, touch };

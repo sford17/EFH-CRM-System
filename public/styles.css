@@ -639,3 +639,9 @@ fieldset.ir-side.new { background: var(--ok-soft); }
   .ir-sides, .ir-prefill { grid-template-columns: 1fr; }
   .ir-sides > .ir-arrow { transform: rotate(90deg); }
 }
+
+/* Valuation used for a property's value */
+.method-chip.used { border-color: var(--ok); background: var(--ok-soft); }
+.method-chip .used-tick { color: var(--ok); font-weight: 700; }
+.basis-note { display: block; max-width: 34rem; }
+tr.val-used td { background: var(--ok-soft); }

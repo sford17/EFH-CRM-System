@@ -713,6 +713,12 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 18. A valuation the broker has chosen to use for a property's value
+  // (otherwise the highest recent valuation is used).
+  `ALTER TABLE properties ADD COLUMN valuation_id INTEGER REFERENCES valuations(id) ON DELETE SET NULL;`,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

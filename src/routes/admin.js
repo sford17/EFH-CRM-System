@@ -38,12 +38,13 @@ users.patch('/:id', auth.requireRole('admin'), (req, res) => {
 });
 
 // ---- Settings -----------------------------------------------------------------
-const SETTING_KEYS = ['business_name', 'business_phone', 'business_email', 'business_website', 'acl_number', 'monthly_settlement_target', 'app_url', 'google_review_link'];
+const SETTING_KEYS = ['business_name', 'business_phone', 'business_email', 'business_website', 'acl_number', 'monthly_settlement_target', 'app_url', 'google_review_link',
+  'valuation_rule', 'valuation_recent_months', 'valuation_ignore_estimates'];
+const SETTING_DEFAULTS = { valuation_rule: 'highest_recent', valuation_recent_months: '12', valuation_ignore_estimates: '1' };
+const settingValues = () => Object.fromEntries(SETTING_KEYS.map((k) => [k, db.getSetting(k, SETTING_DEFAULTS[k] ?? '')]));
 const settings = express.Router();
 
-settings.get('/', (req, res) => {
-  res.json(Object.fromEntries(SETTING_KEYS.map((k) => [k, db.getSetting(k, '')])));
-});
+settings.get('/', (req, res) => res.json(settingValues()));
 
 settings.put('/', auth.requireRole('admin'), (req, res) => {
   if (req.body?.google_review_link && !/^https:\/\/\S+$/i.test(String(req.body.google_review_link).trim())) {
@@ -52,8 +53,13 @@ settings.put('/', auth.requireRole('admin'), (req, res) => {
   if (req.body?.app_url && !/^https?:\/\/[^\s/]+(:\d+)?(\/\S*)?$/i.test(String(req.body.app_url).trim())) {
     throw new HttpError(400, 'The CRM web address should look like http://localhost:3000 or https://crm.example.com.au');
   }
-  for (const k of SETTING_KEYS) if (req.body && k in req.body) db.setSetting(k, String(req.body[k] ?? ''));
-  res.json(Object.fromEntries(SETTING_KEYS.map((k) => [k, db.getSetting(k, '')])));
+  if (req.body?.valuation_rule != null && !['highest_recent', 'latest'].includes(req.body.valuation_rule)) throw new HttpError(400, 'Choose how property values are worked out');
+  if (req.body?.valuation_recent_months != null && req.body.valuation_recent_months !== ''
+    && !(Number.isInteger(Number(req.body.valuation_recent_months)) && Number(req.body.valuation_recent_months) >= 0 && Number(req.body.valuation_recent_months) <= 120)) {
+    throw new HttpError(400, 'Recent valuations: enter a number of months from 0 to 120 (0 = no limit)');
+  }
+  for (const k of SETTING_KEYS) if (req.body && k in req.body) db.setSetting(k, String(req.body[k] ?? SETTING_DEFAULTS[k] ?? ''));
+  res.json(settingValues());
 });
 
 // ---- Simple CRUD resources -----------------------------------------------------

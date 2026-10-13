@@ -125,6 +125,10 @@ export async function settingsPage() {
     { name: 'monthly_settlement_target', label: 'Monthly settlement target ($)', type: 'number' },
     { name: 'app_url', label: 'CRM web address (for links in reminder emails)', placeholder: `${location.origin}` },
     { name: 'google_review_link', label: 'Google review link (Google Business Profile → "Ask for reviews")', placeholder: 'https://g.page/r/…/review', full: true },
+    { name: 'valuation_rule', label: 'Property value used in the lending structure', type: 'select', required: true, full: true,
+      options: [['highest_recent', 'Highest recent valuation (latest of each method – full, desktop, kerbside, AVM… – take the highest)'], ['latest', 'Most recent valuation only']] },
+    { name: 'valuation_recent_months', label: 'Count valuations from the last … months (0 = no limit)', type: 'number', step: 1 },
+    { name: 'valuation_ignore_estimates', label: 'Ignore client estimates unless there\'s nothing else', type: 'checkbox' },
   ];
   const bizForm = h('form.grid-form', bizFields.map((f) => field(f, settings[f.name])), isAdmin ? h('div.actions.full', h('button', { type: 'submit' }, 'Save')) : null);
   if (!isAdmin) for (const el of bizForm.elements) el.disabled = true;
