@@ -719,6 +719,18 @@ MIGRATIONS.push(
   `ALTER TABLE properties ADD COLUMN valuation_id INTEGER REFERENCES valuations(id) ON DELETE SET NULL;`,
 );
 
+MIGRATIONS.push(
+  // 19. Purchase calculation (funds to complete) saved on a deal.
+  `
+  CREATE TABLE deal_purchase_calcs (
+    deal_id     INTEGER PRIMARY KEY REFERENCES deals(id) ON DELETE CASCADE,
+    inputs      TEXT NOT NULL,
+    updated_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

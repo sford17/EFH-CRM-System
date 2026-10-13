@@ -134,6 +134,64 @@ router.patch('/:id', (req, res) => {
   res.json(withLvr(db.one(`${SELECT} WHERE d.id = ?`, id)));
 });
 
+// ---- Purchase calculation (funds to complete) ------------------------------------
+const purchaseCalc = require('../services/purchaseCalc');
+
+function purchaseCalcFor(id) {
+  const deal = notFound(db.one('SELECT * FROM deals WHERE id = ?', id), 'Deal');
+  const saved = db.one(
+    'SELECT p.*, u.name AS updated_by_name FROM deal_purchase_calcs p LEFT JOIN users u ON u.id = p.updated_by WHERE p.deal_id = ?', id,
+  );
+  const inputs = saved ? JSON.parse(saved.inputs) : purchaseCalc.fromDeal(deal);
+  let result = null;
+  let error = null;
+  try {
+    result = purchaseCalc.calculate(inputs);
+  } catch (err) {
+    error = err.message;
+  }
+  return {
+    saved: Boolean(saved), updated_at: saved?.updated_at || null, updated_by_name: saved?.updated_by_name || null,
+    inputs, result, error, suggested: purchaseCalc.PURCHASE_PURPOSES.includes(deal.loan_purpose),
+  };
+}
+
+router.get('/:id/purchase-calc', (req, res) => res.json(purchaseCalcFor(intParam(req.params.id))));
+
+// Saves the calculation; `apply_to_deal` also copies the price, loan and deposit onto the deal.
+router.put('/:id/purchase-calc', (req, res) => {
+  const id = intParam(req.params.id);
+  const deal = notFound(db.one('SELECT * FROM deals WHERE id = ?', id), 'Deal');
+  let result;
+  try {
+    result = purchaseCalc.calculate(req.body?.inputs || {});
+  } catch (err) {
+    throw new HttpError(400, err.message);
+  }
+  db.run(
+    `INSERT INTO deal_purchase_calcs (deal_id, inputs, updated_by, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(deal_id) DO UPDATE SET inputs = excluded.inputs, updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
+    id, JSON.stringify(result.inputs), req.user.id, nowIso(),
+  );
+  if (req.body?.apply_to_deal) {
+    db.update('deals', id, {
+      property_value: result.purchase_price, loan_amount: result.total_loan, deposit: result.deposit_required, updated_at: nowIso(),
+    });
+    db.insert('activities', {
+      contact_id: deal.contact_id, deal_id: id, user_id: req.user.id, type: 'system',
+      body: `Purchase calculation applied: price $${Math.round(result.purchase_price).toLocaleString('en-AU')}, loan $${Math.round(result.total_loan).toLocaleString('en-AU')} (${result.lvr_incl_lmi}% LVR), client contribution $${Math.round(result.total_contribution).toLocaleString('en-AU')}`,
+    });
+  }
+  res.json(purchaseCalcFor(id));
+});
+
+router.delete('/:id/purchase-calc', (req, res) => {
+  const id = intParam(req.params.id);
+  notFound(db.one('SELECT 1 FROM deals WHERE id = ?', id), 'Deal');
+  db.run('DELETE FROM deal_purchase_calcs WHERE deal_id = ?', id);
+  res.json(purchaseCalcFor(id));
+});
+
 // ---- Parties: agent, solicitor, buyer's agent… ------------------------------------
 router.put('/:id/parties/:role', (req, res) => {
   const id = intParam(req.params.id);

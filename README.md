@@ -30,7 +30,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
 | **Internal refinance register** | A record of every client you've moved from one of your loans to a new one, with the existing loan beside the new loan (borrowers, lender, account, product, amounts, rates, settlement and pay-out dates, broker), plus the reason, clawback and cashback. Every field is editable. It's added automatically when a refinance deal settles, and a CSV export is there for sale or trail-book records |
 | **Reports** | Running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
-| **Calculators** | Stamp duty for residential and commercial property in every state and territory (2026-27 rates, with owner-occupier and first home buyer concessions and foreign surcharges), repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
+| **Calculators** | Purchase calculation (funds to complete: price, loan and LVR, deposit, stamp duty, LMI, legal and other costs, total client contribution; also saved on purchase deals), stamp duty for residential and commercial property in every state and territory (2026-27 rates, with owner-occupier and first home buyer concessions and foreign surcharges), repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
 | **Team** | Admin, broker and assistant roles, with notifications for automation alerts |
 
 ## Getting started
@@ -161,6 +161,27 @@ A few items couldn't be checked against the official calculators when they were 
 - the ACT investor rates.
 
 Every result links to that state's official calculator. Land titles registration fees and off-the-plan concessions (VIC, WA) aren't included.
+
+## Purchase calculation (funds to complete)
+
+This works out how much a client needs to put in. Find it at the top of **Calculators**, and on every purchase deal (*Purchase*, *First home*, *Investment*, *Construction* and *Commercial*).
+
+The table runs top to bottom:
+
+1. **Purchase price**
+2. **Loan amount** and **LVR**. Type either one and the other updates. You can type a loan amount, or set the LVR the lender allows (e.g. 80%, 90% or 95%) and the loan amount is worked out.
+3. **Costs:**
+   - **Deposit required** (price less loan)
+   - **Stamp duty**, estimated from the state, property type, owner-occupier or investor, first home buyer and foreign purchaser options, using the same rates as the stamp duty calculator
+   - **LMI fee**, an indicative estimate when the LVR is over 80%. Tick *Add to the loan* if LMI is capitalised; it's then added to the loan instead of the contribution, and the LVR including LMI is shown.
+   - **Legal costs** ($2,000 to start with)
+   - any **other costs** you add, such as registration fees, building & pest, lender fees or moving. To take something off the total, such as a grant, enter it as a cost with a minus amount.
+4. **Total contribution**
+5. Optionally, the client's **funds available**, which gives the **shortfall or surplus**.
+
+Stamp duty and LMI are estimates: type over either one to use your own figure, and click *Use estimate* to go back to the estimate.
+
+**On a deal**, the calculation starts from the deal's property value and loan amount. The state comes from the property address, and the first home buyer and investor settings come from the loan purpose. **Save** keeps it with the deal. **Save & update deal** also copies the purchase price, the loan amount (including any capitalised LMI) and the deposit onto the deal, and notes it in the activity. *Start again from the deal* clears a saved calculation.
 
 ## Running settlements report
 

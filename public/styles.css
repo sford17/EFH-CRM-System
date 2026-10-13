@@ -645,3 +645,41 @@ fieldset.ir-side.new { background: var(--ok-soft); }
 .method-chip .used-tick { color: var(--ok); font-weight: 700; }
 .basis-note { display: block; max-width: 34rem; }
 tr.val-used td { background: var(--ok-soft); }
+
+/* Purchase calculation */
+.pc-options { display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: end; margin-bottom: .8rem; }
+.pc-opt { display: flex; flex-direction: column; gap: .2rem; font-size: .8rem; color: var(--text-2); }
+.pc-opt select { min-width: 120px; }
+.pc-check { display: inline-flex; align-items: center; gap: .35rem; font-size: .88rem; cursor: pointer; white-space: nowrap; }
+.pc-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.pc-table th, .pc-table td { padding: .45rem .5rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.pc-table th[scope=row] { white-space: normal; font-weight: 500; width: 40%; padding-top: .7rem; text-transform: none; letter-spacing: normal; font-size: .92rem; color: var(--text); }
+.pc-table td { text-align: right; min-width: 0; }
+.pc-input { width: 11rem; max-width: 100%; text-align: right; font-variant-numeric: tabular-nums; }
+.pc-input.pc-pct { width: 6rem; }
+.pc-label { width: 100%; }
+.pc-inline { display: inline-flex; align-items: center; gap: .5rem; justify-content: flex-end; flex-wrap: wrap; }
+.pc-sub { display: block; font-size: .78rem; color: var(--text-2); margin-top: .2rem; }
+.pc-value { font-variant-numeric: tabular-nums; font-size: 1.02rem; display: inline-block; padding-top: .25rem; }
+.pc-key th, .pc-key td { padding-top: .2rem; }
+.pc-heading th { padding-top: 1rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-2); }
+.pc-add td { text-align: left; border-bottom: 0; }
+.pc-total th, .pc-total td { background: var(--accent-soft); border-top: 2px solid var(--accent); border-bottom: 2px solid var(--accent); }
+.pc-total th { font-weight: 700; font-size: 1.02rem; }
+.pc-total-value { font-size: 1.45rem; font-variant-numeric: tabular-nums; }
+.pc-surplus[hidden] { display: none; }
+.pc-status:empty { display: none; }
+.pc-messages { margin-top: .6rem; }
+.pc-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-top: .9rem; }
+.pc-actions .spacer { flex: 1; }
+.pc-headline { font-size: .9rem; color: var(--text-2); }
+.pc-headline strong { color: var(--text); font-size: 1.05rem; }
+.pc-card .table-wrap { overflow-x: visible; }
+@media (max-width: 560px) {
+  .pc-table th[scope=row] { width: 42%; font-size: .85rem; }
+  .pc-table th, .pc-table td { padding: .4rem .3rem; }
+  .pc-input { width: 100%; }
+  .pc-input.pc-pct { width: 4.5rem; }
+  .pc-inline { justify-content: flex-end; }
+  .pc-total-value { font-size: 1.2rem; }
+}

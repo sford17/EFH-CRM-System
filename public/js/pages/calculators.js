@@ -1,4 +1,5 @@
 import { api, h, pageHeader, field, readForm, money, money2, attempt, table } from '../core.js';
+import { purchaseCalcCard } from './purchaseCalc.js';
 
 const CALCS = [
   {
@@ -148,6 +149,8 @@ function calcCard(c) {
 
 export async function calculatorsPage() {
   return h('div', pageHeader('Calculators'),
+    h('h2.section-title', 'Purchase'),
+    purchaseCalcCard(),
     h('h2.section-title', 'Stamp duty'),
     h('div.grid-2', STAMP_DUTY.map(calcCard)),
     h('h2.section-title', 'Loans'),

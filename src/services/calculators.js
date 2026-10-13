@@ -89,14 +89,7 @@ function borrowingPower(input) {
   };
 }
 
-// Indicative LMI premium as a % of the loan, by LVR band. Real premiums vary by
-// insurer, loan size and borrower profile.
-const LMI_BANDS = [
-  [80, 0],
-  [85, 0.75],
-  [90, 1.6],
-  [95, 3.2],
-];
+const { LMI_BANDS } = require('./purchaseCalc');
 
 function lvr(input) {
   const value = n(input.property_value);
@@ -141,6 +134,7 @@ const CALCULATORS = {
   repayment, 'borrowing-power': borrowingPower, lvr, refinance,
   'stamp-duty-residential': (input) => stampDuty.residential(input),
   'stamp-duty-commercial': (input) => stampDuty.commercial(input),
+  purchase: (input) => require('./purchaseCalc').calculate(input),
 };
 
 module.exports = { CALCULATORS, incomeTax, paymentFor };

@@ -9,6 +9,7 @@ import { emailLenderDialog } from './lenders.js';
 import { requestReviewDialog } from './googleReview.js';
 import { signingCard } from './signing.js';
 import { smsCard } from './sms.js';
+import { dealPurchaseCard } from './purchaseCalc.js';
 
 // Moves a deal, asking for extra details where a stage needs them.
 export async function moveDeal(deal, stage) {
@@ -231,6 +232,7 @@ export async function dealPage(id) {
           `${s.from_stage ? `${stageLabel(s.from_stage)} → ` : ''}${stageLabel(s.to_stage)}`,
           h('div.muted', `${dateTime(s.changed_at)}${s.user_name ? ` · ${s.user_name}` : ''}`)))))),
       h('div.col-main',
+        await dealPurchaseCard(deal),
         documentsCard(deal),
         h('section.card',
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ deal_id: deal.id, contact_id: deal.contact_id }) }, '+ Task')),
