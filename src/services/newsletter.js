@@ -658,7 +658,11 @@ function stats(id) {
     .reduce((o, r) => ({ ...o, [r.status]: r.n }), {});
 }
 
+// Email building blocks, shared with other branded emails (e.g. property reports).
+const emailParts = { esc, para, heading, keyNumbers, barChart, sourceLine, button, fmtValue, FONT, MUTED, TEXT, BORDER };
+
 module.exports = {
+  emailParts,
   SETTING_KEYS, DEFAULT_SOURCES, NEWSLETTER_SCHEMA, RATE_KEYS, RATE_LABELS, settings, saveSettings, reviewers, generate, write, tick, clean,
   recipients, rateCheck, render, get, list, save, send, sendTest, stats, unsubscribe, unsubscribeLink, monthLabel, currentMonth, running,
 };

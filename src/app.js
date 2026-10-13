@@ -84,6 +84,7 @@ function createApp() {
   app.use('/api/quickli', require('./routes/quickli'));
   app.use('/api/agent', require('./routes/agent'));
   app.use('/api/leads', require('./routes/leads'));
+  app.use('/api/property-reports', require('./routes/propertyReports'));
   app.use('/api/newsletters', newsletterRoutes.router);
   app.use('/api/social', socialRoutes.router);
   app.use('/api/appointments', calendar.appointments);

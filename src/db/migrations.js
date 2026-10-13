@@ -898,6 +898,29 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 26. Property reports: a client's valuation history plus AI-researched data
+  // on their area, sent as a branded email with a PDF.
+  `
+  CREATE TABLE property_reports (
+    id           INTEGER PRIMARY KEY,
+    contact_id   INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    property_ids TEXT NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'researching' CHECK (status IN ('researching','ready','failed','sent')),
+    content      TEXT,
+    error        TEXT,
+    model        TEXT,
+    usage        TEXT,
+    created_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sent_at      TEXT,
+    sent_to      TEXT,
+    created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_property_reports_contact ON property_reports(contact_id);
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;
