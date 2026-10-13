@@ -11,6 +11,7 @@ import { smsCard, smsDialog } from './sms.js';
 import { contactAppointmentsCard, bookingLinkDialog } from './calendar.js';
 import { trackerTab } from './tracker.js';
 import { reviewsCard, startReview } from './review.js';
+import { refinancesCard } from './refinances.js';
 import { relatedCard } from './household.js';
 import { googleReviewInfo, requestReviewDialog } from './googleReview.js';
 import { signingCard } from './signing.js';
@@ -95,7 +96,7 @@ export async function contactPage(id) {
     h('nav.tabs', { 'aria-label': 'Contact sections' },
       h(`a${tab === 'overview' ? '.active' : ''}`, { href: `#/contacts/${c.id}`, 'aria-current': tab === 'overview' ? 'page' : undefined }, 'Overview'),
       h(`a${tab === 'tracker' ? '.active' : ''}`, { href: `#/contacts/${c.id}?tab=tracker`, 'aria-current': tab === 'tracker' ? 'page' : undefined }, 'Mortgage tracker')),
-    tab === 'tracker' ? h('div', await trackerTab(c), reviewsCard(c.id, c.reviews)) : h('div.detail-grid',
+    tab === 'tracker' ? h('div', await trackerTab(c), await refinancesCard(c), reviewsCard(c.id, c.reviews)) : h('div.detail-grid',
       h('div.col-side',
         h('section.card', h('h2', 'Details'), h('dl.info',
           info('Owner', c.owner_name),

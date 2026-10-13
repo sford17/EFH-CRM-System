@@ -660,6 +660,59 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 17. Internal refinance register: a client moved from one loan/lender to
+  // another, with both sides recorded (for clawbacks and trail-book records).
+  `
+  CREATE TABLE internal_refinances (
+    id                   INTEGER PRIMARY KEY,
+    contact_id           INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
+    client_name          TEXT NOT NULL,
+    status               TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('needs_review','in_progress','completed')),
+    source               TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','auto')),
+    reason               TEXT,
+    -- Existing (old) loan
+    old_loan_id          INTEGER REFERENCES loans(id) ON DELETE SET NULL,
+    old_lender_id        INTEGER REFERENCES lenders(id) ON DELETE SET NULL,
+    old_lender_name      TEXT,
+    old_borrowers        TEXT,
+    old_account_number   TEXT,
+    old_product          TEXT,
+    old_loan_type        TEXT,
+    old_loan_amount      REAL,
+    old_balance          REAL,
+    old_interest_rate    REAL,
+    old_rate_type        TEXT,
+    old_settlement_date  TEXT,
+    old_discharge_date   TEXT,
+    old_broker_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    -- New loan
+    new_deal_id          INTEGER REFERENCES deals(id) ON DELETE SET NULL,
+    new_loan_id          INTEGER REFERENCES loans(id) ON DELETE SET NULL,
+    new_lender_id        INTEGER REFERENCES lenders(id) ON DELETE SET NULL,
+    new_lender_name      TEXT,
+    new_borrowers        TEXT,
+    new_account_number   TEXT,
+    new_product          TEXT,
+    new_loan_type        TEXT,
+    new_loan_amount      REAL,
+    new_interest_rate    REAL,
+    new_rate_type        TEXT,
+    new_settlement_date  TEXT,
+    new_broker_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    -- Commission impact
+    clawback_amount      REAL,
+    cashback             REAL,
+    notes                TEXT,
+    created_by           INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_internal_refinances_contact ON internal_refinances(contact_id);
+  CREATE UNIQUE INDEX idx_internal_refinances_deal ON internal_refinances(new_deal_id) WHERE new_deal_id IS NOT NULL;
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

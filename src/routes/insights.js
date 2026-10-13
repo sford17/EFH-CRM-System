@@ -168,6 +168,37 @@ router.get('/reports/settlements.csv', (req, res) => {
   res.send(require('../csv').stringify(settlementReport.csvRows(r)));
 });
 
+// ---- Internal refinance register ------------------------------------------------
+const refinances = require('../services/internalRefinances');
+const refinanceArgs = (q) => ({
+  period: q.period === 'all' ? null : periods.resolve(q),
+  ownerId: Number(q.owner_id) || null,
+  lenderId: Number(q.lender_id) || null,
+  status: q.status || null,
+  contactId: Number(q.contact_id) || null,
+  q: q.q ? String(q.q).slice(0, 100) : null,
+});
+const refinancePeriod = (q) => (q.period === 'all' ? { type: 'all', label: 'All dates', short: 'all dates' } : periods.resolve(q));
+
+router.get('/refinances', (req, res) => res.json({ period: refinancePeriod(req.query), ...refinances.list(refinanceArgs(req.query)) }));
+
+router.get('/refinances.csv', (req, res) => {
+  const p = refinancePeriod(req.query);
+  const tag = p.type === 'all' ? 'all' : p.type === 'fy' ? `FY${String(p.fy).slice(2)}` : p.type === 'cy' ? String(p.year) : `${p.from}-to-${p.to}`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="internal-refinances-${tag}.csv"`);
+  res.send(require('../csv').stringify(refinances.csvRows(refinances.list(refinanceArgs(req.query)).rows), refinances.CSV_COLUMNS));
+});
+
+router.get('/refinances/options/:contactId', (req, res) => res.json(notFound(refinances.options(intParam(req.params.contactId)), 'Contact')));
+router.get('/refinances/:id', (req, res) => res.json(notFound(refinances.get(intParam(req.params.id)), 'Refinance')));
+router.post('/refinances', (req, res) => res.status(201).json(refinances.create(req.body || {}, req.user.id)));
+router.put('/refinances/:id', (req, res) => res.json(notFound(refinances.update(intParam(req.params.id), req.body || {}), 'Refinance')));
+router.delete('/refinances/:id', (req, res) => {
+  if (!refinances.remove(intParam(req.params.id))) throw new HttpError(404, 'Refinance not found');
+  res.status(204).end();
+});
+
 // ---- Commissions ---------------------------------------------------------------
 router.get('/commissions', (req, res) => {
   const where = [];

@@ -1,5 +1,6 @@
-import { api, h, pageHeader, table, money, money2, label, state, date, userOptions, lenderTag, badge } from '../core.js';
+import { api, h, pageHeader, table, money, money2, label, state, date, userOptions, lenderTag, badge, toast } from '../core.js';
 import { columns, barList, stackedColumns } from '../charts.js';
+import { refinanceDialog, sideCell, heldCell, STATUS_KIND } from './refinances.js';
 
 // One reporting period shared by both tabs: financial year, calendar year or custom dates.
 const period = { period: 'fy', fy: '', year: '', from: '', to: '' };
@@ -13,11 +14,13 @@ const periodQuery = () => {
 };
 
 // Period type, then a year or two dates. `current` is the period the report used.
-async function periodPicker(current) {
+// `allowAll` adds "All dates" (for registers rather than period reports).
+async function periodPicker(current, { allowAll = false } = {}) {
   yearOptions = yearOptions || await api('/reports/periods');
   const go = () => window.dispatchEvent(new Event('crm:refresh'));
   const type = h('select', { 'aria-label': 'Report period' },
-    [['fy', 'Financial year'], ['cy', 'Calendar year'], ['custom', 'Custom dates']].map(([v, l]) => h('option', { value: v, selected: current.type === v }, l)));
+    [['fy', 'Financial year'], ['cy', 'Calendar year'], ['custom', 'Custom dates'], ...(allowAll ? [['all', 'All dates']] : [])]
+      .map(([v, l]) => h('option', { value: v, selected: current.type === v }, l)));
   const yearSel = (key, list, chosen) => {
     const el = h('select', { 'aria-label': key === 'fy' ? 'Financial year' : 'Year' },
       list.map((o) => h('option', { value: o.value, selected: o.value === chosen }, o.label)));
@@ -35,12 +38,12 @@ async function periodPicker(current) {
   };
   from.addEventListener('change', applyDates);
   to.addEventListener('change', applyDates);
-  const detail = current.type === 'fy' ? yearSel('fy', yearOptions.fy, current.fy)
+  const detail = current.type === 'all' ? null : current.type === 'fy' ? yearSel('fy', yearOptions.fy, current.fy)
     : current.type === 'cy' ? yearSel('year', yearOptions.cy, current.year)
       : h('span.date-range', from, h('span.muted', 'to'), to);
   type.addEventListener('change', () => {
     period.period = type.value;
-    if (type.value === 'custom') {
+    if (type.value === 'custom' && current.from) {
       // Start from the dates being shown, so switching keeps the same view until changed.
       Object.assign(period, { from: current.from, to: current.to });
     }
@@ -52,10 +55,12 @@ const monthName = (m) => new Date(`${m}-01T00:00:00`).toLocaleString('en-AU', { 
 
 const tabs = (active) => h('nav.tabs.report-tabs', { 'aria-label': 'Report sections' },
   h(`a${active === 'overview' ? '.active' : ''}`, { href: '#/reports', 'aria-current': active === 'overview' ? 'page' : undefined }, 'Overview'),
-  h(`a${active === 'settlements' ? '.active' : ''}`, { href: '#/reports?tab=settlements', 'aria-current': active === 'settlements' ? 'page' : undefined }, 'Settlements'));
+  h(`a${active === 'settlements' ? '.active' : ''}`, { href: '#/reports?tab=settlements', 'aria-current': active === 'settlements' ? 'page' : undefined }, 'Settlements'),
+  h(`a${active === 'refinances' ? '.active' : ''}`, { href: '#/reports?tab=refinances', 'aria-current': active === 'refinances' ? 'page' : undefined }, 'Internal refinances'));
 
 export async function reportsPage() {
   if (window.routeQuery?.get('tab') === 'settlements') return settlementsReport();
+  if (window.routeQuery?.get('tab') === 'refinances') return refinancesReport();
   const r = await api(`/reports?${new URLSearchParams(periodQuery())}`);
   const totalSettled = r.settlements_by_month.reduce((s, m) => s + m.volume, 0);
   const totalCount = r.settlements_by_month.reduce((s, m) => s + m.count, 0);
@@ -204,4 +209,62 @@ async function settlementsReport() {
       h('div.card-head', h('h2', `In progress, no settlement date yet (${r.undated.length})`), h('span.settle-sub', h('span', 'Volume ', h('strong', money(t.undated_volume))))),
       h('p.muted.small', 'Lodged or approved deals without a settlement date. Add the date on the deal and they\'ll appear in their month above.'),
       dealTable(r.undated)) : null);
+}
+
+// ---- Internal refinances: clients moved from one of our loans to a new one ----
+const refiFilters = { owner_id: '', lender_id: '', status: '', q: '' };
+let refiOpened = null;
+
+async function refinancesReport() {
+  const q = { ...periodQuery(), ...Object.fromEntries(Object.entries(refiFilters).filter(([, v]) => v)) };
+  const r = await api(`/refinances?${new URLSearchParams(q)}`);
+  const t = r.totals;
+  const set = (key) => (e) => { refiFilters[key] = e.target.value; window.dispatchEvent(new Event('crm:refresh')); };
+  const ownerSel = h('select', { 'aria-label': 'Broker', onchange: set('owner_id') },
+    h('option', { value: '' }, 'All brokers'), userOptions().map(([v, l]) => h('option', { value: v, selected: String(v) === refiFilters.owner_id }, l)));
+  const lenderSel = h('select', { 'aria-label': 'Lender', onchange: set('lender_id') },
+    h('option', { value: '' }, 'All lenders'), state.lenders.map((l) => h('option', { value: l.id, selected: String(l.id) === refiFilters.lender_id }, l.name)));
+  const statusSel = h('select', { 'aria-label': 'Status', onchange: set('status') },
+    [['', 'Any status'], ['needs_review', 'Needs review'], ['in_progress', 'In progress'], ['completed', 'Completed']]
+      .map(([v, l]) => h('option', { value: v, selected: v === refiFilters.status }, l)));
+  const search = h('input', { type: 'search', placeholder: 'Client, borrower or account…', 'aria-label': 'Search', value: refiFilters.q });
+  search.addEventListener('change', set('q'));
+  const csv = h('a.button.secondary', { href: `/api/refinances.csv?${new URLSearchParams(q)}`, download: '' }, 'Export CSV');
+  const add = h('button', { type: 'button', onclick: () => refinanceDialog() }, '+ Record refinance');
+  const tile = (l, v, sub) => h('div.tile', h('div.tile-label', l), h('div.tile-value', v), sub ? h('div.tile-sub', sub) : null);
+
+  // Opened from a notification link (#/reports?tab=refinances&open=ID), once.
+  const openId = Number(window.routeQuery?.get('open')) || null;
+  if (!openId) refiOpened = null;
+  else if (refiOpened !== openId) {
+    refiOpened = openId;
+    api(`/refinances/${openId}`).then((e) => refinanceDialog(e)).catch((err) => toast(err.message, 'error'));
+  }
+
+  return h('div',
+    pageHeader('Reports', await periodPicker(r.period, { allowAll: true }), ownerSel, csv, add),
+    tabs('refinances'),
+    h('div.filters.ir-filters', lenderSel, statusSel, search),
+    t.needs_review_count ? h('div.alert.warn-box', h('strong', `${t.needs_review_count} to check. `),
+      'These were recorded automatically when a refinance deal settled. Open each one, check both loans and set the status to Completed.') : null,
+    h('div.tiles',
+      tile('Internal refinances', String(t.count), `${t.completed_count} completed${t.in_progress_count ? ` · ${t.in_progress_count} in progress` : ''}`),
+      tile('New lending', money(t.new_volume), `replacing ${money(t.old_volume)}`),
+      tile('Within clawback period', String(t.within_clawback_count), t.clawback_amount ? `${money2(t.clawback_amount)} clawed back` : 'of the old lender'),
+      tile('Cashbacks', money(t.cashback), 'lender incentives recorded')),
+    r.flows.length ? h('section.card', h('h2', `Lender movements – ${r.period.label}`),
+      barList(r.flows.map((f) => ({ label: `${f.from} → ${f.to}`, value: f.count, note: money(f.volume) })), { format: (n) => `${n} client${n === 1 ? '' : 's'}` })) : null,
+    h('section.card',
+      h('div.card-head', h('h2', `Register – ${r.period.label}`), h('span.muted.small', 'Click a row to edit it')),
+      table([
+        { label: 'Date', value: (x) => date(x.switch_date) },
+        { label: 'Client', value: (x) => h('div', x.contact_id ? h('a', { href: `#/contacts/${x.contact_id}?tab=tracker` }, x.client_name) : x.client_name,
+          x.reason ? h('div.muted.small', x.reason) : null) },
+        { label: 'Existing loan', value: (x) => sideCell(x, 'old') },
+        { label: '', value: () => '→', class: 'ir-arrow' },
+        { label: 'New loan', value: (x) => sideCell(x, 'new') },
+        { label: 'Held', value: heldCell },
+        { label: 'Broker', value: (x) => x.new_broker_name || x.old_broker_name || '—' },
+        { label: 'Status', value: (x) => h('div', badge(x.status_label, STATUS_KIND[x.status]), x.source === 'auto' ? h('div.muted.small', 'auto') : null) },
+      ], r.rows, { onRow: (x) => refinanceDialog(x), empty: `No internal refinances in ${r.period.label}. Use "+ Record refinance" to add one, or choose "All dates".` })));
 }

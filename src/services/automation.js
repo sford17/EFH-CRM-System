@@ -231,7 +231,11 @@ function changeDealStage(dealId, toStage, userId, extra = {}) {
     body: `Stage changed: ${stageLabel(deal.stage)} → ${stageLabel(toStage)}`,
   });
   // A settled loan joins the client's mortgage tracker.
-  if (toStage === 'settled') require('./tracker').createFromDeal(dealId);
+  if (toStage === 'settled') {
+    require('./tracker').createFromDeal(dealId);
+    // Moving a client off a loan we arranged is logged as an internal refinance.
+    require('./internalRefinances').detectFromDeal(dealId);
+  }
   emit('deal.stage_changed', { dealId, from_stage: deal.stage, to_stage: toStage });
   return db.one('SELECT * FROM deals WHERE id = ?', dealId);
 }

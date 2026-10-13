@@ -616,3 +616,26 @@ tr.subtotal td { font-weight: 600; border-top: 2px solid var(--border); }
 .duty-notes { margin: .5rem 0; padding-left: 1.1rem; color: var(--text-2); display: grid; gap: .3rem; }
 .duty-compare { margin: .5rem 0; }
 .duty-compare summary { cursor: pointer; color: var(--accent); }
+
+/* Internal refinance register */
+dialog.modal.ir-dialog { width: min(1000px, calc(100vw - 32px)); }
+.ir-sides { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .5rem; align-items: start; }
+fieldset.ir-side { border: 1px solid var(--border); border-radius: 8px; padding: .5rem .8rem .8rem; margin: 0; min-width: 0; }
+fieldset.ir-side legend { font-weight: 600; padding: 0 .3rem; }
+fieldset.ir-side.old { background: var(--warn-soft); }
+fieldset.ir-side.new { background: var(--ok-soft); }
+.ir-arrow { align-self: center; font-size: 1.4rem; color: var(--text-2); text-align: center; }
+.ir-prefill { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; padding: .6rem .8rem; border-radius: 8px; background: var(--accent-soft); }
+.ir-prefill[hidden] { display: none; }
+.ir-client { margin: 0 0 .35rem; font-size: .9rem; }
+.ir-find input[type=search] { width: 100%; }
+.lender-pick { display: flex; gap: .5rem; }
+.lender-pick > * { flex: 1; min-width: 0; }
+.lender-pick input[hidden] { display: none; }
+.ir-cell .lender-tag { font-weight: 500; }
+.ir-filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.ir-form .actions .spacer { flex: 1; }
+@media (max-width: 760px) {
+  .ir-sides, .ir-prefill { grid-template-columns: 1fr; }
+  .ir-sides > .ir-arrow { transform: rotate(90deg); }
+}

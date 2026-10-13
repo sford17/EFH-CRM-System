@@ -28,6 +28,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
+| **Internal refinance register** | A record of every client you've moved from one of your loans to a new one, with the existing loan beside the new loan (borrowers, lender, account, product, amounts, rates, settlement and pay-out dates, broker), plus the reason, clawback and cashback. Every field is editable. It's added automatically when a refinance deal settles, and a CSV export is there for sale or trail-book records |
 | **Reports** | Running settlements by financial year (settled and expected, month by month, with client, lender, loan type, amount and commission), plus settlements by month, stage movement, lead-source conversion, lender split, partner performance, commission by month, lost reasons, average days to settle |
 | **Calculators** | Stamp duty for residential and commercial property in every state and territory (2026-27 rates, with owner-occupier and first home buyer concessions and foreign surcharges), repayments (P&I / IO), borrowing power (estimate), LVR & indicative LMI, refinance savings and break-even |
 | **Team** | Admin, broker and assistant roles, with notifications for automation alerts |
@@ -174,6 +175,31 @@ Every result links to that state's official calculator. Land titles registration
 - **Commission** is the upfront commission after any referral fee. For settled loans it comes from the commission ledger (✓ = received). For expected loans it's an estimate (≈) from the lender's upfront rate.
 
 Choose a single broker at the top to see just their loans, and use **Export CSV** to open the report in Excel.
+
+## Internal refinance register
+
+Use **Reports → Internal refinances** to keep a permanent record of clients you've moved from one of your loans to a new loan, usually with a new lender. This is the history a buyer of your business (or your aggregator) will ask for.
+
+**Each entry has two sides, side by side, and every field can be edited:**
+
+- **Existing loan (refinanced away):** lender, borrower(s), account number, product, loan type, rate type, loan amount, balance when refinanced, interest rate, original settlement date, the date it was discharged/paid out, and the broker who wrote it.
+- **New loan:** lender, borrower(s), account or application number, product, loan type, rate type, loan amount, interest rate, settlement date and broker.
+- **The rest:** the client name as you want it recorded, the status (*Needs review*, *In progress*, *Completed*), the reason (pick a common one or type your own), any clawback on the old loan, any lender cashback, and notes.
+
+**Adding one:** click **+ Record refinance**. You can also click **+ Internal refinance** on a client's *Mortgage tracker* tab. Find the client, then use *Fill the existing loan from* and *Fill the new loan from* to copy the details from their tracker loans and deals. Change anything you like. For a lender you no longer use, choose *Other* and type its name. For loans written before you used the CRM, just type everything in.
+
+**Added automatically:** when a deal with the purpose *Refinance* settles, and the client (or their partner) still has an active loan you arranged with a *different* lender, an entry is created with both sides filled in. Its status is *Needs review*, and you get a notification that opens it. If the client had several possible loans, the one secured by the same property (or else the largest) is chosen, and a note says so. Check the details and set the status to **Completed**. Tick *Mark the existing loan as "Refinanced"* to update the client's Mortgage tracker.
+
+**The report** uses the same period choices as the other report tabs, plus **All dates**. Each refinance is dated by the new loan's settlement date. It shows:
+
+- the number of refinances
+- the new lending and the balances it replaced
+- how many fell **within the old lender's clawback period** (worked out from the original settlement date and the lender's *clawback months* on the Lenders page)
+- the cashbacks recorded
+- a chart of **lender movements** (e.g. *Westpac → ANZ*)
+- the full register
+
+You can filter by broker, lender and status, or search by client, borrower or account number. **Export CSV** gives a spreadsheet with one row per refinance, with every old-loan and new-loan field, plus months held, the clawback date and the old loan's upfront commission.
 
 ## Google reviews
 
