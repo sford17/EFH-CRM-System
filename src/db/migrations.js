@@ -857,6 +857,24 @@ MIGRATIONS.push(
   `,
 );
 
+MIGRATIONS.push(
+  // 24. AI assistant conversations. `messages` is the conversation as sent to
+  // the model (append-only); `pending` holds actions waiting for approval.
+  `
+  CREATE TABLE ai_conversations (
+    id         INTEGER PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title      TEXT NOT NULL DEFAULT 'New conversation',
+    messages   TEXT NOT NULL DEFAULT '[]',
+    pending    TEXT,
+    usage      TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  CREATE INDEX idx_ai_conversations_user ON ai_conversations(user_id, updated_at);
+  `,
+);
+
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
 module.exports.addSmsDefaults = addSmsDefaults;

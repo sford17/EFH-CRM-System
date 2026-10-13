@@ -16,9 +16,11 @@ import { importPage } from './pages/import.js';
 import { reviewPage } from './pages/review.js';
 import { socialPage } from './pages/social.js';
 import { newslettersPage, newsletterPage } from './pages/newsletters.js';
+import { assistantPage } from './pages/assistant.js';
 
 const NAV = [
   ['#/', 'Dashboard', '◧'],
+  ['#/assistant', 'Assistant', '✧'],
   ['#/pipeline', 'Pipeline', '▤'],
   ['#/contacts', 'Contacts', '☺'],
   ['#/deals', 'Deals', '$'],
@@ -61,6 +63,8 @@ const ROUTES = [
   [/^\/reports$/, reportsPage],
   [/^\/calculators$/, calculatorsPage],
   [/^\/social$/, socialPage],
+  [/^\/assistant$/, assistantPage],
+  [/^\/assistant\/(\d+)$/, assistantPage],
   [/^\/newsletters$/, newslettersPage],
   [/^\/newsletters\/(\d+)$/, newsletterPage],
   [/^\/settings$/, settingsPage],
@@ -140,7 +144,7 @@ function shell() {
       h('div.user-box', h('div', h('strong', state.user.name), h('div.muted', state.user.role)),
         h('button.link', { type: 'button', onclick: logout }, 'Sign out'))),
     h('div.main',
-      h('header.topbar', menuBtn, h('div.search-box', search, results), bell),
+      h('header.topbar', menuBtn, h('div.search-box', search, results), h('a.button.secondary.small.ask-ai', { href: '#/assistant', title: 'Ask the AI assistant' }, '✧ Ask AI'), bell),
       h('main#view')),
   );
   refreshNotifications();

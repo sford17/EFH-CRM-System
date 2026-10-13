@@ -6,6 +6,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 
 | Area | What it does |
 | --- | --- |
+| **AI assistant** | Ask questions about your clients, deals, loans, tasks and reports in plain English, or give it tasks: create tasks, add notes, create contacts, update deals, email or text clients. It looks things up itself; anything that changes the CRM or contacts someone waits for your approval (emails and texts can be edited first) |
 | **Dashboard** | Open pipeline, settlements against a monthly target, commission, overdue tasks, upcoming finance/settlement/expiry dates, recent activity |
 | **Contacts** | Leads → prospects → clients, with owner, lead source, referral partner, tags, income and employment details, marketing opt-in, review date. Full activity timeline (calls, emails, meetings, notes). CSV export |
 | **Related contacts & households** | Link partners, family, guarantors and advisers. Couples who share finances see one combined mortgage tracker on both profiles, keep a shared address, become joint borrowers on new deals by default, and can have emails, templates and lending reviews addressed to one or both of them |
@@ -165,6 +166,33 @@ A few items couldn't be checked against the official calculators when they were 
 - the ACT investor rates.
 
 Every result links to that state's official calculator. Land titles registration fees and off-the-plan concessions (VIC, WA) aren't included.
+
+## AI assistant
+
+Open **Assistant** in the menu (or **✧ Ask AI** at the top of any page) and type a question or a task.
+
+**Questions** are answered from your CRM data, with links straight to the records, for example:
+- "Which clients have fixed rates ending in the next 90 days?"
+- "What's settling this month, and is anything overdue?"
+- "Summarise Mia Jones: her loans, her deals and what's outstanding."
+- "How are settlements and commission tracking this financial year?"
+- "What's the stamp duty on an $850k home in NSW for a first home buyer?" (it uses the CRM's calculators)
+- "What did the RBA do this month?" (it can search the web)
+
+**Tasks:** it can **create tasks**, **add notes** or logged calls to a client's timeline, **create contacts**, **update deals** (move stage, change dates, amount, rate or lender), and **email** or **text** clients.
+
+**You stay in control:**
+- Looking things up happens straight away.
+- Anything that changes the CRM or contacts someone appears as a card with **Approve** and **Decline**.
+- You can edit an email or text before approving it. The assistant is told what was actually sent.
+- Nothing happens until you press **Confirm**.
+- Moving a deal's stage runs that stage's automations, as it would if you moved it yourself. The card warns you about this.
+
+**How it works:**
+- The assistant acts as you: emails go from your mailbox with your signature, and tasks are assigned to you unless you say otherwise.
+- Conversations are private to each user and kept on the left so you can return to them.
+- It uses the Anthropic API key from Settings → AI. Each question costs a few cents (more for long conversations or web searches).
+- The details it looks at are sent to Anthropic to be processed.
 
 ## Monthly newsletter
 
