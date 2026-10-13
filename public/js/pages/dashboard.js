@@ -28,6 +28,7 @@ export async function dashboardPage() {
 
   return h('div',
     h('div.page-header', h('h1', `Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, ${state.user.name.split(' ')[0]}`)),
+    d.backup_warning ? h('div.alert.warn-box', h('strong', 'Backups: '), d.backup_warning, ' ', link('#/settings', 'Check Settings → Backups')) : null,
     h('div.tiles',
       tile('Open pipeline', `$${compact(d.pipeline.volume)}`, `${d.pipeline.count} deals`),
       tile('Settled this month', `$${compact(d.settled_month.volume)}`,

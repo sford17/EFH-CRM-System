@@ -74,6 +74,7 @@ function createApp() {
   const admin = require('./routes/admin');
   app.use('/api/users', admin.users);
   app.use('/api/settings', admin.settings);
+  app.use('/api/backups', auth.requireRole('admin'), require('./routes/backups'));
   app.use('/api/lenders', admin.lenders);
   app.use('/api/partners', admin.partners);
   app.use('/api/outlook', outlookRoutes.router);

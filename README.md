@@ -839,6 +839,40 @@ public/                single-page web app (no build step)
 test/                  API tests (node:test)
 ```
 
+## Backups
+
+The CRM backs itself up. Open **Settings → Backups** (admins only).
+
+**What's backed up:** each backup is a folder holding:
+- `crm.db`: all your clients, deals, uploaded documents and settings
+- `secret.key`: unlocks the saved passwords and connections (Outlook, ClickSend, the AI key…)
+
+Each copy is checked after it's made, and it's a single file that's safe to copy.
+
+**When:**
+- **Every day** at the time you choose (11pm by default). The computer must be on with the CRM running at that time, or the backup runs next time it is.
+- **Before every update.** When an update changes the database, a copy is made first, before anything changes.
+- **Whenever you press "Back up now".**
+
+**Where:** by default, a `backups` folder inside the `data` folder. That only protects against mistakes, not against losing the computer. **Choose a folder that syncs to the cloud**, such as `C:\Users\you\OneDrive\CRM Backups`, a Google Drive or Dropbox folder, or a USB drive you keep elsewhere. The CRM warns you while backups are only on this computer.
+
+**How many are kept:**
+- the last 14 days, plus the first backup of each of the last 12 months (both adjustable)
+- the last 5 backups made before updates
+- every manual backup, until you delete it yourself
+
+Folders the CRM didn't create are never touched.
+
+**If something goes wrong:** admins get a notification and an email when a nightly backup fails, and it's retried an hour later. The dashboard shows a warning when backups are off, failing, or haven't run for more than 3 days.
+
+**Restoring a backup:**
+1. Stop the CRM (close the window running `npm start`).
+2. In the `data` folder, rename `crm.db` to `crm-old.db` and `secret.key` to `secret-old.key`, just in case.
+3. Copy `crm.db` and `secret.key` from the backup folder into the `data` folder. Delete any `crm.db-wal` or `crm.db-shm` files left in the `data` folder.
+4. Start the CRM again (`npm start`).
+
+Backups contain your clients' personal and financial information. Keep the backup folder private, and only share it with people who should see that data.
+
 ## Security notes
 
 - Passwords are hashed with scrypt. Sessions use HttpOnly, SameSite=Strict cookies, and logins are rate-limited.
@@ -851,7 +885,7 @@ test/                  API tests (node:test)
 
 ## Updating to a new version
 
-Your data lives in the `data` folder: `crm.db` and `secret.key`. To update, download the new version, copy your old `data` folder into it, then run `npm install` and `npm start`. Database changes are applied automatically on start.
+Your data lives in the `data` folder: `crm.db` and `secret.key`. To update, download the new version, copy your old `data` folder into it, then run `npm install` and `npm start`. Database changes are applied automatically on start. A backup of your data is made automatically first (see [Backups](#backups)), so you can always go back.
 
 ## Disclaimer
 

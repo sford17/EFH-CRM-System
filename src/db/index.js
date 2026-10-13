@@ -21,6 +21,13 @@ function open(file = process.env.DB_FILE || path.join(__dirname, '..', '..', 'da
 function migrate() {
   const version = db.prepare('PRAGMA user_version').get().user_version;
   if (version >= MIGRATIONS.length) return;
+  // An update with database changes: keep a copy of the data first.
+  try {
+    const saved = require('../services/backups').beforeUpdate(dbFile, db, version);
+    if (saved) console.log(`Backed up your data before updating: ${saved}`);
+  } catch (err) {
+    console.error('Couldn\'t back up the data before updating:', err.message);
+  }
   // Foreign keys are off while upgrading so tables can be rebuilt (SQLite's
   // documented procedure), then checked before being switched back on.
   db.exec('PRAGMA foreign_keys = OFF');

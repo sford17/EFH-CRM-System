@@ -85,7 +85,19 @@ router.get('/dashboard', (req, res) => {
     req.user.id, new Date(Date.now() - 3600000).toISOString(), new Date(Date.now() + 8 * 86400000).toISOString(),
   );
   const target = Number(db.getSetting('monthly_settlement_target', 0)) || 0;
+  // Admins see a warning when backups are off or haven't worked lately.
+  let backupWarning = null;
+  if (req.user.role === 'admin') {
+    const b = require('../services/backups').settings();
+    const age = b.last_ok_at ? (Date.now() - Date.parse(b.last_ok_at)) / 86400000 : null;
+    const started = db.one('SELECT MIN(created_at) AS t FROM users').t;
+    const settled = started && (Date.now() - Date.parse(started)) / 86400000 > 2;
+    if (!b.enabled) backupWarning = 'Automatic backups are switched off.';
+    else if (b.last_error) backupWarning = `The last backup didn't work: ${b.last_error}`;
+    else if ((age === null && settled) || age > 3) backupWarning = age === null ? 'No backup has been made yet.' : `There's been no backup for ${Math.floor(age)} days.`;
+  }
   res.json({
+    backup_warning: backupWarning,
     pipeline, settled_month: settledMonth, by_stage: byStage, new_leads_month: newLeads,
     commission_month: commissionMonth, my_tasks: myTasks, overdue_tasks: overdue, key_dates: keyDates,
     recent_activity: recentActivity, settlement_target: target, appointments,
