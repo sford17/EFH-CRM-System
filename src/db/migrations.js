@@ -1148,6 +1148,10 @@ MIGRATIONS.push(
     UPDATE loan_borrowers SET position = -1 WHERE loan_id = NEW.id AND contact_id = NEW.co_borrower_id;
   END;
   `,
+  // 34. Trail commissions are no longer tracked
+  `
+  DELETE FROM commissions WHERE type = 'trail';
+  `,
 );
 
 module.exports = MIGRATIONS;

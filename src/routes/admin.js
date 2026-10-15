@@ -100,7 +100,7 @@ function simpleCrud(table, fields, { required = ['name'], list, label = 'Record'
 
 const lenders = simpleCrud(
   'lenders',
-  ['name', 'website', 'upfront_pct', 'trail_pct', 'clawback_months', 'notes', 'active'],
+  ['name', 'website', 'upfront_pct', 'clawback_months', 'notes', 'active'],
   {
     label: 'Lender',
     // Includes the primary BDM and the signed-in broker's own accreditation.

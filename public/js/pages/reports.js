@@ -102,7 +102,6 @@ export async function reportsPage() {
       h('section.card', h('h2', 'Commission by month'), table([
         { label: 'Month', value: (m) => monthName(m.month) },
         { label: 'Upfront', value: (m) => money2(m.upfront), class: 'num' },
-        { label: 'Trail', value: (m) => money2(m.trail), class: 'num' },
         { label: 'Deductions', value: (m) => money2(m.deductions), class: 'num' },
         { label: 'Received', value: (m) => money2(m.received), class: 'num' },
       ], r.commission_by_month, { empty: 'No commission in this period.' })),

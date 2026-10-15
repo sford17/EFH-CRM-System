@@ -52,7 +52,7 @@ export async function lendersPage() {
       },
       { label: 'Open deals', value: (l) => String(l.open_deals), class: 'num' },
       { label: 'Settled', value: (l) => `${l.settled_count} · ${money(l.settled_volume)}`, class: 'num' },
-      { label: 'Upfront / trail', value: (l) => `${pct(l.upfront_pct)} / ${pct(l.trail_pct)}`, class: 'num' },
+      { label: 'Upfront', value: (l) => pct(l.upfront_pct), class: 'num' },
     ], shown, { onRow: (l) => { location.hash = `#/lenders/${l.id}`; }, empty: 'No lenders match.' }));
   };
   const box = h('input', { type: 'search', placeholder: 'Search lender, BDM or accreditation number…', value: search, 'aria-label': 'Search lenders' });
@@ -100,7 +100,6 @@ export async function lenderPage(id) {
         accreditationCard(l),
         h('section.card', h('h2', 'Commission & notes'), h('dl.info',
           info('Upfront', pct(l.upfront_pct)),
-          info('Trail', `${pct(l.trail_pct)} p.a.`),
           info('Clawback', `${l.clawback_months} months`),
           info('Logo', logoCell(l))),
         l.notes ? h('div.background', h('h3', 'Notes'), h('p.pre', l.notes)) : null)),

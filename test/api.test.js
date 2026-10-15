@@ -83,8 +83,8 @@ test('deal lifecycle: checklist, stage automations, settlement commissions', asy
   const upfront = d.commissions.find((x) => x.type === 'upfront');
   assert.equal(upfront.amount, 3250); // 0.65% of 500k
   assert.equal(d.commissions.find((x) => x.type === 'referral_fee').amount, -325);
-  assert.equal(d.commissions.filter((x) => x.type === 'trail').length, 12);
-  assert.equal(d.commissions.find((x) => x.type === 'trail').amount, 62.5); // 0.15% / 12
+  assert.equal(d.commissions.filter((x) => x.type === 'trail').length, 0, 'trail isn\'t tracked');
+  assert.equal((await api.post('/commissions', { deal_id: deal.id, type: 'trail', amount: 50 })).status, 400);
 
   const c = (await api.get(`/contacts/${contact.id}`)).data;
   assert.equal(c.status, 'client');

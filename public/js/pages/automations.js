@@ -33,7 +33,7 @@ const ACTIONS = {
   add_tag: { label: 'Add a tag', icon: '🏷', group: 'update', hint: 'Tag the contact, e.g. "first home buyer"' },
   remove_tag: { label: 'Remove a tag', icon: '🏷', group: 'update', hint: 'Take a tag off the contact' },
   create_document_checklist: { label: 'Add standard document checklist', icon: '📋', group: 'admin', hint: 'The standard list of documents on the deal' },
-  generate_commissions: { label: 'Generate commission entries', icon: '$', group: 'admin', hint: 'Upfront and trail entries from the lender\'s rates' },
+  generate_commissions: { label: 'Generate commission entries', icon: '$', group: 'admin', hint: 'Upfront commission (and any referral fee) from the lender\'s rate' },
 };
 const GROUPS = { talk: 'Talk to people', task: 'Tasks and notes', update: 'Update the record', admin: 'Deal admin' };
 const actionLabel = (type) => ACTIONS[type]?.label || label(type);

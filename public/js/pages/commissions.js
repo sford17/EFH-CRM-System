@@ -20,7 +20,7 @@ export async function commissionsPage() {
     const { rows } = await api('/deals?stage=settled');
     formModal('Record commission / clawback', [
       { name: 'deal_id', label: 'Deal', type: 'select', required: true, full: true, options: rows.map((d) => [d.id, d.title]) },
-      { name: 'type', label: 'Type', type: 'select', required: true, options: ['upfront', 'trail', 'clawback', 'referral_fee', 'other'].map((t) => [t, label(t)]) },
+      { name: 'type', label: 'Type', type: 'select', required: true, options: ['upfront', 'clawback', 'referral_fee', 'other'].map((t) => [t, label(t)]) },
       { name: 'amount', label: 'Amount ($) – clawbacks are saved as negative', type: 'number', required: true },
       { name: 'period', label: 'Period (YYYY-MM)', default: todayStr().slice(0, 7) },
       { name: 'status', label: 'Status', type: 'select', required: true, options: [['expected', 'Expected'], ['received', 'Received'], ['paid', 'Paid']], default: 'received' },
@@ -36,7 +36,7 @@ export async function commissionsPage() {
       h('div.tile', h('div.tile-label', 'Received (filtered)'), h('div.tile-value', money(data.totals.received))),
       h('div.tile', h('div.tile-label', 'Deals in clawback window'), h('div.tile-value', String(data.clawback_exposure.length)),
         h('div.tile-sub', `${money(data.clawback_exposure.reduce((s, d) => s + d.upfront, 0))} upfront at risk`))),
-    h('div.filters', sel('status', 'All statuses', ['expected', 'received', 'paid', 'cancelled']), sel('type', 'All types', ['upfront', 'trail', 'clawback', 'referral_fee', 'other']), month('from', 'From month'), month('to', 'To month')),
+    h('div.filters', sel('status', 'All statuses', ['expected', 'received', 'paid', 'cancelled']), sel('type', 'All types', ['upfront', 'clawback', 'referral_fee', 'other']), month('from', 'From month'), month('to', 'To month')),
     h('section.card', h('h2', 'Ledger'), table([
       { label: 'Period', value: (c) => c.period || '—' },
       { label: 'Deal', value: (c) => h('a', { href: `#/deals/${c.deal_id}` }, c.deal_title) },

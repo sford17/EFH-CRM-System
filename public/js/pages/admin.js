@@ -32,7 +32,6 @@ export const lenderFields = [
   { name: 'name', label: 'Lender', required: true },
   { name: 'website', label: 'Website (for fetching a logo)', placeholder: 'westpac.com.au' },
   { name: 'upfront_pct', label: 'Upfront commission (% of loan)', type: 'number', step: 0.01, required: true, default: 0.65 },
-  { name: 'trail_pct', label: 'Trail commission (% p.a.)', type: 'number', step: 0.01, required: true, default: 0.15 },
   { name: 'clawback_months', label: 'Clawback period (months)', type: 'number', step: 1, required: true, default: 24 },
   { name: 'active', label: 'Active', type: 'checkbox', default: true },
   { name: 'notes', label: 'Notes (policy, turnaround times…)', type: 'textarea', full: true },
