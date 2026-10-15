@@ -25,6 +25,7 @@ function createSession(userId) {
   const expires = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
   db.run('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)', token, userId, expires);
   db.run('DELETE FROM sessions WHERE expires_at < ?', new Date().toISOString());
+  db.run('UPDATE users SET last_login_at = ? WHERE id = ?', new Date().toISOString(), userId);
   return { token, expires };
 }
 

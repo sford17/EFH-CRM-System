@@ -841,6 +841,18 @@ public/                single-page web app (no build step)
 test/                  API tests (node:test)
 ```
 
+## Adding your team
+
+In **Settings → Team**, click **+ Add user**. Enter their name, work email and role (Admin, Broker or Assistant), and leave **Email them a welcome link** ticked.
+
+- **The welcome email** comes from your Outlook with a **Choose your password** button. The link works once and lasts 7 days. It also lists their first steps: two-factor sign-in, connecting their Outlook and (for brokers) their mobile for texts.
+- **They click the button**, choose a password and are signed in. If two-factor sign-in is required, the CRM walks them through setting it up straight away.
+- **The Team list** shows when each person last signed in, or *Not yet (welcome email sent …)*. Use **✉ Send again** if the email went astray; the earlier link then stops working.
+- **Forgotten password:** for someone who has signed in before, the button is **✉ Password link**. It emails a link to choose a new password, which lasts 24 hours. Their two-factor sign-in stays the same.
+- **If the email can't be sent** (for example, your Outlook isn't connected), the CRM shows you the link to pass on by text or Teams instead.
+
+Nobody's password is ever emailed, and the link is removed from the Outbox once it's sent. You can still set a password for someone yourself if you prefer.
+
 ## Two-factor sign-in
 
 After your password, the CRM asks for a 6-digit code from an authenticator app on your phone, so a stolen or guessed password isn't enough to get in. **Turn it on before the CRM goes online.**

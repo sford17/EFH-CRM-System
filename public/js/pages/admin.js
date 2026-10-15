@@ -1,4 +1,4 @@
-import { api, h, pageHeader, table, badge, money, pct, attempt, confirmDialog, label, formModal, state, loadLookups, field, readForm, opts, lenderLogo, toast } from '../core.js';
+import { api, h, pageHeader, table, badge, money, pct, attempt, confirmDialog, label, formModal, state, loadLookups, field, readForm, opts, lenderLogo, toast, modal, dateTime } from '../core.js';
 import { refresh } from './forms.js';
 import { outlookSettingsCard } from './email.js';
 import { smsSettingsCard } from './sms.js';
@@ -149,15 +149,41 @@ export async function settingsPage() {
     { name: 'email', label: 'Email', type: 'email', required: true },
     { name: 'phone', label: 'Phone' },
     { name: 'role', label: 'Role', type: 'select', required: true, default: 'broker', options: [['admin', 'Admin'], ['broker', 'Broker'], ['assistant', 'Assistant / processor']] },
-    { name: 'password', label: isNew ? 'Password (8+ chars)' : 'New password (leave blank to keep)', type: 'password', required: isNew },
-    ...(isNew ? [] : [{ name: 'active', label: 'Active', type: 'checkbox' }]),
+    ...(isNew
+      ? [{ name: 'welcome', label: 'Email them a welcome link to choose their own password and get started (recommended)', type: 'checkbox', default: true },
+        { name: 'password', label: 'Or set a password for them (8+ chars)', type: 'password' }]
+      : [{ name: 'password', label: 'New password (leave blank to keep)', type: 'password' },
+        { name: 'active', label: 'Active', type: 'checkbox' }]),
   ];
   const editUser = (u) => formModal(u ? `Edit ${u.name}` : 'Add user', userFields(!u), u || {}, async (v) => {
-    if (!v.password) delete v.password;
-    await attempt(() => api(u ? `/users/${u.id}` : '/users', { method: u ? 'PATCH' : 'POST', body: v }), 'User saved');
+    const { welcome, ...body } = v;
+    if (!body.password) delete body.password;
+    if (!u && !welcome && !body.password) throw new Error('Tick the welcome email, or set a password for them');
+    const saved = await attempt(() => api(u ? `/users/${u.id}` : '/users', { method: u ? 'PATCH' : 'POST', body }), welcome ? null : 'User saved');
     await loadLookups(true);
     refresh();
+    if (!u && welcome) await sendWelcome(saved, { ask: false });
   });
+
+  // Emails the welcome (or new password) link; if it can't be emailed, shows the link to pass on.
+  const sendWelcome = async (u, { ask = true } = {}) => {
+    const reset = Boolean(u.last_login_at);
+    if (ask && !await confirmDialog(reset
+      ? `Email ${u.name} a link to choose a new password? Their current password stops working once they use it.`
+      : `Email ${u.name} (${u.email}) a welcome link to choose their password and get started?`)) return;
+    try {
+      const r = await attempt(() => api(`/users/${u.id}/welcome`, { method: 'POST', body: {} }));
+      if (r.status === 'sent') toast(`${r.kind === 'welcome' ? 'Welcome email' : 'Password link'} sent to ${r.to}`);
+      else {
+        const why = r.status === 'logged' ? 'No Outlook or email server is connected for you, so it wasn\'t emailed.' : `It couldn't be emailed${r.error ? ` (${r.error})` : ''}.`;
+        modal('Pass this link on yourself', h('div',
+          h('p', why, ` Send ${u.name} this link another way, e.g. by text or Teams. It works once and expires ${dateTime(r.expires_at)}.`),
+          h('p', h('code.copy', r.link)),
+          h('div.actions', h('button', { type: 'button', onclick: () => navigator.clipboard?.writeText(r.link).then(() => toast('Copied')) }, 'Copy link'))));
+      }
+      refresh();
+    } catch { /* toasted */ }
+  };
 
   const pwFields = [
     { name: 'current_password', label: 'Current password', type: 'password', required: true },
@@ -189,6 +215,14 @@ export async function settingsPage() {
         { label: 'Email', value: (u) => u.email },
         { label: 'Role', value: (u) => label(u.role) },
         { label: 'Status', value: (u) => badge(u.active ? 'active' : 'inactive', u.active ? 'ok' : '') },
+        { label: 'Last signed in', value: (u) => (u.last_login_at ? dateTime(u.last_login_at)
+          : h('span.muted', u.link_sent_at ? `Not yet (welcome email sent ${dateTime(u.link_sent_at)})` : 'Not yet')) },
+        ...(isAdmin ? [{
+          label: '', value: (u) => (u.active && u.id !== state.user.id
+            ? h('button.secondary.small', { type: 'button', title: u.last_login_at ? 'Email them a link to choose a new password' : 'Email them a link to choose their password and get started', onclick: () => sendWelcome(u) },
+              u.last_login_at ? '✉ Password link' : (u.link_sent_at ? '✉ Send again' : '✉ Welcome email'))
+            : null),
+        }] : []),
       ], users, { onRow: isAdmin ? editUser : undefined })),
     h('section.card', h('h2', 'My password'), pwForm),
     await mfaCard().catch(() => null));

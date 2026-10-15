@@ -102,6 +102,18 @@ router.post('/change-password', auth.requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- Welcome / password links (no sign-in needed: the one-time link is the proof) -------------------
+router.get('/welcome/:token', (req, res) => res.json(require('../services/invites').describe(req.params.token)));
+router.post('/welcome/:token', (req, res) => {
+  const { user, needsCode } = require('../services/invites').accept(req.params.token, req.body?.password);
+  failures.delete(user.email.toLowerCase());
+  // Someone who already uses two-factor still needs their code.
+  if (needsCode) return res.json({ mfa_required: true, challenge: mfa.challenge(user.id) });
+  const session = auth.createSession(user.id);
+  auth.setSessionCookie(res, session.token, session.expires);
+  res.json({ user });
+});
+
 // ---- Two-factor set-up (for yourself) and admin controls -------------------------------------------
 router.get('/2fa', auth.requireSession, (req, res) => res.json(mfa.status(req.user.id)));
 router.post('/2fa/start', auth.requireSession, async (req, res) => res.json(await mfa.start(req.user.id)));

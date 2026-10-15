@@ -1046,6 +1046,21 @@ MIGRATIONS.push(
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   );
   `,
+  // 32. Welcome emails for new team members (and password reset links)
+  `
+  ALTER TABLE users ADD COLUMN last_login_at TEXT;
+  UPDATE users SET last_login_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE id IN (SELECT user_id FROM sessions) OR totp_enabled_at IS NOT NULL;
+  CREATE TABLE user_invites (
+    token_hash TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL DEFAULT 'welcome' CHECK (kind IN ('welcome','reset')),
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    expires_at TEXT NOT NULL,
+    used_at    TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  `,
 );
 
 module.exports = MIGRATIONS;
