@@ -1172,6 +1172,21 @@ MIGRATIONS.push(
   (db) => {
     rebuildWithCheck(db, 'loans', "'commercial','personal'", "'commercial','business_loan','personal'");
     rebuildWithCheck(db, 'deals', "'commercial','other'", "'commercial','business_loan','other'");
+  },  // 36. A loan type on each deal (home, commercial, business, SMSF…) for reporting; SMSF loans on the tracker
+  (db) => {
+    rebuildWithCheck(db, 'loans', "'business_loan','personal'", "'business_loan','smsf','personal'");
+    db.run('ALTER TABLE deals ADD COLUMN loan_type TEXT');
+    db.run(`UPDATE deals SET loan_type = CASE loan_purpose WHEN 'investment' THEN 'investment_loan' WHEN 'commercial' THEN 'commercial'
+      WHEN 'business_loan' THEN 'business_loan' WHEN 'construction' THEN 'construction' ELSE 'home_loan' END`);
+    // Deals added without one (imports, fact finds…) get the usual type for their purpose.
+    db.run(`CREATE TRIGGER deals_loan_type_ai AFTER INSERT ON deals WHEN NEW.loan_type IS NULL BEGIN
+      UPDATE deals SET loan_type = CASE NEW.loan_purpose WHEN 'investment' THEN 'investment_loan' WHEN 'commercial' THEN 'commercial'
+        WHEN 'business_loan' THEN 'business_loan' WHEN 'construction' THEN 'construction' ELSE 'home_loan' END WHERE id = NEW.id;
+    END`);
+    // Settled deals: the loan on the tracker knows best.
+    db.run(`UPDATE deals SET loan_type = (SELECT n.loan_type FROM loans n WHERE n.deal_id = deals.id LIMIT 1)
+      WHERE EXISTS (SELECT 1 FROM loans n WHERE n.deal_id = deals.id AND n.loan_type IN
+        ('home_loan','investment_loan','commercial','business_loan','smsf','construction','bridging','line_of_credit','car','personal'))`);
   },
 );
 

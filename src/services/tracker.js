@@ -70,7 +70,8 @@ function createFromDeal(dealId, { importId = null } = {}) {
     co_borrower_id: deal.co_borrower_id,
     deal_id: deal.id,
     lender_id: deal.lender_id,
-    loan_type: deal.loan_purpose === 'investment' ? 'investment_loan'
+    loan_type: deal.loan_type && deal.loan_type !== 'other' ? deal.loan_type
+      : deal.loan_purpose === 'investment' ? 'investment_loan'
       : deal.loan_purpose === 'construction' ? 'construction'
         : deal.loan_purpose === 'commercial' ? 'commercial'
           : deal.loan_purpose === 'business_loan' ? 'business_loan' : 'home_loan',

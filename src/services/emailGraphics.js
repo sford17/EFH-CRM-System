@@ -31,7 +31,7 @@ const GRAPHICS = [
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const compact = (n) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/\.?0+$/, '')}m` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : money(n));
 const pct = (n, dp = 1) => (n === null || n === undefined ? '—' : `${Number(n).toFixed(dp).replace(/\.0+$/, '')}%`);
-const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP', construction: 'Construction loan', personal: 'Personal loan', car: 'Car loan', bridging: 'Bridging loan', business_loan: 'Business loan', commercial: 'Commercial loan' };
+const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP', construction: 'Construction loan', personal: 'Personal loan', car: 'Car loan', bridging: 'Bridging loan', business_loan: 'Business loan', smsf: 'SMSF loan', commercial: 'Commercial loan' };
 const loanLabel = (t) => LOAN_LABELS[t] || 'Loan';
 const shortAddress = (a) => String(a || '').split(',')[0];
 const rateText = (l) => (l.interest_rate ? `${pct(l.interest_rate, 2)} ${l.rate_type === 'fixed' ? 'fixed' : l.rate_type === 'split' ? 'split' : 'variable'}` : '');

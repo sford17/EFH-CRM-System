@@ -111,7 +111,7 @@ function suggestions(s, reviewDate = today()) {
 // Blocks: heading, text (commentary with bullets), tiles, table, diagram, note.
 
 const pct = (n) => (n === null || n === undefined ? '–' : `${n}%`);
-const typeLabel = (t) => ({ home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP', business_loan: 'Business loan' }[t]
+const typeLabel = (t) => ({ home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP', business_loan: 'Business loan', smsf: 'SMSF loan' }[t]
   || String(t).replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()));
 const titleCase = (t) => String(t || '').replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 

@@ -3,7 +3,7 @@ import {
   label, userOptions, todayStr, relDays, opts, dateTime, lenderTag, lenderLogo,
 } from '../core.js';
 import { borrowersFieldset, entityBadge } from './borrowers.js';
-import { dealFields, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
+import { dealFields, linkLoanType, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard, composeDialog } from './email.js';
 import { partiesCard } from './parties.js';
 import { emailLenderDialog } from './lenders.js';
@@ -174,10 +174,10 @@ export async function dealPage(id) {
   const deal = await api(`/deals/${id}`);
   const edit = async () => {
     const who = await borrowersFieldset({ mainId: deal.contact_id, coIds: deal.co_borrower_ids, chooseMain: true });
-    formModal(`Edit ${deal.title}`, dealFields(), deal, async (v) => {
+    linkLoanType(formModal(`Edit ${deal.title}`, dealFields(), deal, async (v) => {
       await attempt(() => api(`/deals/${id}`, { method: 'PATCH', body: { ...v, ...who.read() } }), 'Saved');
       refresh();
-    }, { before: who.el });
+    }, { before: who.el }));
   };
   const remove = async () => {
     if (!(await confirmDialog(`Delete "${deal.title}"? Its tasks, documents and commissions will also be removed.`))) return;
@@ -211,6 +211,7 @@ export async function dealPage(id) {
       h('div.col-side',
         h('section.card', h('h2', 'Loan'), h('dl.info',
           info('Purpose', label(deal.loan_purpose)),
+          info('Loan type', state.meta.loan_types?.find((t) => t.key === deal.loan_type)?.label),
           info('Property', deal.property_address),
           info('Property value', deal.property_value ? money(deal.property_value) : null),
           info('Loan amount', deal.loan_amount ? money(deal.loan_amount) : null),

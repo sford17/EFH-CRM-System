@@ -530,6 +530,23 @@ Stamp duty and LMI are estimates: type over either one to use your own figure, a
 
 Choose a single broker at the top to see just their loans, and use **Export CSV** to open the report in Excel.
 
+## Loan types report
+
+Every deal has a **Loan type**: Home loan, Investment loan, Commercial loan, Business loan, SMSF loan, Construction loan, Bridging loan, Line of credit, Car / asset finance, Personal loan or Other.
+- It's chosen on the New deal and Edit deal forms, next to *Loan purpose*. Picking a purpose sets the usual type (e.g. Investment → Investment loan) until you choose one yourself.
+- Existing deals were given a type from their purpose, or from their loan on the tracker once settled.
+- When a deal settles, its loan goes onto the mortgage tracker with the same type.
+
+**Reports → Loan types** (for a financial year, calendar year or custom dates, for everyone or one broker) shows:
+- **Totals:** volume and number of loans settled, commission (upfront, after referral fees), and the biggest loan type.
+- **Settled by loan type:** a chart and table with loans, volume, share, average loan size and commission for each type.
+- **Month by month:** loans and volume for each type, each month.
+- **In the pipeline now:** open deals by type.
+- **Your loan book:** active loans you arranged on your clients' mortgage trackers, by type, with the amount owing.
+- **Export CSV:** every settled loan in the period with its type, purpose, client, lender, amount, commission and broker.
+
+The Settlements report shows the type too, e.g. *Home loan · Refinance*. SMSF loans aren't sent to Quickli, because they're the super fund's debt, not the clients'; you'll see a note when you send a scenario.
+
 ## Running costs (Claude and SMS)
 
 **Reports → Running costs** shows what the CRM's AI features and text messages have cost: this month, the chosen period and a running total since you started, plus a month-by-month table and chart.

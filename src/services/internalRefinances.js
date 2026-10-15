@@ -10,7 +10,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const STATUSES = { needs_review: 'Needs review', in_progress: 'In progress', completed: 'Completed' };
 const LOAN_TYPES = {
   home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', construction: 'Construction',
-  bridging: 'Bridging', commercial: 'Commercial', business_loan: 'Business loan', personal: 'Personal', car: 'Car', other: 'Other',
+  bridging: 'Bridging', commercial: 'Commercial', business_loan: 'Business loan', smsf: 'SMSF loan', personal: 'Personal', car: 'Car', other: 'Other',
 };
 const PURPOSE_TYPE = { investment: 'investment_loan', construction: 'construction', commercial: 'commercial', business_loan: 'business_loan' };
 const SIDE = ['lender_id', 'lender_name', 'borrowers', 'account_number', 'product', 'loan_type', 'loan_amount', 'interest_rate', 'rate_type', 'settlement_date', 'broker_id', 'loan_id'];

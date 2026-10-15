@@ -179,6 +179,18 @@ router.get('/reports/settlements.csv', (req, res) => {
   res.send(require('../csv').stringify(settlementReport.csvRows(r)));
 });
 
+// ---- Loan types (home, commercial, business, SMSF…) ------------------------------
+const loanTypeReport = require('../services/loanTypeReport');
+router.get('/reports/loan-types', (req, res) => res.json(loanTypeReport.report(settlementArgs(req.query))));
+router.get('/reports/loan-types.csv', (req, res) => {
+  const args = settlementArgs(req.query);
+  const p = args.period;
+  const tag = p.type === 'fy' ? `FY${String(p.fy).slice(2)}` : p.type === 'cy' ? String(p.year) : `${p.from}-to-${p.to}`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="loan-types-${tag}.csv"`);
+  res.send(require('../csv').stringify(loanTypeReport.csvRows(args), loanTypeReport.CSV_COLUMNS));
+});
+
 // ---- Internal refinance register ------------------------------------------------
 const refinances = require('../services/internalRefinances');
 const refinanceArgs = (q) => ({

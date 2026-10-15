@@ -348,6 +348,9 @@ function buildScenario(dealId) {
       });
       if (secIds.length) links.push({ id: `crm-link-loan-${n.id}`, which_security_ids: secIds, which_existing_home_loan_ids: [`crm-loan-${n.id}`] });
       if (!n.interest_rate) warnings.push(`No interest rate on the ${n.lender_display} loan.`);
+    } else if (n.loan_type === 'smsf') {
+      // Held by the super fund, not the applicants personally.
+      warnings.push(`The ${n.lender_display} SMSF loan isn't sent: it's the super fund's debt. Add it in Quickli if the lender wants it counted.`);
     } else if (n.loan_type === 'hecs') {
       const owner = applicants.find((a) => a.id === n.contact_id) || applicants[0];
       hecs.set(owner.id, (hecs.get(owner.id) || 0) + (num(n.balance) || 0));

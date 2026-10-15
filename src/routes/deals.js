@@ -8,7 +8,7 @@ const { listEmails } = require('./outlook');
 const commissions = require('../services/commissions');
 const parties = require('../services/parties');
 const { lvr } = require('../services/templating');
-const { STAGES, STAGE_KEYS } = require('../constants');
+const { STAGES, STAGE_KEYS, LOAN_TYPE_KEYS, loanTypeForPurpose } = require('../constants');
 const { nowIso, HttpError } = require('../util');
 const { pick, requireFields, notFound, intParam, like, safeLink } = require('./helpers');
 
@@ -17,7 +17,7 @@ const borrowers = require('../services/borrowers');
 const router = express.Router();
 
 const FIELDS = [
-  'title', 'contact_id', 'co_borrower_id', 'loan_purpose', 'property_address', 'property_value', 'loan_amount',
+  'title', 'contact_id', 'co_borrower_id', 'loan_purpose', 'loan_type', 'property_address', 'property_value', 'loan_amount',
   'deposit', 'lender_id', 'product_name', 'interest_rate', 'rate_type', 'fixed_expiry_date', 'loan_term_years',
   'repayment_type', 'priority', 'pre_approval_expiry', 'finance_due_date', 'settlement_date', 'application_ref',
   'lost_reason', 'owner_id', 'referral_partner_id',
@@ -32,6 +32,10 @@ const SELECT = `
   LEFT JOIN lenders l ON l.id = d.lender_id
   LEFT JOIN users u ON u.id = d.owner_id
   LEFT JOIN referral_partners p ON p.id = d.referral_partner_id`;
+
+function checkLoanType(row) {
+  if (row.loan_type && !LOAN_TYPE_KEYS.includes(row.loan_type)) throw new HttpError(400, 'Unknown loan type');
+}
 
 const withLvr = (d) => (d ? { ...d, lvr: lvr(d) } : d);
 
@@ -107,6 +111,8 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   const row = pick(req.body, FIELDS);
   requireFields(row, ['contact_id']);
+  checkLoanType(row);
+  if (!row.loan_type) row.loan_type = loanTypeForPurpose(row.loan_purpose);
   const contact = notFound(db.one('SELECT * FROM contacts WHERE id = ?', row.contact_id), 'Contact');
   const stage = req.body.stage && STAGE_KEYS.includes(req.body.stage) ? req.body.stage : 'lead';
   if (!row.title) row.title = `${contact.first_name} ${contact.last_name || ''} – ${(row.loan_purpose || 'purchase').replace('_', ' ')}`.replace(/\s+/g, ' ');
@@ -134,6 +140,8 @@ router.patch('/:id', (req, res) => {
   const before = notFound(db.one('SELECT * FROM deals WHERE id = ?', id), 'Deal');
   const row = pick(req.body, FIELDS);
   if (row.contact_id === null) throw new HttpError(400, 'A deal must have a borrower');
+  checkLoanType(row);
+  if (row.loan_type === null) row.loan_type = loanTypeForPurpose(row.loan_purpose || before.loan_purpose);
   const co = borrowers.fromBody(req.body);
   delete row.co_borrower_id;
   db.transaction(() => {

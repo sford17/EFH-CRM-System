@@ -69,6 +69,7 @@ export function entityTypeSwitch(type, onChange) {
 export const dealFields = () => [
   { name: 'title', label: 'Deal name (auto if blank)', full: true },
   { name: 'loan_purpose', label: 'Loan purpose', type: 'select', options: opts(LOAN_PURPOSES), required: true, default: 'purchase' },
+  { name: 'loan_type', label: 'Loan type', type: 'select', options: () => (state.meta?.loan_types || []).map((t) => [t.key, t.label]), required: true, default: 'home_loan' },
   { name: 'priority', label: 'Priority', type: 'select', options: opts(['low', 'normal', 'high']), required: true, default: 'normal' },
   { name: 'property_address', label: 'Security property address', full: true },
   { name: 'property_value', label: 'Property value ($)', type: 'number' },
@@ -88,6 +89,19 @@ export const dealFields = () => [
   { name: 'owner_id', label: 'Broker', type: 'select', options: userOptions },
   { name: 'referral_partner_id', label: 'Referral partner', type: 'select', options: partnerOptions },
 ];
+
+// The loan type follows the purpose (investment → investment loan…) until it's chosen by hand.
+const PURPOSE_TYPE = { investment: 'investment_loan', commercial: 'commercial', business_loan: 'business_loan', construction: 'construction' };
+export function linkLoanType(dialog) {
+  const form = dialog.querySelector('form');
+  const purpose = form?.elements.loan_purpose;
+  const type = form?.elements.loan_type;
+  if (!purpose || !type) return dialog;
+  let chosen = false;
+  type.addEventListener('change', () => { chosen = true; });
+  purpose.addEventListener('change', () => { if (!chosen) type.value = PURPOSE_TYPE[purpose.value] || 'home_loan'; });
+  return dialog;
+}
 
 export const taskFields = () => [
   { name: 'title', label: 'Task', required: true, full: true },
@@ -119,12 +133,12 @@ export async function newDeal(contactId, values = {}) {
   const partner = contactId ? (await api(`/contacts/${contactId}/household`)).rows.find((m) => m.id !== Number(contactId)) : null;
   const who = await borrowersFieldset({ mainId: contactId || null, coIds: partner ? [partner.id] : [], chooseMain: !contactId });
   const parties = partiesFieldset();
-  formModal('New deal', fields, values, async (v) => {
+  linkLoanType(formModal('New deal', fields, values, async (v) => {
     const body = { ...v, contact_id: contactId, ...who.read(), parties: parties.read() };
     const d = await attempt(() => api('/deals', { method: 'POST', body }), 'Deal created');
     if (body.parties.some((p) => p.new_partner)) await loadLookups(true);
     location.hash = `#/deals/${d.id}`;
-  }, { extra: parties.el, before: who.el });
+  }, { extra: parties.el, before: who.el }));
 }
 
 export function newTask(context = {}) {

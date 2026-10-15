@@ -57,7 +57,7 @@ test('settled and expected deals, by month, with commission', async () => {
   const mia = thisMonth.settled.find((d) => d.client === 'Mia Jones & Tom Jones');
   assert.ok(mia, 'joint borrowers named');
   assert.equal(mia.lender_name, 'Westpac');
-  assert.equal(mia.loan_type, 'Purchase');
+  assert.equal(mia.loan_type, 'Home loan · Purchase');
   assert.equal(mia.rate_type, 'fixed');
   assert.equal(mia.loan_amount, 600000);
   assert.equal(mia.commission_upfront, 3900);
@@ -146,7 +146,7 @@ test('CSV export', async () => {
   const text = await res.text();
   const lines = text.split('\r\n');
   assert.match(lines[0], /^Month,Status,Settlement date,Client,Lender,Loan type,Rate type,Loan amount,Upfront commission,Referral fee,Net commission,Commission status,Stage,Broker,Deal$/);
-  assert.ok(lines.some((l) => /,Settled,.*Mia Jones & Tom Jones,Westpac,Purchase,fixed,600000,3900,780,3120,received,/.test(l)));
+  assert.ok(lines.some((l) => /,Settled,.*Mia Jones & Tom Jones,Westpac,Home loan · Purchase,fixed,600000,3900,780,3120,received,/.test(l)));
   assert.ok(lines.some((l) => /^No date yet,Expected,,Liam Wilson,/.test(l)));
   assert.ok(lines.some((l) => /Expected \(overdue\),.*Zoe Clarke/.test(l)));
 });
