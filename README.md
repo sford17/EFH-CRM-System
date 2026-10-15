@@ -800,6 +800,18 @@ Each automation has three parts:
    - add the document checklist
    - generate commissions
 
+### Changing an automation (the diagram)
+
+Click an automation to see it as a diagram, read top to bottom: **When** → **Only if** → each step in order → **End**. The Automations list shows the same flow in a single line under each name.
+
+- **Change a step:** click it. Its settings open in the panel on the right (on a phone, just below the step). The diagram updates as you type.
+- **Add a step:** click a **+** between two steps (or **Add another step** at the bottom). Pick one of the **Suggestions**, such as *Call the client tomorrow*, *Text the client an update*, *Remind me in 3 days* or *Ask for documents*. These come filled in ready to adjust. Or pick any kind of step from the list below the suggestions.
+- **Reorder, copy or delete:** use **↑ ↓**, **⧉** and **×** on the step.
+- **Waits:** a step with *Wait before sending* shows **⏱ wait N days** on the line above it.
+- **Conditions:** click **Only if** to add them in plain words, e.g. *New deal stage is Settled*. Stages and statuses are picked from a list.
+- **Problems:** a step that still needs something, such as an email without a template, is flagged in red, and Save takes you to it.
+- **Saving:** click **Save** when you're done. *Unsaved changes* shows until you do.
+
 Merge fields such as `{{contact.first_name}}`, `{{deal.loan_amount|money}}` and `{{deal.fixed_expiry_date|date}}` work in task titles, notes and email templates. Templates in the `marketing` category are never sent to contacts who have opted out.
 
 ### Included automations
