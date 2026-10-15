@@ -3,6 +3,7 @@ import {
   label, userOptions, todayStr, relDays, opts, dateTime, lenderTag, lenderLogo,
 } from '../core.js';
 import { borrowersFieldset, entityBadge } from './borrowers.js';
+import { securitiesSection } from './securities.js';
 import { dealFields, linkLoanType, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard, composeDialog } from './email.js';
 import { partiesCard } from './parties.js';
@@ -231,6 +232,11 @@ export async function dealPage(id) {
           info('App ref', deal.application_ref),
           info('Broker', deal.owner_name),
           info('Referral partner', deal.partner_name))),
+        // Rent roll, GSA, guarantee (commercial and business loans).
+        (() => {
+          const sec = securitiesSection({ items: deal.other_securities, parent: { deal_id: deal.id }, loanType: deal.loan_type, onChange: refresh, heading: false });
+          return sec ? h('section.card', h('h2', 'Other securities'), h('p.muted.small', 'Securities besides the property: these carry over to the loan on the mortgage tracker when the deal settles.'), sec) : null;
+        })(),
         partiesCard(deal, { compose: (p) => composeDialog({ contactId: deal.contact_id, dealId: deal.id, to: p.email, toParty: p }) }),
         h('section.card', h('h2', 'Key dates'), h('dl.info',
           info('Pre-approval expires', deal.pre_approval_expiry ? `${date(deal.pre_approval_expiry)} (${relDays(deal.pre_approval_expiry)})` : '—'),
@@ -244,7 +250,7 @@ export async function dealPage(id) {
           h('div.muted', `${dateTime(s.changed_at)}${s.user_name ? ` · ${s.user_name}` : ''}`)))))),
       h('div.col-main',
         await settlementLetterCard(deal),
-        await quickliCard(deal),
+        await quickliCard(deal).catch(() => null),
         await dealPurchaseCard(deal),
         documentsCard(deal),
         h('section.card',

@@ -100,6 +100,7 @@ router.get('/:id', (req, res) => {
   deal.co_borrower_ids = deal.borrowers.filter((b) => b.role === 'co').map((b) => b.id);
   deal.mail = listEmails({ contactIds: borrowers.addresseesFor(deal.borrowers).map((b) => b.id).concat(deal.borrowers.map((b) => b.id)), limit: 50 });
   deal.parties = parties.list(deal.id);
+  deal.other_securities = require('../services/securities').forDeal(deal.id);
   deal.sign_requests = require('../services/adobeSign').list({ dealId: deal.id });
   // The broker's accreditation number with this lender, and who to email there.
   const lenders = require('../services/lenders');
@@ -272,8 +273,16 @@ router.post('/:id/settlement-letter/email', async (req, res) => {
 const quickli = require('../services/quickli');
 
 const quickliResponse = (id, req) => {
-  const built = quickli.buildScenario(id);
+  // A scenario that can't be built yet (e.g. a company with no directors linked) is explained, not an error.
+  let built;
+  try {
+    built = quickli.buildScenario(id);
+  } catch (err) {
+    if (err.status !== 400) throw err;
+    built = { summary: null, warnings: [], scenario: null, blocked: err.message };
+  }
   return {
+    blocked: built.blocked || null,
     configured: quickli.configured(),
     connected: Boolean(quickli.tokenStatus(req.user.id)),
     link: quickli.linkFor(id),

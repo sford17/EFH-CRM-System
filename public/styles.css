@@ -1024,3 +1024,9 @@ p.sl-ai { display: block; }
 }
 .card-head-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
 .method-hint { margin: .3rem 0 0; }
+
+/* ---- Rent roll, GSA, guarantee ---- */
+.other-securities h3 { margin: .25rem 0 .4rem; font-size: 1rem; }
+.security-list li { padding: .45rem 0; border-bottom: 1px solid var(--border); }
+.security-list li:last-child { border-bottom: 0; }
+.security-add { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }

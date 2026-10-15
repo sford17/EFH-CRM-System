@@ -3,6 +3,7 @@
 import {
   api, h, attempt, formModal, modal, confirmDialog, field, readForm, money, date, pct, label, opts, badge, lenderOptions, todayStr, lenderLogo,
 } from '../core.js';
+import { securitiesSection, SECURITY_LOAN_TYPES } from './securities.js';
 import { propertyReportsCard } from './propertyReports.js';
 
 const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
@@ -316,7 +317,16 @@ export async function trackerTab(contact) {
       props.filter((p) => p.status !== 'sold' || current.has(p.id)).length
         ? props.filter((p) => p.status !== 'sold' || current.has(p.id)).map((p) => h('label.field.check', h('input', { type: 'checkbox', value: p.id, checked: current.has(p.id) }), p.address))
         : h('p.muted.small', 'No properties yet – add one first, or leave this loan unsecured (e.g. a car loan or credit card).'));
-    const form = h('form.grid-form', fields.map((f) => field(f, loan?.[f.name])), securities,
+    // Rent roll, GSA or guarantee, for commercial and business loans.
+    const otherBox = h('div.full');
+    const showOther = (type) => {
+      if (!loan) {
+        otherBox.replaceChildren(SECURITY_LOAN_TYPES.includes(type) ? h('p.muted.small', 'Save the loan, then open it again to add a rent roll, GSA or guarantee.') : '');
+        return;
+      }
+      otherBox.replaceChildren(securitiesSection({ items: loan.other_securities, parent: { loan_id: loan.id }, loanType: type, onChange: () => { d.close(); refresh(); } }) || '');
+    };
+    const form = h('form.grid-form', fields.map((f) => field(f, loan?.[f.name])), securities, otherBox,
       h('div.actions.full',
         loan ? h('button.danger.ghost', { type: 'button', onclick: async () => {
           if (!(await confirmDialog('Delete this loan from the tracker?'))) return;
@@ -326,6 +336,8 @@ export async function trackerTab(contact) {
         } }, 'Delete') : null,
         h('button', { type: 'submit' }, loan ? 'Save loan' : 'Add loan')));
     const d = modal(loan ? `${loan.lender_display} ${loanType(loan.loan_type).toLowerCase()}` : 'Add loan', form, { wide: true });
+    form.elements.loan_type.addEventListener('change', () => showOther(form.elements.loan_type.value));
+    showOther(loan?.loan_type || form.elements.loan_type.value);
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const body = { ...readForm(form, fields), security_ids: [...securities.querySelectorAll('input:checked')].map((i) => Number(i.value)) };
@@ -353,8 +365,9 @@ export async function trackerTab(contact) {
             ? `${label(n.rate_type)}${n.fixed_expiry_date ? ` to ${date(n.fixed_expiry_date)}` : ''}` : 'Variable')),
           h('td', n.repayment_type === 'io' ? 'Interest only' : 'P&I', n.io_expiry_date && n.repayment_type === 'io' ? h('div.muted.small', `IO ends ${date(n.io_expiry_date)}`) : null,
             n.repayment_amount ? h('div.muted.small', `${money(n.repayment_amount)} ${n.repayment_frequency}`) : null),
-          h('td.small', n.security_ids.length ? n.security_ids.map((id) => propName.get(id)).join(' + ') : badge('unsecured'),
-            n.security_ids.length > 1 ? h('div', badge('cross-collateralised', 'warn')) : null),
+          h('td.small', n.security_ids.length ? n.security_ids.map((id) => propName.get(id)).join(' + ') : n.other_securities?.length ? null : badge('unsecured'),
+            n.security_ids.length > 1 ? h('div', badge('cross-collateralised', 'warn')) : null,
+            (n.other_securities || []).map((s) => h('div', s.summary))),
           h('td', badge(n.status, n.status === 'active' ? 'ok' : ''))))))) : h('p.empty', 'No loans recorded yet.'));
   }
 

@@ -145,7 +145,7 @@ function model(review) {
         n.interest_rate ? `${n.interest_rate}%` : '–',
         n.rate_type === 'variable' ? 'Variable' : `${titleCase(n.rate_type)}${n.fixed_expiry_date ? ` to ${d(n.fixed_expiry_date)}` : ''}`,
         `${n.repayment_type === 'io' ? `Interest only${n.io_expiry_date ? ` to ${d(n.io_expiry_date)}` : ''}` : 'P&I'}${n.repayment_amount ? `\n${aud(n.repayment_amount)} ${n.repayment_frequency}` : ''}`,
-        n.security_ids.length ? n.security_ids.map((id) => propName.get(id)).filter(Boolean).join(' + ') : 'Unsecured',
+        [n.security_ids.map((id) => propName.get(id)).filter(Boolean).join(' + '), ...(n.other_securities || []).map((x) => x.summary)].filter(Boolean).join('\n') || 'Unsecured',
       ]),
       total: ['Total', '', aud(t.total_debt), '', '', '', ''],
     });

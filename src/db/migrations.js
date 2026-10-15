@@ -1187,7 +1187,29 @@ MIGRATIONS.push(
     db.run(`UPDATE deals SET loan_type = (SELECT n.loan_type FROM loans n WHERE n.deal_id = deals.id LIMIT 1)
       WHERE EXISTS (SELECT 1 FROM loans n WHERE n.deal_id = deals.id AND n.loan_type IN
         ('home_loan','investment_loan','commercial','business_loan','smsf','construction','bridging','line_of_credit','car','personal'))`);
-  },
+  },  // 37. Securities that aren't property, for commercial and business loans: rent roll, GSA, guarantee
+  `
+  CREATE TABLE other_securities (
+    id            INTEGER PRIMARY KEY,
+    deal_id       INTEGER REFERENCES deals(id) ON DELETE CASCADE,
+    loan_id       INTEGER REFERENCES loans(id) ON DELETE CASCADE,
+    type          TEXT NOT NULL CHECK (type IN ('rent_roll','gsa','guarantee')),
+    contact_id    INTEGER REFERENCES contacts(id) ON DELETE SET NULL, -- the grantor or guarantor, when they're in the CRM
+    name          TEXT,    -- grantor/guarantor or rent roll business name, when not
+    description   TEXT,
+    value         REAL,    -- rent roll or secured assets value
+    limit_amount  REAL,    -- guarantee limit (blank = unlimited)
+    managements   INTEGER, -- rent roll: number of managements
+    ppsr_number   TEXT,    -- GSA: PPSR registration number
+    notes         TEXT,
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    CHECK ((deal_id IS NULL) != (loan_id IS NULL))
+  );
+  CREATE INDEX idx_other_securities_deal ON other_securities(deal_id);
+  CREATE INDEX idx_other_securities_loan ON other_securities(loan_id);
+  CREATE INDEX idx_other_securities_contact ON other_securities(contact_id);
+  `,
 );
 
 module.exports = MIGRATIONS;

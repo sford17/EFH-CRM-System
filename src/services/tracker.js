@@ -88,6 +88,8 @@ function createFromDeal(dealId, { importId = null } = {}) {
     loan_term_years: deal.loan_term_years,
   });
   if (propertyId) db.run('INSERT OR IGNORE INTO loan_securities (loan_id, property_id) VALUES (?, ?)', loanId, propertyId);
+  // Rent roll, GSA or guarantee recorded on the deal.
+  require('./securities').copyDealToLoan(deal.id, loanId);
   // Everyone on the deal is on the loan.
   require('./borrowers').setCo('loan', loanId, require('./borrowers').coIds('deal', deal.id));
   return loanId;
@@ -183,6 +185,7 @@ function loansFor(ids) {
   );
   for (const n of loans) {
     n.security_ids = db.all('SELECT property_id FROM loan_securities WHERE loan_id = ?', n.id).map((r) => r.property_id);
+    n.other_securities = require('./securities').forLoan(n.id);
     n.owing = n.balance ?? n.limit_amount ?? 0;
     n.net_owing = Math.max(0, n.owing - (n.offset_balance || 0));
   }

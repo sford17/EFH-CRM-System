@@ -239,9 +239,10 @@ ${received.length ? `<div style="font-size:13px;font-weight:bold;margin:14px 0 4
 <td style="font-weight:bold;color:${c.dark};">${logoImg(l.logo_id, l.name, 90, 22)}${l.logo_id ? '&nbsp; ' : ''}${esc(l.name)}</td><td align="right" style="font-weight:bold;color:${c.dark};">${esc(compact(l.total))}</td></tr></table></td></tr>
 ${l.loans.map((n) => {
     const secured = n.security_ids.map((id) => props.get(id)).filter(Boolean).map((p) => shortAddress(p.address));
+    const others = (n.other_securities || []).map((x) => x.summary);
     return `<tr><td style="padding:8px 12px;border-top:1px solid #f0f2f5;font-size:14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
 <td><strong>${esc(loanLabel(n.loan_type))}</strong> <span style="color:${MUTED};font-size:13px;">${esc([rateText(n), n.repayment_type === 'io' ? 'interest only' : null].filter(Boolean).join(' · '))}</span><br>
-<span style="font-size:12px;color:${MUTED};">${secured.length ? `&#8627; Secured by ${esc(secured.join(' + '))}${secured.length > 1 ? ' <span style="color:#c27c0e;font-weight:bold;">(cross-secured)</span>' : ''}` : 'Unsecured'}</span></td>
+<span style="font-size:12px;color:${MUTED};">${secured.length ? `&#8627; Secured by ${esc(secured.join(' + '))}${secured.length > 1 ? ' <span style="color:#c27c0e;font-weight:bold;">(cross-secured)</span>' : ''}` : others.length ? '' : 'Unsecured'}${others.length ? `${secured.length ? '<br>' : ''}&#8627; ${esc(others.join(' · '))}` : ''}</span></td>
 <td align="right" valign="top" style="font-weight:bold;white-space:nowrap;">${esc(compact(n.owing))}</td></tr></table></td></tr>`;
   }).join('')}</table>`).join('');
     const propBlocks = s.structure.properties.map((p) => `<tr><td style="padding:8px 0;border-bottom:1px solid #f0f2f5;">
@@ -251,7 +252,7 @@ ${l.loans.map((n) => {
     const html = card(c, 'How your lending is structured', `${lenderBlocks}
 ${propBlocks ? `<div style="font-size:13px;font-weight:bold;margin:12px 0 2px 0;">Your properties</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${propBlocks}</table>` : ''}`);
     const text = ['How your lending is structured',
-      ...s.structure.lenders.flatMap((l) => [`${l.name} – ${compact(l.total)}`, ...l.loans.map((n) => `  - ${loanLabel(n.loan_type)} ${compact(n.owing)}${rateText(n) ? ` at ${rateText(n)}` : ''}, ${n.security_ids.length ? `secured by ${n.security_ids.map((id) => shortAddress(props.get(id)?.address)).join(' + ')}` : 'unsecured'}`)]),
+      ...s.structure.lenders.flatMap((l) => [`${l.name} – ${compact(l.total)}`, ...l.loans.map((n) => `  - ${loanLabel(n.loan_type)} ${compact(n.owing)}${rateText(n) ? ` at ${rateText(n)}` : ''}, ${[n.security_ids.length ? `secured by ${n.security_ids.map((id) => shortAddress(props.get(id)?.address)).join(' + ')}` : null, ...(n.other_securities || []).map((x) => x.summary)].filter(Boolean).join(', ') || 'unsecured'}`)]),
       ...s.structure.properties.map((p) => `${shortAddress(p.address)}: value ${compact(p.current_value || 0)}, LVR ${pct(p.lvr)}`)].join('\n');
     return { html, text };
   },

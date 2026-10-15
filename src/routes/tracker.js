@@ -116,6 +116,15 @@ function setSecurities(loanId, ids, contactId) {
   }
 }
 
+// ---- Rent rolls, GSAs and guarantees (commercial and business loans) ----------------------
+const securities = require('../services/securities');
+router.post('/securities', (req, res) => res.status(201).json(securities.create(req.body)));
+router.patch('/securities/:id', (req, res) => res.json(securities.update(intParam(req.params.id), req.body)));
+router.delete('/securities/:id', (req, res) => {
+  if (!securities.remove(intParam(req.params.id))) throw new HttpError(404, 'Security not found');
+  res.json({ ok: true });
+});
+
 router.post('/loans', (req, res) => {
   const row = pick(req.body, LOAN_FIELDS);
   requireFields(row, ['contact_id']);

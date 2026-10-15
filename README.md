@@ -530,6 +530,20 @@ Stamp duty and LMI are estimates: type over either one to use your own figure, a
 
 Choose a single broker at the top to see just their loans, and use **Export CSV** to open the report in Excel.
 
+## Rent rolls, GSAs and guarantees
+
+Commercial and business loans can be secured by more than property. On a deal, the **Other securities** card offers:
+- **Rent roll:** its name, number of managements, value, owner and details.
+- **GSA (General Security Agreement):** the grantor (a company or trust in the CRM, or a name), what it covers (*All present and after-acquired property* to start with), the value of the secured assets and the PPSR registration number.
+- **Guarantee:** the guarantor (anyone in the CRM, or a name), the limit (blank = unlimited) and the kind, e.g. director's guarantee.
+
+They move onto the loan in the mortgage tracker when the deal settles. On the tracker, open a commercial or business loan to add more, change them or remove them. They appear:
+- in the *Secured by* column, e.g. *GSA – Harbour Realty Pty Ltd*, *Guarantee – Mia Jones (limit $250k)*
+- on lending reviews
+- in the lending structure email graphic
+
+A loan backed only by a GSA or guarantee isn't marked "unsecured", but LVR and usable equity still count property only.
+
 ## Loan types report
 
 Every deal has a **Loan type**: Home loan, Investment loan, Commercial loan, Business loan, SMSF loan, Construction loan, Bridging loan, Line of credit, Car / asset finance, Personal loan or Other.
