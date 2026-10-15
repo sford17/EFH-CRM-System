@@ -673,6 +673,29 @@ A bell notification appears in the CRM too.
 - These reminders go to the broker's own email address from Outlook (or SMTP). They aren't filed on the client's timeline or emails, and they show as *🔔 reminder to you* in the Outbox.
 - **Links in the email** use **Settings → Business → CRM web address**. Leave it blank if you only use the CRM on this computer (it defaults to http://localhost:3000). If you've put the CRM on a server, enter that address instead.
 
+## Asking a referral partner for their invoice
+
+When a loan settles and the referral partner gets a referral fee, the deal's **Commissions** card shows who's owed what, e.g. *Alex Morgan (Harbourside Realty) · $357.50 incl. GST*, with a **✉ Request invoice** button.
+
+The button opens an email to the partner, ready to check and send. It asks for a tax invoice and lists:
+- the client(s)
+- the loan amount
+- the lender
+- the settlement date
+- the referral fee, e.g. *$325.00 + GST $32.50 = $357.50 (including GST)*
+
+You can correct the fee before sending, and the GST and message update to match.
+
+**Sending:**
+- The email goes from your Outlook and is noted on the deal's timeline.
+- The deal shows when the invoice was requested; use **Request invoice again** to follow up.
+- The **Commissions** page also has *Request invoice* (and *Mark paid*) on each referral fee.
+
+**Where the figures come from:**
+- **The fee** is the referral fee entry created at settlement: the partner's % of your upfront commission.
+- **GST:** 10% is added unless the partner is marked as not registered. Untick *Registered for GST* on the **Partners & agents** page to change that.
+- **Wording:** change the standard text in **Email templates → Referral fee invoice request**. Merge fields include `{{referral.client}}`, `{{referral.fee_text}}`, `{{referral.fee_ex_gst|money}}`, `{{referral.gst|money}}` and `{{referral.fee_inc_gst|money}}`.
+
 ## Thanking referral partners
 
 When a loan settles for a client that a referral partner sent you, the partner gets a text from your mobile, for example *"Hi Alex, great news - Liam Wilson's loan has settled. Thanks so much for the referral! Sam, EFH Mortgage Broking"*.

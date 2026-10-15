@@ -22,6 +22,7 @@ const partnerFields = [
   { name: 'mobile', label: 'Mobile' },
   { name: 'phone', label: 'Office phone' },
   { name: 'referral_fee_pct', label: 'Referral fee (% of upfront)', type: 'number', default: 0, required: true },
+  { name: 'gst_registered', label: 'Registered for GST (10% GST is added to their referral fee)', type: 'checkbox', default: true, full: true },
   { name: 'sms_updates', label: 'Text them when a client they referred settles (needs a mobile number)', type: 'checkbox', default: true, full: true },
   { name: 'newsletter_opt_in', label: 'Send them the monthly partner newsletter (needs an email address)', type: 'checkbox', default: true, full: true },
   { name: 'active', label: 'Active', type: 'checkbox', default: true },

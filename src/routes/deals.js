@@ -101,6 +101,7 @@ router.get('/:id', (req, res) => {
   deal.mail = listEmails({ contactIds: borrowers.addresseesFor(deal.borrowers).map((b) => b.id).concat(deal.borrowers.map((b) => b.id)), limit: 50 });
   deal.parties = parties.list(deal.id);
   deal.other_securities = require('../services/securities').forDeal(deal.id);
+  deal.referral_invoice = require('../services/referralInvoice').status(deal.id);
   deal.sign_requests = require('../services/adobeSign').list({ dealId: deal.id });
   // The broker's accreditation number with this lender, and who to email there.
   const lenders = require('../services/lenders');
@@ -293,6 +294,11 @@ const quickliResponse = (id, req) => {
 };
 
 router.get('/:id/quickli', (req, res) => res.json(quickliResponse(intParam(req.params.id), req)));
+
+// ---- Referral fee: ask the partner for an invoice ---------------------------------
+const referralInvoice = require('../services/referralInvoice');
+router.get('/:id/referral-invoice', (req, res) => res.json(referralInvoice.draft(intParam(req.params.id), { feeExGst: req.query.fee_ex_gst ?? null })));
+router.post('/:id/referral-invoice', async (req, res) => res.json(await referralInvoice.send(intParam(req.params.id), req.body || {}, req.user.id)));
 router.post('/:id/quickli/push', async (req, res) => {
   const id = intParam(req.params.id);
   await quickli.push(id, req.user.id);

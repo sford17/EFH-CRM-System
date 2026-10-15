@@ -1030,3 +1030,13 @@ p.sl-ai { display: block; }
 .security-list li { padding: .45rem 0; border-bottom: 1px solid var(--border); }
 .security-list li:last-child { border-bottom: 0; }
 .security-add { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+
+/* ---- Referral fee invoice request ---- */
+.ri-block { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .75rem; margin: 0 0 .75rem; display: flex; flex-direction: column; gap: .35rem; align-items: flex-start; background: var(--surface-2); }
+.ri-form { display: flex; flex-direction: column; gap: .7rem; }
+.ri-form textarea { width: 100%; font: inherit; }
+.ri-fee { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: 1rem; align-items: end; }
+.ri-sums { display: grid; gap: .2rem; font-size: 14px; }
+.ri-sums div { display: flex; justify-content: space-between; gap: 1rem; }
+.ri-sums .total { border-top: 1px solid var(--border); padding-top: .2rem; }
+@media (max-width: 560px) { .ri-fee { grid-template-columns: minmax(0, 1fr); } }

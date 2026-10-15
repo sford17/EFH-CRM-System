@@ -4,6 +4,7 @@ import {
 } from '../core.js';
 import { borrowersFieldset, entityBadge } from './borrowers.js';
 import { securitiesSection } from './securities.js';
+import { referralInvoiceBlock } from './referralInvoice.js';
 import { dealFields, linkLoanType, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard, composeDialog } from './email.js';
 import { partiesCard } from './parties.js';
@@ -154,7 +155,7 @@ function documentsCard(deal) {
 
 function commissionsCard(deal) {
   if (!deal.commissions.length) {
-    return h('section.card', h('h2', 'Commissions'),
+    return h('section.card', h('h2', 'Commissions'), referralInvoiceBlock(deal, refresh),
       h('p.empty', deal.stage === 'settled' ? 'No commission entries. Set a lender and loan amount, then generate.' : 'Commission entries are created automatically when the deal settles.'),
       deal.stage === 'settled' ? h('button.small', { type: 'button', onclick: async () => { await attempt(() => api(`/deals/${deal.id}/commissions/generate`, { method: 'POST', body: {} }), 'Generated'); refresh(); } }, 'Generate commissions') : null);
   }
@@ -162,6 +163,7 @@ function commissionsCard(deal) {
   const received = deal.commissions.filter((c) => ['received', 'paid'].includes(c.status)).reduce((s, c) => s + c.amount, 0);
   return h('section.card', h('h2', 'Commissions'),
     h('p', h('strong', money2(total)), ' expected · ', h('strong', money2(received)), ' received'),
+    referralInvoiceBlock(deal, refresh),
     h('details', h('summary', `${deal.commissions.length} entries`),
       table([
         { label: 'Type', value: (c) => label(c.type) },

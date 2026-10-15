@@ -180,6 +180,26 @@ function rebuildWithCheck(db, table, from, to) {
   for (const o of extras) db.run(o.sql);
 }
 
+// Sent to a referral partner after settlement, asking for a tax invoice for their fee.
+const REFERRAL_INVOICE_TEMPLATE = ['Referral fee invoice request', 'settlement', 'Referral fee invoice: {{referral.client}}',
+  `Hi {{referrer.first_name}},
+
+Thank you for referring {{referral.client}} to us. Their loan has now settled, so we'd like to pay your referral fee.
+
+Could you please send us a tax invoice for the amount below?
+
+- Client: {{referral.client}}
+- Loan amount: {{deal.loan_amount|money}}
+- Lender: {{deal.lender_name}}
+- Settled: {{deal.settlement_date|date}}
+- Referral fee: {{referral.fee_text}}
+
+Please make the invoice out to {{business.name}} and include your ABN and bank details, and we'll arrange payment.
+
+Thanks again for thinking of us.
+
+Kind regards,`];
+
 const MIGRATIONS = [
   // 1. Outlook email sync
   `
@@ -1209,11 +1229,19 @@ MIGRATIONS.push(
   CREATE INDEX idx_other_securities_deal ON other_securities(deal_id);
   CREATE INDEX idx_other_securities_loan ON other_securities(loan_id);
   CREATE INDEX idx_other_securities_contact ON other_securities(contact_id);
-  `,
+  `,  // 38. Asking a referral partner for an invoice for their referral fee
+  (db) => {
+    db.run('ALTER TABLE referral_partners ADD COLUMN gst_registered INTEGER NOT NULL DEFAULT 1');
+    db.run('ALTER TABLE commissions ADD COLUMN invoice_requested_at TEXT');
+    // Existing installs; new ones get it with the standard templates.
+    const [name, category, subject, body] = REFERRAL_INVOICE_TEMPLATE;
+    if (db.one('SELECT 1 FROM email_templates LIMIT 1') && !db.one('SELECT 1 FROM email_templates WHERE name = ?', name)) db.insert('email_templates', { name, category, subject, body });
+  },
 );
 
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
+module.exports.REFERRAL_INVOICE_TEMPLATE = REFERRAL_INVOICE_TEMPLATE;
 module.exports.addSmsDefaults = addSmsDefaults;
 module.exports.addCalendarDefaults = addCalendarDefaults;
 module.exports.addTrackerDefaults = addTrackerDefaults;
