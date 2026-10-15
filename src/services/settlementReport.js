@@ -23,10 +23,9 @@ function monthsBetween(from, to) {
 const DEAL_SQL = `
   SELECT d.id, d.title, d.stage, d.loan_purpose, d.rate_type, d.loan_amount, d.settlement_date, d.contact_id, d.owner_id,
          c.first_name || ' ' || COALESCE(c.last_name,'') AS client,
-         cb.first_name || ' ' || COALESCE(cb.last_name,'') AS co_borrower,
+         ${require('./borrowers').coNamesSql('deal', 'd')} AS co_borrower,
          l.name AS lender_name, l.logo_asset_id AS lender_logo_id, l.upfront_pct, p.referral_fee_pct, u.name AS owner_name
   FROM deals d JOIN contacts c ON c.id = d.contact_id
-  LEFT JOIN contacts cb ON cb.id = d.co_borrower_id
   LEFT JOIN lenders l ON l.id = d.lender_id
   LEFT JOIN referral_partners p ON p.id = d.referral_partner_id
   LEFT JOIN users u ON u.id = d.owner_id`;

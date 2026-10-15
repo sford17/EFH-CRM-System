@@ -76,6 +76,8 @@ function createFromDeal(dealId, { importId = null } = {}) {
     loan_term_years: deal.loan_term_years,
   });
   if (propertyId) db.run('INSERT OR IGNORE INTO loan_securities (loan_id, property_id) VALUES (?, ?)', loanId, propertyId);
+  // Everyone on the deal is on the loan.
+  require('./borrowers').setCo('loan', loanId, require('./borrowers').coIds('deal', deal.id));
   return loanId;
 }
 
@@ -160,10 +162,10 @@ function chooseValuation(p, rules = valuationRules()) {
 function loansFor(ids) {
   const loans = db.all(
     `SELECT n.*, COALESCE(l.name, n.lender_name, 'Unknown lender') AS lender_display, l.logo_asset_id AS lender_logo_id,
-            b.first_name || ' ' || COALESCE(b.last_name,'') AS co_borrower_name, m.first_name || ' ' || COALESCE(m.last_name,'') AS borrower_name
-     FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id LEFT JOIN contacts b ON b.id = n.co_borrower_id
+            ${require('./borrowers').coNamesSql('loan', 'n')} AS co_borrower_name, m.first_name || ' ' || COALESCE(m.last_name,'') AS borrower_name
+     FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id
      LEFT JOIN contacts m ON m.id = n.contact_id
-     WHERE n.contact_id IN (${inList(ids)}) OR n.co_borrower_id IN (${inList(ids)})
+     WHERE ${require('./borrowers').involving('loan', 'n', ids)}
      ORDER BY n.status != 'active', lender_display, n.id`,
     ...ids, ...ids,
   );

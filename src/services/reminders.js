@@ -93,7 +93,7 @@ function clientSnapshot(contactId) {
   const soon = addDays(today(), 365);
   for (const n of db.all(
     `SELECT n.*, COALESCE(l.name, n.lender_name, 'Unknown lender') AS lender FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id
-     WHERE n.status = 'active' AND (n.contact_id IN (${list}) OR n.co_borrower_id IN (${list}))
+     WHERE n.status = 'active' AND (n.contact_id IN (${list}) OR n.id IN (SELECT loan_id FROM loan_borrowers WHERE contact_id IN (${list})))
        AND ((n.rate_type != 'variable' AND n.fixed_expiry_date BETWEEN ? AND ?) OR (n.repayment_type = 'io' AND n.io_expiry_date BETWEEN ? AND ?))
      ORDER BY COALESCE(n.fixed_expiry_date, n.io_expiry_date)`,
     ...ids, ...ids, today(), soon, today(), soon,
@@ -102,7 +102,7 @@ function clientSnapshot(contactId) {
     if (n.fixed_expiry_date && n.fixed_expiry_date <= soon && n.rate_type !== 'variable') lines.push(`- Fixed rate ends ${formatDate(n.fixed_expiry_date)}: ${what}`);
     if (n.repayment_type === 'io' && n.io_expiry_date && n.io_expiry_date <= soon) lines.push(`- Interest-only ends ${formatDate(n.io_expiry_date)}: ${what}`);
   }
-  const open = db.one(`SELECT COUNT(*) AS n FROM deals WHERE (contact_id IN (${list}) OR co_borrower_id IN (${list})) AND stage NOT IN ('settled','lost')`, ...ids, ...ids).n;
+  const open = db.one(`SELECT COUNT(*) AS n FROM deals WHERE (contact_id IN (${list}) OR id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id IN (${list}))) AND stage NOT IN ('settled','lost')`, ...ids, ...ids).n;
   if (open) lines.push(`- ${open} open deal${open === 1 ? '' : 's'} in the pipeline`);
   return lines.join('\n');
 }

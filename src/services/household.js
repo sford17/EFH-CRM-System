@@ -6,16 +6,30 @@
 const db = require('../db');
 const { nowIso, HttpError } = require('../util');
 
-const TYPES = ['spouse', 'de_facto', 'partner', 'parent', 'child', 'sibling', 'relative', 'business_partner', 'guarantor', 'accountant', 'solicitor', 'other'];
+const TYPES = ['spouse', 'de_facto', 'partner', 'parent', 'child', 'sibling', 'relative', 'business_partner', 'guarantor', 'accountant', 'solicitor', 'other',
+  'director', 'shareholder', 'trustee', 'beneficiary', 'appointor'];
+// Roles a person has in a company or trust; stored with the person as contact_id.
+const ENTITY_ROLES = ['director', 'shareholder', 'trustee', 'beneficiary', 'appointor', 'guarantor'];
 const REVERSE = { parent: 'child', child: 'parent' };
 const ADDRESS = ['address', 'suburb', 'state', 'postcode'];
 
 function link(contactId, relatedId, { relationship = 'spouse', shared_finances = false, copy_address = true, notes = null } = {}) {
   if (Number(contactId) === Number(relatedId)) throw new HttpError(400, 'A contact can\'t be related to themselves');
   if (!TYPES.includes(relationship)) throw new HttpError(400, 'Unknown relationship');
-  const a = db.one('SELECT * FROM contacts WHERE id = ?', contactId);
-  const b = db.one('SELECT * FROM contacts WHERE id = ?', relatedId);
+  let a = db.one('SELECT * FROM contacts WHERE id = ?', contactId);
+  let b = db.one('SELECT * FROM contacts WHERE id = ?', relatedId);
   if (!a || !b) throw new HttpError(404, 'Contact not found');
+  // A company or trust and one of its people: always stored person → entity.
+  if (a.entity_type !== 'person' && b.entity_type === 'person') [a, b] = [b, a];
+  const entityLink = a.entity_type !== 'person' || b.entity_type !== 'person';
+  if (entityLink) {
+    if (b.entity_type !== 'person' && a.entity_type === 'person' && !ENTITY_ROLES.includes(relationship) && !['accountant', 'solicitor', 'other'].includes(relationship)) {
+      throw new HttpError(400, `Choose how they're linked to ${b.first_name}, e.g. director or trustee`);
+    }
+    shared_finances = false; // finances are combined between people, not with a company or trust
+  } else if (['director', 'shareholder', 'trustee', 'beneficiary', 'appointor'].includes(relationship)) {
+    throw new HttpError(400, 'Director, trustee and similar roles link a person to a company or trust');
+  }
   if (db.one('SELECT 1 FROM contact_relationships WHERE (contact_id = ? AND related_id = ?) OR (contact_id = ? AND related_id = ?)', a.id, b.id, b.id, a.id)) {
     throw new HttpError(409, `${a.first_name} and ${b.first_name} are already linked`);
   }
@@ -61,7 +75,7 @@ function relatedTo(contactId) {
      SELECT r.id, r.contact_id, r.relationship, r.shared_finances, r.notes, 1 FROM contact_relationships r WHERE r.related_id = ?`,
     contactId, contactId,
   ).map((r) => {
-    const c = db.one('SELECT id, first_name, last_name, email, mobile, status FROM contacts WHERE id = ?', r.other_id);
+    const c = db.one('SELECT id, first_name, last_name, email, mobile, status, entity_type FROM contacts WHERE id = ?', r.other_id);
     return {
       id: r.id,
       relationship: r.reversed ? REVERSE[r.relationship] || r.relationship : r.relationship,
@@ -130,4 +144,5 @@ function syncAddress(contactId, before, after) {
   return moved;
 }
 
-module.exports = { TYPES, link, update, unlink, relatedTo, householdIds, household, partnerOf, jointName, joinWords, syncAddress, fillAddress };
+module.exports = {
+  ENTITY_ROLES, TYPES, link, update, unlink, relatedTo, householdIds, household, partnerOf, jointName, joinWords, syncAddress, fillAddress };

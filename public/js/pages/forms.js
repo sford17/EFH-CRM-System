@@ -6,13 +6,34 @@ import {
 import { addresseePicker, householdOf } from './household.js';
 import { partiesFieldset } from './parties.js';
 import { bodyPreview } from './graphics.js';
+import { borrowersFieldset, TRUST_TYPES, ENTITY_LABELS } from './borrowers.js';
 
 export const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 export const CONTACT_STATUSES = ['lead', 'prospect', 'client', 'past_client', 'lost'];
 export const LEAD_SOURCES = ['website', 'referral', 'walk_in', 'social', 'repeat', 'phone', 'other'];
 export const LOAN_PURPOSES = ['purchase', 'first_home', 'refinance', 'investment', 'construction', 'top_up', 'commercial', 'other'];
 
-export const contactFields = () => [
+// A company or trust: one name, ABN/ACN and business details instead of personal ones.
+const entityFields = (type) => [
+  { name: 'first_name', label: type === 'trust' ? 'Trust name (e.g. Jones Family Trust)' : 'Company name (e.g. Jones Holdings Pty Ltd)', required: true, full: true },
+  { name: 'abn', label: 'ABN' },
+  { name: 'acn', label: type === 'trust' ? 'Corporate trustee ACN (if any)' : 'ACN' },
+  ...(type === 'trust' ? [{ name: 'trust_type', label: 'Kind of trust', type: 'select', options: TRUST_TYPES }] : []),
+  { name: 'email', label: 'Email', type: 'email' },
+  { name: 'phone', label: 'Phone' },
+  { name: 'status', label: 'Status', type: 'select', options: opts(CONTACT_STATUSES), required: true, default: 'lead' },
+  { name: 'lead_source', label: 'Lead source', type: 'select', options: opts(LEAD_SOURCES) },
+  { name: 'referral_partner_id', label: 'Referred by', type: 'select', options: partnerOptions },
+  { name: 'owner_id', label: 'Owner', type: 'select', options: userOptions, default: state.user?.id },
+  { name: 'address', label: 'Registered / business address', full: true },
+  { name: 'suburb', label: 'Suburb' },
+  { name: 'state', label: 'State', type: 'select', options: STATES.map((s) => [s, s]) },
+  { name: 'postcode', label: 'Postcode' },
+  { name: 'tags', label: 'Tags (comma separated)', full: true },
+  { name: 'background', label: 'Background notes', type: 'textarea', full: true },
+];
+
+export const contactFields = (type = 'person') => (type !== 'person' ? entityFields(type) : [
   { name: 'first_name', label: 'First name', required: true },
   { name: 'last_name', label: 'Last name' },
   { name: 'email', label: 'Email', type: 'email' },
@@ -37,7 +58,13 @@ export const contactFields = () => [
   { name: 'marketing_opt_in', label: 'Happy to receive marketing emails & texts', type: 'checkbox', default: true },
   { name: 'sms_opt_out', label: 'Opted out of all SMS (replied STOP)', type: 'checkbox', default: false },
   { name: 'background', label: 'Background notes', type: 'textarea', full: true },
-];
+]);
+
+// Person / Company / Trust buttons at the top of a contact form.
+export function entityTypeSwitch(type, onChange) {
+  return h('div.segmented.full', { role: 'radiogroup', 'aria-label': 'Type of contact' },
+    Object.entries(ENTITY_LABELS).map(([key, text]) => h('button.secondary', { type: 'button', role: 'radio', 'aria-checked': String(key === type), onclick: () => key !== type && onChange(key) }, text)));
+}
 
 export const dealFields = () => [
   { name: 'title', label: 'Deal name (auto if blank)', full: true },
@@ -72,42 +99,32 @@ export const taskFields = () => [
 
 const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 
-export function newContact(values = {}) {
-  formModal('New contact', contactFields(), values, async (v) => {
-    const c = await attempt(() => api('/contacts', { method: 'POST', body: v }), 'Contact created');
+export function newContact(values = {}, type = 'person') {
+  const d = formModal(`New ${type === 'person' ? 'contact' : type}`, contactFields(type), values, async (v) => {
+    const c = await attempt(() => api('/contacts', { method: 'POST', body: { ...v, entity_type: type } }), `${type === 'person' ? 'Contact' : label(type)} created`);
     location.hash = `#/contacts/${c.id}`;
+  }, {
+    before: entityTypeSwitch(type, (t) => {
+      const form = d.querySelector('form');
+      const keep = { email: form.elements.email?.value, phone: form.elements.phone?.value, status: form.elements.status?.value, owner_id: form.elements.owner_id?.value };
+      d.close();
+      newContact({ ...values, ...keep }, t);
+    }),
   });
-}
-
-// Co-borrower choices: the borrower's related contacts, partner first.
-export async function coBorrowerField(contactId, current = null) {
-  const { rows, related } = await api(`/contacts/${contactId}/household`);
-  const options = related.map((r) => [r.contact.id, `${r.contact.full_name} (${label(r.relationship)})`]);
-  const partner = rows.find((m) => m.id !== Number(contactId));
-  if (current && !options.some(([id]) => id === Number(current))) options.push([current, 'Current co-borrower']);
-  return {
-    field: { name: 'co_borrower_id', label: 'Co-borrower', type: 'select', options, full: true },
-    partnerId: partner?.id ?? null,
-  };
 }
 
 export async function newDeal(contactId, values = {}) {
   const fields = dealFields();
-  if (contactId) {
-    const co = await coBorrowerField(contactId);
-    fields.unshift(co.field);
-    values = { co_borrower_id: co.partnerId, ...values };
-  } else {
-    const { rows } = await api('/contacts?limit=500');
-    fields.unshift({ name: 'contact_id', label: 'Borrower', type: 'select', required: true, full: true, options: rows.map((c) => [c.id, fullName(c)]) });
-  }
+  // Co-borrowers: the client's partner to start with; add more, or a company or trust.
+  const partner = contactId ? (await api(`/contacts/${contactId}/household`)).rows.find((m) => m.id !== Number(contactId)) : null;
+  const who = await borrowersFieldset({ mainId: contactId || null, coIds: partner ? [partner.id] : [], chooseMain: !contactId });
   const parties = partiesFieldset();
-  formModal('New deal', fields, { ...values, contact_id: contactId }, async (v) => {
-    const body = { ...v, contact_id: contactId || v.contact_id, parties: parties.read() };
+  formModal('New deal', fields, values, async (v) => {
+    const body = { ...v, contact_id: contactId, ...who.read(), parties: parties.read() };
     const d = await attempt(() => api('/deals', { method: 'POST', body }), 'Deal created');
     if (body.parties.some((p) => p.new_partner)) await loadLookups(true);
     location.hash = `#/deals/${d.id}`;
-  }, { extra: parties.el });
+  }, { extra: parties.el, before: who.el });
 }
 
 export function newTask(context = {}) {
@@ -172,7 +189,7 @@ export function emailList(emails) {
 // Pick a template, preview it with merge fields filled in, then queue it.
 // For a couple it can be addressed to one or both of them.
 export async function sendTemplateDialog({ contactId, dealId, parties = [] }) {
-  const [{ rows }, members] = await Promise.all([api('/templates'), householdOf(contactId)]);
+  const [{ rows }, members] = await Promise.all([api('/templates'), householdOf(contactId, dealId)]);
   let addressees = defaultAddressees(members, contactId);
   let recipientRole = '';
   // The first person ticked is the main addressee ("Hi Tom" if only Tom).

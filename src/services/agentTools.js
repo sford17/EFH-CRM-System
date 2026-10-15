@@ -58,7 +58,7 @@ const READ = {
         annual_income: c.annual_income, dependants: c.dependants, broker: c.owner, lead_source: c.lead_source, tags: c.tags,
         marketing_opt_in: Boolean(c.marketing_opt_in), next_review_date: c.next_review_date, background: clip(c.background, 600),
         household: household.household(c.id).filter((m) => m.id !== c.id).map((m) => ({ id: m.id, name: fullName(m) })),
-        deals: db.all(`SELECT d.id, d.title, d.stage, d.loan_amount, d.settlement_date, l.name AS lender FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id WHERE d.contact_id IN (${inIds}) OR d.co_borrower_id IN (${inIds}) ORDER BY d.id DESC LIMIT 15`, ...ids, ...ids)
+        deals: db.all(`SELECT d.id, d.title, d.stage, d.loan_amount, d.settlement_date, l.name AS lender FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id WHERE d.contact_id IN (${inIds}) OR d.id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id IN (${inIds})) ORDER BY d.id DESC LIMIT 15`, ...ids, ...ids)
           .map((d) => ({ id: d.id, title: d.title, stage: stageLabel(d.stage), loan_amount: d.loan_amount, lender: d.lender, settlement_date: d.settlement_date, link: `#/deals/${d.id}` })),
         position: { property_value: t.totals.property_value, total_lending: t.totals.total_debt, lvr: t.totals.lvr, usable_equity: t.totals.usable_equity, net_position: t.totals.net_position },
         properties: t.properties.filter((p) => p.status !== 'sold').map((p) => ({ address: p.address, use: p.usage, value: p.current_value, valued: p.current_valuation?.method_label })),
@@ -108,15 +108,15 @@ const READ = {
     input_schema: obj({ deal_id: int }, ['deal_id']),
     run(i) {
       const d = db.one(
-        `SELECT d.*, l.name AS lender, u.name AS broker, c.first_name, c.last_name, cb.first_name AS co_first, cb.last_name AS co_last
-         FROM deals d JOIN contacts c ON c.id = d.contact_id LEFT JOIN contacts cb ON cb.id = d.co_borrower_id
+        `SELECT d.*, l.name AS lender, u.name AS broker, c.first_name, c.last_name
+         FROM deals d JOIN contacts c ON c.id = d.contact_id
          LEFT JOIN lenders l ON l.id = d.lender_id LEFT JOIN users u ON u.id = d.owner_id WHERE d.id = ?`,
         i.deal_id,
       );
       if (!d) return { error: 'No deal with that id' };
       const letter = db.one('SELECT status, sent_at FROM settlement_letters WHERE deal_id = ?', d.id);
       return {
-        id: d.id, title: d.title, link: `#/deals/${d.id}`, stage: stageLabel(d.stage), borrowers: [fullName(d), d.co_first ? fullName({ first_name: d.co_first, last_name: d.co_last }) : null].filter(Boolean),
+        id: d.id, title: d.title, link: `#/deals/${d.id}`, stage: stageLabel(d.stage), borrowers: require('./borrowers').all('deal', d.id).map((b) => `${b.full_name}${b.entity_type !== 'person' ? ` (${b.entity_type})` : ''}`),
         contact_id: d.contact_id, purpose: d.loan_purpose, lender: d.lender, product: d.product_name, loan_amount: d.loan_amount, property_value: d.property_value,
         lvr: d.loan_amount && d.property_value ? Math.round((d.loan_amount / d.property_value) * 1000) / 10 : null, rate: d.interest_rate, rate_type: d.rate_type,
         property: d.property_address, broker: d.broker, pre_approval_expiry: d.pre_approval_expiry, finance_due: d.finance_due_date, settlement_date: d.settlement_date,

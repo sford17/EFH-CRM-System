@@ -96,6 +96,23 @@ On a contact, click **Lending review** (or **+ New review** under *Lending revie
 - **Download** as **PDF** or **Word** (.docx, editable).
 - **Email to client** sends the PDF as an attachment from your Outlook, with your signature added. The review is marked *Sent*, a timeline entry is added, and the client's next review date is set 12 months out if they don't already have a future one.
 
+## Borrowers: several co-borrowers, companies and trusts
+
+**Several co-borrowers:** a deal can have as many borrowers as the loan has. In the **Borrowers** box on the New deal and Edit forms, the main borrower is at the top (on Edit you can change who that is). Below it:
+- **+ Add co-borrower** adds another row. The client's related contacts come first in the list, then everyone else.
+- **×** removes a co-borrower. The order you set is the order they're shown in.
+- The client's partner is added for you on a new deal.
+
+Everyone on the deal sees it on their own contact page, deal search finds it by any borrower's name, and the loan created at settlement carries every borrower to the mortgage tracker. Emails and automations addressed to "the client" go to all the borrowers ("Hi Mia, Tom and Ava"). Settlement letters, the internal refinance register and the settlements report list them all.
+
+**Companies and trusts:** a contact can be a **Person**, a **Company** or a **Trust**. Choose at the top of **+ New contact**, or click **+ Company or trust** on a client's *Related contacts* card, which creates it already linked to that client.
+- A company or trust has a name, ABN, ACN (for a trust, its corporate trustee's) and the kind of trust. Personal details like date of birth and income are left off, and it starts opted out of marketing.
+- **Linking people:** link its directors, shareholders, trustees, beneficiaries, appointors or guarantors on its page (**+ Link person**). The client's page shows *Trustee of Jones Family Trust* and so on, and lists the trust's or company's deals too.
+- **As a borrower:** pick it in the Borrowers box like anyone else, or click **+ New company or trust** right there.
+- **Emails** about its loans go to the people linked to it, since a company or trust can't read email. They're greeted by name, not as "Hi Jones Family Trust".
+- **Quickli:** its directors or trustees are sent as the applicants, with a reminder to add the trust's or company's own income in Quickli.
+- **Automations:** creating a company or trust doesn't trigger new-lead automations.
+
 ## Related contacts & households
 
 On a contact's overview, use **+ Link contact** in the *Related contacts* card to link an existing contact, or create their partner on the spot. A new partner gets the same surname, status, owner, lead source and address. Relationships include spouse, de facto, partner, parent/child, sibling, business partner, guarantor, accountant and solicitor.

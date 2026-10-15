@@ -43,7 +43,7 @@ router.put('/settings', auth.requireRole('admin'), (req, res) => res.json(newsle
 router.get('/recipients', (req, res) => {
   const rows = newsletter.recipients().map((r) => ({
     id: r.id, name: [r.first_name, r.last_name].filter(Boolean).join(' '), email: r.email, status: r.status,
-    loans: db.one("SELECT COUNT(*) AS n FROM loans WHERE (contact_id = ? OR co_borrower_id = ?) AND status = 'active' AND interest_rate > 0", r.id, r.id).n,
+    loans: db.one("SELECT COUNT(*) AS n FROM loans WHERE (contact_id = ? OR id IN (SELECT loan_id FROM loan_borrowers WHERE contact_id = ?)) AND status = 'active' AND interest_rate > 0", r.id, r.id).n,
   }));
   res.json({ rows });
 });

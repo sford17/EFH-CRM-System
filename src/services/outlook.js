@@ -248,7 +248,7 @@ function recordEmail(account, msg, { contactIds: extraIds = [], dealId = null, l
   if (!contactIds.length && !lenderId) return null;
 
   if (!dealId && contactIds.length === 1) {
-    const open = db.all("SELECT id FROM deals WHERE (contact_id = ? OR co_borrower_id = ?) AND stage NOT IN ('settled','lost')", contactIds[0], contactIds[0]);
+    const open = db.all("SELECT id FROM deals WHERE (contact_id = ? OR id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id = ?)) AND stage NOT IN ('settled','lost')", contactIds[0], contactIds[0]);
     if (open.length === 1) dealId = open[0].id;
   }
   // "Email sent to Westpac (Jane Smith, BDM): …" on the client's timeline.

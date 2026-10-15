@@ -2,7 +2,8 @@ import {
   api, h, table, badge, date, money, money2, pct, pageHeader, formModal, attempt, confirmDialog, state, stageLabel,
   label, userOptions, todayStr, relDays, opts, dateTime, lenderTag, lenderLogo,
 } from '../core.js';
-import { dealFields, coBorrowerField, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
+import { borrowersFieldset, entityBadge } from './borrowers.js';
+import { dealFields, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard, composeDialog } from './email.js';
 import { partiesCard } from './parties.js';
 import { emailLenderDialog } from './lenders.js';
@@ -171,10 +172,13 @@ function commissionsCard(deal) {
 
 export async function dealPage(id) {
   const deal = await api(`/deals/${id}`);
-  const edit = async () => formModal(`Edit ${deal.title}`, [(await coBorrowerField(deal.contact_id, deal.co_borrower_id)).field, ...dealFields()], deal, async (v) => {
-    await attempt(() => api(`/deals/${id}`, { method: 'PATCH', body: v }), 'Saved');
-    refresh();
-  });
+  const edit = async () => {
+    const who = await borrowersFieldset({ mainId: deal.contact_id, coIds: deal.co_borrower_ids, chooseMain: true });
+    formModal(`Edit ${deal.title}`, dealFields(), deal, async (v) => {
+      await attempt(() => api(`/deals/${id}`, { method: 'PATCH', body: { ...v, ...who.read() } }), 'Saved');
+      refresh();
+    }, { before: who.el });
+  };
   const remove = async () => {
     if (!(await confirmDialog(`Delete "${deal.title}"? Its tasks, documents and commissions will also be removed.`))) return;
     await attempt(() => api(`/deals/${id}`, { method: 'DELETE' }), 'Deal deleted');
@@ -187,8 +191,9 @@ export async function dealPage(id) {
   return h('div',
     h('div.page-header',
       h('div', h('h1', deal.title, ' ', deal.priority === 'high' ? badge('high priority', 'danger') : null),
-        h('div.muted', 'Borrower: ', h('a', { href: `#/contacts/${deal.contact_id}` }, deal.contact_name),
-          deal.co_borrower_name ? [' & ', h('a', { href: `#/contacts/${deal.co_borrower_id}` }, deal.co_borrower_name)] : null)),
+        h('div.muted.deal-borrowers', deal.borrowers.length > 1 ? 'Borrowers: ' : 'Borrower: ',
+          deal.borrowers.flatMap((b, i) => [i ? (i === deal.borrowers.length - 1 ? ' & ' : ', ') : null,
+            h('a', { href: `#/contacts/${b.id}` }, b.full_name), entityBadge(b)]))),
       h('div.actions',
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ dealId: deal.id, contactId: deal.contact_id, parties: deal.parties }) }, 'Send template'),
         deal.stage === 'settled' ? h('button.secondary', { type: 'button', onclick: async () => requestReviewDialog({ contact: await api(`/contacts/${deal.contact_id}`), dealId: deal.id }) }, '⭐ Review request') : null,

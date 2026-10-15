@@ -107,7 +107,7 @@ function loadLoan({ loanId, dealId, contactId }) {
   if (byDeal) return byDeal;
   if (!contactId) return null;
   return db.one(
-    `${select} WHERE (n.contact_id = ? OR n.co_borrower_id = ?) AND n.status = 'active' AND n.fixed_expiry_date >= ?
+    `${select} WHERE (n.contact_id = ? OR n.id IN (SELECT loan_id FROM loan_borrowers WHERE contact_id = ?)) AND n.status = 'active' AND n.fixed_expiry_date >= ?
      ORDER BY n.fixed_expiry_date LIMIT 1`,
     contactId, contactId, today(),
   );

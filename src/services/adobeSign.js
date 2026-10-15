@@ -171,7 +171,7 @@ async function send(input, user) {
   const contact = db.one('SELECT * FROM contacts WHERE id = ?', input.contact_id);
   if (!contact) throw new HttpError(404, 'Contact not found');
   const dealId = Number(input.deal_id) || null;
-  if (dealId && !db.one('SELECT 1 FROM deals WHERE id = ? AND (contact_id = ? OR co_borrower_id = ?)', dealId, contact.id, contact.id)) {
+  if (dealId && !db.one('SELECT 1 FROM deals WHERE id = ? AND (contact_id = ? OR id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id = ?))', dealId, contact.id, contact.id)) {
     throw new HttpError(400, 'That deal belongs to a different client');
   }
   const documentId = Number(input.document_id) || null;

@@ -212,9 +212,13 @@ const PURCHASES = ['purchase', 'first_home', 'investment', 'construction', 'comm
 function buildScenario(dealId) {
   const deal = db.one('SELECT d.*, l.name AS lender_name FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id WHERE d.id = ?', dealId);
   if (!deal) throw new HttpError(404, 'Deal not found');
-  const applicants = [deal.contact_id, deal.co_borrower_id].filter(Boolean)
-    .map((id) => db.one('SELECT * FROM contacts WHERE id = ?', id)).filter(Boolean);
-  const warnings = [];
+  // Quickli applicants are people: a company or trust borrower is represented by its directors/trustees.
+  const onDeal = require('./borrowers').all('deal', deal.id);
+  const applicants = require('./borrowers').addresseesFor(onDeal)
+    .map((p) => db.one('SELECT * FROM contacts WHERE id = ?', p.id)).filter((c) => c && c.entity_type === 'person');
+  if (!applicants.length) throw new HttpError(400, 'Link the company\'s directors or the trust\'s trustees (Related contacts) so Quickli has applicants');
+  const warnings = onDeal.filter((b) => b.entity_type !== 'person')
+    .map((b) => `${b.full_name} is a ${b.entity_type}: its ${b.entity_type === 'trust' ? 'trustees' : 'directors'} are sent as the applicants. Add the ${b.entity_type}'s own income in Quickli.`);
   const ids = household.householdIds(deal.contact_id);
   for (const a of applicants) if (!ids.includes(a.id)) ids.push(a.id);
   const position = tracker.summary(deal.contact_id);

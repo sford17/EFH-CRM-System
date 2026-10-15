@@ -1061,6 +1061,93 @@ MIGRATIONS.push(
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   );
   `,
+  // 33. More than one co-borrower; companies and trusts as borrowers, linked to their people
+  `
+  ALTER TABLE contacts ADD COLUMN entity_type TEXT NOT NULL DEFAULT 'person' CHECK (entity_type IN ('person','company','trust'));
+  ALTER TABLE contacts ADD COLUMN abn TEXT;
+  ALTER TABLE contacts ADD COLUMN acn TEXT;
+  ALTER TABLE contacts ADD COLUMN trust_type TEXT;
+  CREATE TABLE contact_relationships_new (
+    id              INTEGER PRIMARY KEY,
+    contact_id      INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    related_id      INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    relationship    TEXT NOT NULL DEFAULT 'spouse' CHECK (relationship IN
+                    ('spouse','de_facto','partner','parent','child','sibling','relative','business_partner','guarantor','accountant','solicitor','other',
+                     'director','shareholder','trustee','beneficiary','appointor')),
+    shared_finances INTEGER NOT NULL DEFAULT 0,
+    notes           TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    UNIQUE (contact_id, related_id),
+    CHECK (contact_id != related_id)
+  );
+  INSERT INTO contact_relationships_new SELECT id, contact_id, related_id, relationship, shared_finances, notes, created_at FROM contact_relationships;
+  DROP TABLE contact_relationships;
+  ALTER TABLE contact_relationships_new RENAME TO contact_relationships;
+  CREATE INDEX idx_relationships_related ON contact_relationships(related_id);
+
+  CREATE TABLE deal_borrowers (
+    id         INTEGER PRIMARY KEY,
+    deal_id    INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (deal_id, contact_id)
+  );
+  CREATE INDEX idx_deal_borrowers_contact ON deal_borrowers(contact_id);
+  INSERT INTO deal_borrowers (deal_id, contact_id, position)
+    SELECT id, co_borrower_id, 0 FROM deals WHERE co_borrower_id IS NOT NULL AND co_borrower_id != contact_id;
+  -- deals.co_borrower_id always holds the first co-borrower, for code that only needs one.
+  CREATE TRIGGER deal_borrowers_ai AFTER INSERT ON deal_borrowers BEGIN
+    UPDATE deals SET co_borrower_id = (SELECT contact_id FROM deal_borrowers WHERE deal_id = NEW.deal_id ORDER BY position, id LIMIT 1) WHERE id = NEW.deal_id;
+  END;
+  CREATE TRIGGER deal_borrowers_au AFTER UPDATE ON deal_borrowers BEGIN
+    UPDATE deals SET co_borrower_id = (SELECT contact_id FROM deal_borrowers WHERE deal_id = NEW.deal_id ORDER BY position, id LIMIT 1) WHERE id = NEW.deal_id;
+  END;
+  CREATE TRIGGER deal_borrowers_ad AFTER DELETE ON deal_borrowers BEGIN
+    UPDATE deals SET co_borrower_id = (SELECT contact_id FROM deal_borrowers WHERE deal_id = OLD.deal_id ORDER BY position, id LIMIT 1) WHERE id = OLD.deal_id;
+  END;
+  -- Code that sets co_borrower_id directly (one co-borrower) keeps working.
+  CREATE TRIGGER deals_co_borrower_ai AFTER INSERT ON deals
+    WHEN NEW.co_borrower_id IS NOT NULL AND NEW.co_borrower_id != NEW.contact_id BEGIN
+    INSERT OR IGNORE INTO deal_borrowers (deal_id, contact_id, position) VALUES (NEW.id, NEW.co_borrower_id, 0);
+  END;
+  CREATE TRIGGER deals_co_borrower_au AFTER UPDATE OF co_borrower_id ON deals
+    WHEN NEW.co_borrower_id IS NOT (SELECT contact_id FROM deal_borrowers WHERE deal_id = NEW.id ORDER BY position, id LIMIT 1) BEGIN
+    DELETE FROM deal_borrowers WHERE deal_id = NEW.id AND contact_id = OLD.co_borrower_id;
+    INSERT OR IGNORE INTO deal_borrowers (deal_id, contact_id, position) SELECT NEW.id, NEW.co_borrower_id, -1 WHERE NEW.co_borrower_id IS NOT NULL AND NEW.co_borrower_id != NEW.contact_id;
+    UPDATE deal_borrowers SET position = -1 WHERE deal_id = NEW.id AND contact_id = NEW.co_borrower_id;
+  END;
+  CREATE TABLE loan_borrowers (
+    id         INTEGER PRIMARY KEY,
+    loan_id    INTEGER NOT NULL REFERENCES loans(id) ON DELETE CASCADE,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (loan_id, contact_id)
+  );
+  CREATE INDEX idx_loan_borrowers_contact ON loan_borrowers(contact_id);
+  INSERT INTO loan_borrowers (loan_id, contact_id, position)
+    SELECT id, co_borrower_id, 0 FROM loans WHERE co_borrower_id IS NOT NULL AND co_borrower_id != contact_id;
+  -- loans.co_borrower_id always holds the first co-borrower, for code that only needs one.
+  CREATE TRIGGER loan_borrowers_ai AFTER INSERT ON loan_borrowers BEGIN
+    UPDATE loans SET co_borrower_id = (SELECT contact_id FROM loan_borrowers WHERE loan_id = NEW.loan_id ORDER BY position, id LIMIT 1) WHERE id = NEW.loan_id;
+  END;
+  CREATE TRIGGER loan_borrowers_au AFTER UPDATE ON loan_borrowers BEGIN
+    UPDATE loans SET co_borrower_id = (SELECT contact_id FROM loan_borrowers WHERE loan_id = NEW.loan_id ORDER BY position, id LIMIT 1) WHERE id = NEW.loan_id;
+  END;
+  CREATE TRIGGER loan_borrowers_ad AFTER DELETE ON loan_borrowers BEGIN
+    UPDATE loans SET co_borrower_id = (SELECT contact_id FROM loan_borrowers WHERE loan_id = OLD.loan_id ORDER BY position, id LIMIT 1) WHERE id = OLD.loan_id;
+  END;
+  -- Code that sets co_borrower_id directly (one co-borrower) keeps working.
+  CREATE TRIGGER loans_co_borrower_ai AFTER INSERT ON loans
+    WHEN NEW.co_borrower_id IS NOT NULL AND NEW.co_borrower_id != NEW.contact_id BEGIN
+    INSERT OR IGNORE INTO loan_borrowers (loan_id, contact_id, position) VALUES (NEW.id, NEW.co_borrower_id, 0);
+  END;
+  CREATE TRIGGER loans_co_borrower_au AFTER UPDATE OF co_borrower_id ON loans
+    WHEN NEW.co_borrower_id IS NOT (SELECT contact_id FROM loan_borrowers WHERE loan_id = NEW.id ORDER BY position, id LIMIT 1) BEGIN
+    DELETE FROM loan_borrowers WHERE loan_id = NEW.id AND contact_id = OLD.co_borrower_id;
+    INSERT OR IGNORE INTO loan_borrowers (loan_id, contact_id, position) SELECT NEW.id, NEW.co_borrower_id, -1 WHERE NEW.co_borrower_id IS NOT NULL AND NEW.co_borrower_id != NEW.contact_id;
+    UPDATE loan_borrowers SET position = -1 WHERE loan_id = NEW.id AND contact_id = NEW.co_borrower_id;
+  END;
+  `,
 );
 
 module.exports = MIGRATIONS;

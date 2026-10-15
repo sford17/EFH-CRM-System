@@ -12,6 +12,8 @@ const { STAGES, STAGE_KEYS } = require('../constants');
 const { nowIso, HttpError } = require('../util');
 const { pick, requireFields, notFound, intParam, like, safeLink } = require('./helpers');
 
+const borrowers = require('../services/borrowers');
+
 const router = express.Router();
 
 const FIELDS = [
@@ -24,10 +26,9 @@ const FIELDS = [
 const SELECT = `
   SELECT d.*, c.first_name || ' ' || COALESCE(c.last_name, '') AS contact_name, c.email AS contact_email,
          c.mobile AS contact_mobile, l.name AS lender_name, l.logo_asset_id AS lender_logo_id, u.name AS owner_name, p.name AS partner_name,
-         cb.first_name || ' ' || COALESCE(cb.last_name, '') AS co_borrower_name
+         ${borrowers.coNamesSql('deal', 'd')} AS co_borrower_name, c.entity_type AS contact_entity_type
   FROM deals d
   JOIN contacts c ON c.id = d.contact_id
-  LEFT JOIN contacts cb ON cb.id = d.co_borrower_id
   LEFT JOIN lenders l ON l.id = d.lender_id
   LEFT JOIN users u ON u.id = d.owner_id
   LEFT JOIN referral_partners p ON p.id = d.referral_partner_id`;
@@ -38,8 +39,9 @@ router.get('/', (req, res) => {
   const where = [];
   const params = [];
   if (req.query.q) {
-    where.push(`(d.title LIKE ? ESCAPE '\\' OR c.first_name || ' ' || COALESCE(c.last_name,'') LIKE ? ESCAPE '\\' OR d.property_address LIKE ? ESCAPE '\\' OR d.application_ref LIKE ? ESCAPE '\\')`);
-    params.push(like(req.query.q), like(req.query.q), like(req.query.q), like(req.query.q));
+    where.push(`(d.title LIKE ? ESCAPE '\\' OR c.first_name || ' ' || COALESCE(c.last_name,'') LIKE ? ESCAPE '\\' OR d.property_address LIKE ? ESCAPE '\\' OR d.application_ref LIKE ? ESCAPE '\\'
+      OR d.id IN (SELECT b.deal_id FROM deal_borrowers b JOIN contacts x ON x.id = b.contact_id WHERE x.first_name || ' ' || COALESCE(x.last_name,'') LIKE ? ESCAPE '\\'))`);
+    params.push(like(req.query.q), like(req.query.q), like(req.query.q), like(req.query.q), like(req.query.q));
   }
   if (req.query.stage) { where.push('d.stage = ?'); params.push(req.query.stage); }
   if (req.query.open === '1') where.push("d.stage NOT IN ('settled','lost')");
@@ -90,7 +92,9 @@ router.get('/:id', (req, res) => {
      FROM sms_messages s LEFT JOIN referral_partners p ON p.id = s.partner_id WHERE s.deal_id = ? ORDER BY s.id DESC LIMIT 50`,
     id,
   );
-  deal.mail = listEmails({ contactIds: [deal.contact_id, deal.co_borrower_id].filter(Boolean), limit: 50 });
+  deal.borrowers = borrowers.all('deal', id);
+  deal.co_borrower_ids = deal.borrowers.filter((b) => b.role === 'co').map((b) => b.id);
+  deal.mail = listEmails({ contactIds: borrowers.addresseesFor(deal.borrowers).map((b) => b.id).concat(deal.borrowers.map((b) => b.id)), limit: 50 });
   deal.parties = parties.list(deal.id);
   deal.sign_requests = require('../services/adobeSign').list({ dealId: deal.id });
   // The broker's accreditation number with this lender, and who to email there.
@@ -107,10 +111,14 @@ router.post('/', (req, res) => {
   const stage = req.body.stage && STAGE_KEYS.includes(req.body.stage) ? req.body.stage : 'lead';
   if (!row.title) row.title = `${contact.first_name} ${contact.last_name || ''} – ${(row.loan_purpose || 'purchase').replace('_', ' ')}`.replace(/\s+/g, ' ');
   if (row.owner_id === undefined) row.owner_id = contact.owner_id || req.user.id;
-  if (row.co_borrower_id === undefined) row.co_borrower_id = require('../services/household').partnerOf(contact.id)?.id ?? null;
+  // Co-borrowers: as given, else the client's partner.
+  let co = borrowers.fromBody(req.body);
+  if (co === undefined) co = [require('../services/household').partnerOf(contact.id)?.id].filter(Boolean);
+  delete row.co_borrower_id;
   if (row.referral_partner_id === undefined && contact.referral_partner_id) row.referral_partner_id = contact.referral_partner_id;
   const id = db.transaction(() => {
     const dealId = db.insert('deals', { ...row, stage });
+    borrowers.setCo('deal', dealId, co);
     db.insert('deal_stage_history', { deal_id: dealId, from_stage: null, to_stage: stage, changed_by: req.user.id });
     db.insert('activities', { contact_id: row.contact_id, deal_id: dealId, user_id: req.user.id, type: 'system', body: `Deal created: ${row.title}` });
     // Agent, solicitor, buyer's agent… captured on the New deal form.
@@ -126,7 +134,13 @@ router.patch('/:id', (req, res) => {
   const before = notFound(db.one('SELECT * FROM deals WHERE id = ?', id), 'Deal');
   const row = pick(req.body, FIELDS);
   if (row.contact_id === null) throw new HttpError(400, 'A deal must have a borrower');
-  db.update('deals', id, { ...row, updated_at: nowIso() });
+  const co = borrowers.fromBody(req.body);
+  delete row.co_borrower_id;
+  db.transaction(() => {
+    db.update('deals', id, { ...row, updated_at: nowIso() });
+    // A new main borrower can't also be a co-borrower.
+    if (co !== undefined || row.contact_id) borrowers.setCo('deal', id, co ?? borrowers.coIds('deal', id));
+  });
   if (req.body.stage && req.body.stage !== before.stage) {
     if (!STAGE_KEYS.includes(req.body.stage)) throw new HttpError(400, 'Unknown stage');
     automation.changeDealStage(id, req.body.stage, req.user.id);

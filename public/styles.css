@@ -1003,3 +1003,23 @@ p.sl-ai { display: block; }
 }
 .flow-node-btn, .pick-card { white-space: normal; }
 .badge[hidden] { display: none; }
+
+/* ---- Borrowers, companies & trusts ---- */
+.badge.entity { font-size: 11px; vertical-align: middle; }
+.badge.entity.company { background: var(--accent-soft); color: var(--accent); }
+.badge.entity.trust { background: var(--ok-soft); color: var(--ok); }
+.borrowers-fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem .9rem .6rem; display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
+.borrowers-fieldset legend { font-weight: 600; padding: 0 .3rem; }
+.borrower-rows { display: flex; flex-direction: column; gap: .5rem; }
+.borrower-row { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) auto; gap: .5rem; align-items: center; }
+.borrower-row.borrower-main { grid-template-columns: 9.5rem minmax(0, 1fr); }
+.borrower-row select { width: 100%; min-width: 0; }
+.borrower-tag { font-size: 13px; color: var(--muted); font-weight: 600; }
+.borrower-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.borrowers-fieldset p { margin: 0; }
+.deal-borrowers .badge { margin-left: .25rem; }
+@media (max-width: 560px) {
+  .borrower-row, .borrower-row.borrower-main { grid-template-columns: minmax(0, 1fr) auto; }
+  .borrower-tag { grid-column: 1 / -1; }
+}
+.card-head-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
