@@ -9,9 +9,9 @@ const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 const compactMoney = (n) => (n === null || n === undefined ? '—' : n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/\.?0+$/, '')}m` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : money(n));
 const PROPERTY_TYPES = ['house', 'unit', 'townhouse', 'land', 'rural', 'commercial', 'other'];
 const USAGES = ['owner_occupied', 'investment', 'holiday', 'vacant', 'business', 'other'];
-const LOAN_TYPES = ['home_loan', 'investment_loan', 'line_of_credit', 'construction', 'bridging', 'commercial', 'personal', 'car', 'credit_card', 'hecs', 'other'];
+const LOAN_TYPES = ['home_loan', 'investment_loan', 'line_of_credit', 'construction', 'bridging', 'commercial', 'business_loan', 'personal', 'car', 'credit_card', 'hecs', 'other'];
 const ASSET_TYPES = ['savings', 'superannuation', 'shares', 'vehicle', 'business', 'contents', 'other'];
-const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP' };
+const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP', business_loan: 'Business loan' };
 const loanType = (t) => LOAN_LABELS[t] || label(t);
 const shortAddress = (a) => String(a || '').split(',')[0];
 // "highest of 3" / "chosen" beside the valuation a property's value uses.

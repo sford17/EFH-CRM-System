@@ -11,7 +11,7 @@ import { borrowersFieldset, TRUST_TYPES, ENTITY_LABELS } from './borrowers.js';
 export const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 export const CONTACT_STATUSES = ['lead', 'prospect', 'client', 'past_client', 'lost'];
 export const LEAD_SOURCES = ['website', 'referral', 'walk_in', 'social', 'repeat', 'phone', 'other'];
-export const LOAN_PURPOSES = ['purchase', 'first_home', 'refinance', 'investment', 'construction', 'top_up', 'commercial', 'other'];
+export const LOAN_PURPOSES = ['purchase', 'first_home', 'refinance', 'investment', 'construction', 'top_up', 'commercial', 'business_loan', 'other'];
 
 // A company or trust: one name, ABN/ACN and business details instead of personal ones.
 const entityFields = (type) => [

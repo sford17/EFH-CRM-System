@@ -72,7 +72,8 @@ function createFromDeal(dealId, { importId = null } = {}) {
     lender_id: deal.lender_id,
     loan_type: deal.loan_purpose === 'investment' ? 'investment_loan'
       : deal.loan_purpose === 'construction' ? 'construction'
-        : deal.loan_purpose === 'commercial' ? 'commercial' : 'home_loan',
+        : deal.loan_purpose === 'commercial' ? 'commercial'
+          : deal.loan_purpose === 'business_loan' ? 'business_loan' : 'home_loan',
     account_number: deal.application_ref,
     product_name: deal.product_name,
     limit_amount: deal.loan_amount,

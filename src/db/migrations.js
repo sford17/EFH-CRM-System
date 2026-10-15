@@ -163,6 +163,23 @@ function addTrackerDefaults(db) {
   }
 }
 
+// Changes a CHECK constraint by rebuilding the table (SQLite's documented
+// procedure): same columns and data, with its indexes and any triggers that
+// mention it recreated afterwards.
+function rebuildWithCheck(db, table, from, to) {
+  const { sql } = db.one("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", table);
+  if (!sql.includes(from)) throw new Error(`Couldn't find ${from} in ${table}`);
+  const mentions = new RegExp(`\\b${table}\\b`);
+  const extras = db.all("SELECT type, name, tbl_name, sql FROM sqlite_master WHERE type IN ('index', 'trigger') AND sql IS NOT NULL")
+    .filter((o) => o.tbl_name === table || (o.type === 'trigger' && mentions.test(o.sql)));
+  for (const t of extras.filter((o) => o.type === 'trigger')) db.run(`DROP TRIGGER "${t.name}"`);
+  db.run(sql.replace(from, to).replace(/^CREATE TABLE\s+("?)(\w+)\1/, `CREATE TABLE ${table}__new`));
+  db.run(`INSERT INTO ${table}__new SELECT * FROM ${table}`);
+  db.run(`DROP TABLE ${table}`);
+  db.run(`ALTER TABLE ${table}__new RENAME TO ${table}`);
+  for (const o of extras) db.run(o.sql);
+}
+
 const MIGRATIONS = [
   // 1. Outlook email sync
   `
@@ -1151,7 +1168,11 @@ MIGRATIONS.push(
   // 34. Trail commissions are no longer tracked
   `
   DELETE FROM commissions WHERE type = 'trail';
-  `,
+  `,  // 35. Business loans: a loan type on the tracker and a deal purpose
+  (db) => {
+    rebuildWithCheck(db, 'loans', "'commercial','personal'", "'commercial','business_loan','personal'");
+    rebuildWithCheck(db, 'deals', "'commercial','other'", "'commercial','business_loan','other'");
+  },
 );
 
 module.exports = MIGRATIONS;

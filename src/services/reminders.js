@@ -69,7 +69,7 @@ function annualReviewsDue(cfg, date) {
   }));
 }
 
-const LOAN_LABELS = { home_loan: 'home loan', investment_loan: 'investment loan', line_of_credit: 'line of credit', credit_card: 'credit card', construction: 'construction loan' };
+const LOAN_LABELS = { home_loan: 'home loan', investment_loan: 'investment loan', line_of_credit: 'line of credit', credit_card: 'credit card', construction: 'construction loan', business_loan: 'business loan' };
 
 // Bullet points about the client: contact details, last review, loans
 // needing attention, open deals.

@@ -253,7 +253,7 @@ async function polishScenario(notes) {
 
 const PURPOSE_WORDS = {
   first_home: 'First home buyers', purchase: 'Home buyers', investment: 'An investor', refinance: 'A refinance client', construction: 'Clients building a home',
-  top_up: 'Clients accessing equity', commercial: 'A business owner', other: 'A client',
+  top_up: 'Clients accessing equity', commercial: 'A business owner', business_loan: 'A business owner', other: 'A client',
 };
 const dollars = (n) => (n ? `$${Math.round(n).toLocaleString('en-AU')}` : null);
 function ideas() {

@@ -7,7 +7,7 @@ const { today, addMonths } = require('../util');
 const { STAGES } = require('../constants');
 
 const round2 = (n) => Math.round(n * 100) / 100;
-const PURPOSES = { purchase: 'Purchase', first_home: 'First home', refinance: 'Refinance', investment: 'Investment', construction: 'Construction', top_up: 'Top-up', commercial: 'Commercial', other: 'Other' };
+const PURPOSES = { purchase: 'Purchase', first_home: 'First home', refinance: 'Refinance', investment: 'Investment', construction: 'Construction', top_up: 'Top-up', commercial: 'Commercial', business_loan: 'Business loan', other: 'Other' };
 const stageLabel = (k) => STAGES.find((s) => s.key === k)?.label || k;
 // Open deals far enough along to count as "expected" when they have no date yet.
 const LATE_STAGES = ['application_lodged', 'conditional_approval', 'unconditional_approval', 'settlement_booked'];

@@ -42,7 +42,7 @@ const parse = (v, fallback) => {
 
 const EMPLOYMENT_FROM_CRM = { payg: 'full_time', casual: 'casual', contractor: 'contract', self_employed: 'self_employed', retired: 'retired' };
 const EMPLOYMENT_TO_CRM = { full_time: 'payg', part_time: 'payg', parental_leave: 'payg', casual: 'casual', contract: 'contractor', self_employed: 'self_employed', retired: 'retired' };
-const LIABILITY_FROM_CRM = { home_loan: 'home_loan', investment_loan: 'home_loan', line_of_credit: 'home_loan', construction: 'home_loan', bridging: 'home_loan', credit_card: 'credit_card', personal: 'personal', car: 'car', hecs: 'hecs' };
+const LIABILITY_FROM_CRM = { home_loan: 'home_loan', investment_loan: 'home_loan', line_of_credit: 'home_loan', construction: 'home_loan', bridging: 'home_loan', credit_card: 'credit_card', personal: 'personal', car: 'car', hecs: 'hecs', business_loan: 'business_loan' };
 const ASSET_FROM_CRM = { savings: 'savings', superannuation: 'superannuation', shares: 'shares', vehicle: 'vehicle', business: 'business', contents: 'contents' };
 const month = (d) => (d ? String(d).slice(0, 7) : '');
 
@@ -502,7 +502,7 @@ const remove = (id) => db.run('DELETE FROM fact_finds WHERE id = ?', id).changes
 // ---- Importing answers into the CRM ------------------------------------------------------------------
 
 const PURPOSE_TO_DEAL = { buy_home: 'purchase', first_home: 'first_home', buy_investment: 'investment', refinance: 'refinance', build: 'construction', equity: 'top_up', other: 'other' };
-const LIABILITY_TO_CRM = { home_loan: 'home_loan', credit_card: 'credit_card', personal: 'personal', car: 'car', hecs: 'hecs', bnpl: 'other', tax: 'other', other: 'other' };
+const LIABILITY_TO_CRM = { home_loan: 'home_loan', credit_card: 'credit_card', personal: 'personal', car: 'car', business_loan: 'business_loan', hecs: 'hecs', bnpl: 'other', tax: 'other', other: 'other' };
 const ASSET_TO_CRM = { savings: 'savings', term_deposit: 'savings', superannuation: 'superannuation', shares: 'shares', vehicle: 'vehicle', contents: 'contents', business: 'business', other: 'other' };
 const money = (v) => {
   const n = rules.num(v);
