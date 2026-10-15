@@ -5,16 +5,26 @@
 const db = require('../db');
 const { today, nowIso, addMonths } = require('../util');
 
+// Each kind of valuation, with a plain-English description for clients (shown under reports that use it).
 const VALUATION_METHODS = [
-  { key: 'full', label: 'Full valuation' },
-  { key: 'desktop', label: 'Desktop valuation' },
-  { key: 'kerbside', label: 'Kerbside valuation' },
-  { key: 'avm', label: 'AVM' },
-  { key: 'contract_price', label: 'Contract price' },
-  { key: 'agent_appraisal', label: 'Agent appraisal' },
-  { key: 'client_estimate', label: 'Client estimate' },
-  { key: 'other', label: 'Other' },
+  { key: 'full', label: 'Full valuation', description: 'A qualified valuer inspects the property inside and out and compares it with recent nearby sales. The most thorough type, and the one lenders rely on most.' },
+  { key: 'desktop', label: 'Desktop valuation', description: 'A valuer assesses the property from their desk, using recent sales, property records and market data, without visiting. Quicker than a full valuation, but less precise.' },
+  { key: 'kerbside', label: 'Kerbside valuation', description: 'A valuer views the property from the street, without going inside, and combines this with sales data. More detailed than a desktop valuation, less than a full one.' },
+  { key: 'avm', label: 'AVM', description: 'An automated valuation model: a computer-generated estimate based on sales data and property details. Instant, but it can\'t see a property\'s condition, renovations or special features.' },
+  { key: 'contract_price', label: 'Contract price', description: 'The price agreed on the contract of sale when the property was bought. It reflects the market at that time.' },
+  { key: 'agent_appraisal', label: 'Agent appraisal', description: 'A real estate agent\'s opinion of what the property could sell for, based on their local knowledge. A useful guide, but not a formal valuation.' },
+  { key: 'client_estimate', label: 'Client estimate', description: 'The owner\'s own estimate of what the property is worth. A helpful starting point that hasn\'t been independently checked.' },
+  { key: 'other', label: 'Other', description: 'A value from another source, as noted.' },
 ];
+const PURCHASE_PRICE = { key: 'purchase_price', label: 'Purchase price', description: 'What was paid for the property when it was bought.' };
+
+// [label, description] for the valuation types mentioned (by key or label), in a fixed order.
+function valuationGlossary(mentioned) {
+  const seen = new Set([...mentioned].filter(Boolean).map((m) => String(m).toLowerCase()));
+  return [...VALUATION_METHODS, PURCHASE_PRICE]
+    .filter((m) => seen.has(m.key) || seen.has(m.label.toLowerCase()))
+    .map((m) => [m.label, m.description]);
+}
 const USABLE_EQUITY_LVR = 0.8;
 const PURCHASE_PURPOSES = ['purchase', 'first_home', 'investment', 'construction'];
 
@@ -286,4 +296,4 @@ function touch(table, id) {
   db.run(`UPDATE ${table} SET updated_at = ? WHERE id = ?`, nowIso(), id);
 }
 
-module.exports = { createFromDeal, summary, structure, chooseValuation, valuationRules, VALUATION_METHODS, methodLabel, touch };
+module.exports = { createFromDeal, summary, structure, chooseValuation, valuationRules, VALUATION_METHODS, methodLabel, valuationGlossary, touch };

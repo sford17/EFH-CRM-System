@@ -78,6 +78,13 @@ test('preview, PDF and Word versions', async () => {
     assert.ok(h.toLowerCase().includes(s.toLowerCase()), `preview contains ${s}`);
   }
   assert.doesNotMatch(h, /<script/i);
+  // Each valuation type shown is explained, and only those.
+  const gl = h.slice(h.indexOf('class="glossary"'));
+  assert.match(gl, /About the valuation types/);
+  for (const m of require('../src/services/tracker').VALUATION_METHODS) {
+    const shown = h.slice(0, h.indexOf('class="glossary"')).includes(`>${m.label}<`) || h.slice(0, h.indexOf('class="glossary"')).includes(`${m.label}<br>`);
+    assert.equal(gl.includes(m.description.replace(/'/g, '&#39;')), shown, `${m.label} explained only when shown`);
+  }
 
   const { res: pdfRes, buf: pdf } = await binary(`/reviews/${reviewId}/pdf`);
   assert.equal(pdfRes.headers.get('content-type'), 'application/pdf');
@@ -96,7 +103,7 @@ test('preview, PDF and Word versions', async () => {
   const JSZip = require('jszip');
   const zip = await JSZip.loadAsync(docx);
   const xml = await zip.file('word/document.xml').async('string');
-  for (const s of ['Client Lending Review', 'Rhys Review', 'Point one', 'Call us', 'ACTIONS TO CONSIDER', 'Commonwealth Bank']) assert.ok(xml.includes(s), `docx contains ${s}`);
+  for (const s of ['Client Lending Review', 'Rhys Review', 'Point one', 'Call us', 'ACTIONS TO CONSIDER', 'Commonwealth Bank', 'About the valuation types']) assert.ok(xml.includes(s), `docx contains ${s}`);
 });
 
 test('emailing attaches the PDF, marks the review sent and books the next review', async () => {

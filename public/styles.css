@@ -1023,3 +1023,4 @@ p.sl-ai { display: block; }
   .borrower-tag { grid-column: 1 / -1; }
 }
 .card-head-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
+.method-hint { margin: .3rem 0 0; }

@@ -77,6 +77,15 @@ Open a contact and choose the **Mortgage tracker** tab.
 
 When a deal settles, its loan, security property and recorded value are added to the tracker automatically. Imported settled loans are added too. **Fixed-rate expiry** reminders run from tracker loans, so they also cover loans arranged elsewhere or refixed since. There's also an **Interest-only period ending** reminder (90 days ahead by default). Templates can use `{{loan.lender_name}}`, `{{loan.fixed_expiry_date|date}}`, `{{loan.io_expiry_date|date}}`, `{{loan.balance|money}}` and `{{loan.interest_rate}}`.
 
+## Valuation types explained
+
+When a client document shows how a property was valued, a short **About the valuation types** section underneath explains each type that appears, in plain words. Only the types actually shown are explained, for example full valuation, desktop, kerbside, AVM, contract price, agent appraisal, client estimate or purchase price. It appears in:
+- the property report (PDF, preview and email)
+- the client lending review (PDF, Word and preview)
+- the *property value chart* graphic in emails
+
+The same description shows under the method when you add or edit a valuation on the Mortgage tracker tab.
+
 ## Lender logos
 
 On **Lenders**, each lender has **Upload** (PNG/JPG) and **Fetch** buttons. *Fetch* uses the lender's website icon and is quick but low resolution. For the best result, upload the logo from the lender's broker portal or your aggregator. Website addresses are pre-filled for the standard lenders.

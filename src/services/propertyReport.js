@@ -384,6 +384,12 @@ function business() {
   };
 }
 
+// [label, description] for the valuation types shown for the report's properties.
+function valuationTypes(report) {
+  const shown = report.content.properties.flatMap((pp) => report.performance.find((x) => x.id === pp.property_id)?.points.map((p) => p.method) || []);
+  return require('./tracker').valuationGlossary(shown);
+}
+
 const typeWord = (t) => (t === 'unit' ? 'units' : 'houses');
 
 function model(report) {
@@ -431,6 +437,9 @@ function model(report) {
       if (area.highlights.length) blocks.push({ type: 'text', text: `What's happening locally:\n${area.highlights.map((h) => `• ${h}`).join('\n')}` });
     }
   }
+  // What each valuation type in the report means.
+  const glossary = valuationTypes(report);
+  if (glossary.length) blocks.push({ type: 'glossary', title: 'About the valuation types', items: glossary });
   if (c.closing) blocks.push({ type: 'heading', text: 'Let\'s talk' }, { type: 'text', text: c.closing });
   const sources = [...new Map(c.areas.flatMap((a) => [...a.sources, ...a.stats.filter((s) => s.source_url).map((s) => ({ title: s.source_name, publisher: s.source_name, url: s.source_url }))]).map((s) => [s.url, s])).values()];
   blocks.push({
@@ -491,6 +500,11 @@ function emailHtml(report, senderId) {
       const srcs = [...new Map([...area.sources, ...area.stats.filter((s) => s.source_url).map((s) => ({ title: s.source_name, publisher: s.source_name, url: s.source_url }))].map((s) => [s.url, s])).values()].slice(0, 6);
       html.push(E.sourceLine(srcs, col));
     }
+  }
+  const glossary = valuationTypes(report);
+  if (glossary.length) {
+    html.push(`<div style="margin:6px 0 16px 0;padding:10px 14px;background:${col.soft};border-radius:6px;font-family:${E.FONT};font-size:12px;line-height:1.5;color:${E.MUTED};"><div style="font-weight:bold;color:${col.dark};margin-bottom:4px;">About the valuation types</div>${glossary.map(([k, v]) => `<div style="margin:2px 0;"><strong>${E.esc(k)}:</strong> ${E.esc(v)}</div>`).join('')}</div>`);
+    txt.push(`ABOUT THE VALUATION TYPES\n${glossary.map(([k, v]) => `${k}: ${v}`).join('\n')}`);
   }
   const bookUrl = bookingUrl(report.contact_id, senderId);
   if (c.closing) { html.push(E.heading('Let\'s talk', col), E.para(c.closing, col)); txt.push(c.closing); }

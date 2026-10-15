@@ -78,6 +78,7 @@ test('tracker graphics: position, lending structure, equity, value history and f
   assert.match(e.html, /Your property equity/);
   assert.match(e.html, /3 Park Ave: estimated value/);
   assert.match(e.html, /Up <strong[^>]*>11.1%<\/strong>/);
+  assert.match(e.text, /(Full valuation|Desktop valuation|AVM|Contract price|Agent appraisal|Client estimate|Kerbside valuation): [A-Z]/, 'valuation types explained');
   assert.match(e.html, />75<\/div><div[^>]*>days to go/);
   assert.match(e.text, /Your fixed rate ends on .* – 75 days to go/);
   assert.match(e.text, /Westpac – \$600k\n {2}- Home loan \$600k at 5.69% fixed, secured by 3 Park Ave/);

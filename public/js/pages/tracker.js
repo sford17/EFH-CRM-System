@@ -204,14 +204,25 @@ export async function trackerTab(contact) {
     await attempt(() => api(`/tracker/properties/${p.id}`, { method: 'DELETE' }), 'Property deleted');
     refresh();
   };
-  const addValuation = (p) => formModal(`New valuation – ${shortAddress(p.address)}`, valuationFields(), {}, async (v) => {
+  // Explains the chosen valuation type under the picker.
+  const methodHint = (d, name = 'method') => {
+    const sel = d.querySelector(`select[name=${name}]`);
+    if (!sel) return d;
+    const hint = h('p.small.muted.method-hint');
+    const show = () => { hint.textContent = methods.find((m) => m.key === sel.value)?.description || ''; };
+    sel.addEventListener('change', show);
+    sel.closest('.field').append(hint);
+    show();
+    return d;
+  };
+  const addValuation = (p) => methodHint(formModal(`New valuation – ${shortAddress(p.address)}`, valuationFields(), {}, async (v) => {
     await attempt(() => api(`/tracker/properties/${p.id}/valuations`, { method: 'POST', body: v }), 'Valuation added');
     refresh();
-  });
-  const editValuation = (v) => formModal('Edit valuation', valuationFields(), v, async (vals) => {
+  }));
+  const editValuation = (v) => methodHint(formModal('Edit valuation', valuationFields(), v, async (vals) => {
     await attempt(() => api(`/tracker/valuations/${v.id}`, { method: 'PATCH', body: vals }), 'Saved');
     refresh();
-  });
+  }));
   // Fix the valuation used for a property's value, or go back to the automatic choice.
   const useValuation = async (p, v) => {
     await attempt(() => api(`/tracker/properties/${p.id}`, { method: 'PATCH', body: { valuation_id: v ? v.id : null } }),

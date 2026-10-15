@@ -293,12 +293,15 @@ ${bar([[debt, debtColour], [Math.max(0, scale - debt), equityColour]], 18)}
 <table role="presentation" width="70%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="${colour}" height="${hgt}" style="background:${colour};height:${hgt}px;line-height:${hgt}px;font-size:1px;border-radius:3px 3px 0 0;">&nbsp;</td></tr></table></td>`;
     });
     const labels = vals.map((v) => `<td align="center" valign="top" style="padding:5px 2px 0 2px;font-size:11px;color:${MUTED};border-top:1px solid ${BORDER};">${esc(new Date(`${v.valuation_date}T00:00:00Z`).toLocaleDateString('en-AU', { month: 'short', year: 'numeric', timeZone: 'UTC' }))}<br>${esc(v.method_label)}</td>`);
+    // What each valuation type in the chart means.
+    const types = require('./tracker').valuationGlossary(vals.map((v) => v.method || v.method_label));
     const first = vals[0];
     const last = vals[vals.length - 1];
     const growth = first.amount ? Math.round(((last.amount - first.amount) / first.amount) * 1000) / 10 : null;
     const html = card(c, `${shortAddress(prop.address)}: estimated value`, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed;"><tr>${cols.join('')}</tr><tr>${labels.join('')}</tr></table>
-${growth !== null ? `<div style="font-size:13px;margin-top:10px;">${growth >= 0 ? 'Up' : 'Down'} <strong style="color:${growth >= 0 ? '#1e8e4e' : '#c0392b'};">${pct(Math.abs(growth))}</strong> since ${esc(formatDate(first.valuation_date))}.</div>` : ''}`);
-    return { html, text: `${shortAddress(prop.address)}: estimated value\n${vals.map((v) => `${formatDate(v.valuation_date)}: ${money(v.amount)} (${v.method_label})`).join('\n')}` };
+${growth !== null ? `<div style="font-size:13px;margin-top:10px;">${growth >= 0 ? 'Up' : 'Down'} <strong style="color:${growth >= 0 ? '#1e8e4e' : '#c0392b'};">${pct(Math.abs(growth))}</strong> since ${esc(formatDate(first.valuation_date))}.</div>` : ''}
+${types.length ? `<div style="font-size:11px;line-height:1.45;color:${MUTED};margin-top:10px;border-top:1px solid ${BORDER};padding-top:8px;">${types.map(([k, v]) => `<div style="margin:2px 0;"><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('')}</div>` : ''}`);
+    return { html, text: `${shortAddress(prop.address)}: estimated value\n${vals.map((v) => `${formatDate(v.valuation_date)}: ${money(v.amount)} (${v.method_label})`).join('\n')}${types.length ? `\n\n${types.map(([k, v]) => `${k}: ${v}`).join('\n')}` : ''}` };
   },
 
   fixed_rate(src, c) {

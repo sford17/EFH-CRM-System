@@ -178,6 +178,10 @@ function model(review) {
         align: ['left', 'left', 'left', 'left', 'right'], rows: vals,
       });
     }
+    // What each valuation type shown above means.
+    const shown = [...s.structure.properties.map((p) => p.current_valuation?.method), ...vals.map((v) => v[1])];
+    const glossary = require('./tracker').valuationGlossary(shown);
+    if (glossary.length) blocks.push({ type: 'glossary', title: 'About the valuation types', items: glossary });
   }
 
   if (s.assets.length) {
@@ -313,6 +317,7 @@ function renderHtml(m) {
     if (b.type === 'tiles') return `<div class="tiles">${b.items.map(([k, v]) => `<div><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join('')}</div>`;
     if (b.type === 'diagram') return `<div class="diagram">${b.svg.svg}</div>`;
     if (b.type === 'note') return `<p class="note">${esc(b.text)}</p>`;
+    if (b.type === 'glossary') return `<div class="glossary"><p class="gl-title">${esc(b.title)}</p>${b.items.map(([k, v]) => `<p><strong>${esc(k)}:</strong> ${esc(v)}</p>`).join('')}</div>`;
     if (b.type === 'table') {
       const al = (i) => (b.align?.[i] === 'right' ? ' class="r"' : '');
       const td = (c, i) => {
@@ -337,6 +342,7 @@ h3{font-size:13px;margin:16px 0 6px;color:#374151}p,li{font-size:13.5px;line-hei
 table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}th{text-align:left;background:#f3f4f6;color:#374151;padding:6px;font-weight:600}
 td{padding:6px;border-bottom:1px solid #e5e7eb;vertical-align:top}.r{text-align:right}tr.total td{font-weight:bold;border-top:2px solid #d1d5db}
 .diagram{margin:8px 0 12px;overflow-x:auto}img.lender-logo{margin-bottom:3px}.note{font-size:11px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:12px;margin-top:28px}
+.glossary{background:#f9fafb;border-left:3px solid #d1d5db;padding:8px 12px;margin:10px 0 14px}.glossary p{font-size:11.5px;line-height:1.45;color:#4b5563;margin:2px 0}.glossary .gl-title{font-weight:bold;color:#374151;margin-bottom:4px}
 @media (max-width:700px){.page{padding:24px}.tiles{grid-template-columns:repeat(2,1fr)}}
 </style></head><body><div class="page">
 <header><div>${logo ? `<img src="${logo.url}" alt="${esc(m.business.name)}">` : `<strong style="font-size:20px">${esc(m.business.name)}</strong>`}</div>
@@ -407,6 +413,13 @@ async function renderPdf(m) {
       });
     } else if (b.type === 'note') {
       content.push({ text: b.text, fontSize: 7.5, color: '#6b7280', margin: [0, 20, 0, 0] });
+    } else if (b.type === 'glossary') {
+      content.push({
+        table: { widths: ['*'], body: [[{ stack: [{ text: b.title, bold: true, fontSize: 8, color: '#374151', margin: [0, 0, 0, 2] }, ...b.items.map(([k, v]) => ({ text: [{ text: `${k}: `, bold: true }, v], fontSize: 7.5, color: '#4b5563', margin: [0, 1, 0, 1] }))], fillColor: '#f9fafb' }]] },
+        layout: { hLineWidth: () => 0, vLineWidth: (i) => (i === 0 ? 2 : 0), vLineColor: () => '#d1d5db', paddingLeft: () => 8, paddingTop: () => 5, paddingBottom: () => 5 },
+        margin: [0, 4, 0, 8],
+        unbreakable: true,
+      });
     }
   }
 
@@ -518,6 +531,13 @@ async function renderDocx(m) {
       children.push(new D.Paragraph({ spacing: { after: 80 }, children: [] }));
     } else if (b.type === 'note') {
       children.push(new D.Paragraph({ spacing: { before: 300 }, children: [new D.TextRun({ text: b.text, font: 'Arial', size: 15, color: '6B7280' })] }));
+    } else if (b.type === 'glossary') {
+      children.push(new D.Paragraph({ keepNext: true, spacing: { before: 120, after: 40 }, children: [new D.TextRun({ text: b.title, bold: true, font: 'Arial', size: 16, color: '374151' })] }));
+      b.items.forEach(([k, v], i) => children.push(new D.Paragraph({
+        keepNext: i < b.items.length - 1, spacing: { after: 30 },
+        children: [new D.TextRun({ text: `${k}: `, bold: true, font: 'Arial', size: 15, color: '4B5563' }), new D.TextRun({ text: v, font: 'Arial', size: 15, color: '4B5563' })],
+      })));
+      children.push(new D.Paragraph({ spacing: { after: 80 }, children: [] }));
     }
     // The diagram is shown as the property table in Word.
   }
