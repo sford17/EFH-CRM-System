@@ -31,7 +31,7 @@ const GRAPHICS = [
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const compact = (n) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/\.?0+$/, '')}m` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : money(n));
 const pct = (n, dp = 1) => (n === null || n === undefined ? '—' : `${Number(n).toFixed(dp).replace(/\.0+$/, '')}%`);
-const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP', construction: 'Construction loan', personal: 'Personal loan', car: 'Car loan', bridging: 'Bridging loan', commercial: 'Commercial loan' };
+const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP', construction: 'Construction loan', personal: 'Personal loan', car: 'Car loan', bridging: 'Bridging loan', business_loan: 'Business loan', smsf: 'SMSF loan', commercial: 'Commercial loan' };
 const loanLabel = (t) => LOAN_LABELS[t] || 'Loan';
 const shortAddress = (a) => String(a || '').split(',')[0];
 const rateText = (l) => (l.interest_rate ? `${pct(l.interest_rate, 2)} ${l.rate_type === 'fixed' ? 'fixed' : l.rate_type === 'split' ? 'split' : 'variable'}` : '');
@@ -107,7 +107,7 @@ function loadLoan({ loanId, dealId, contactId }) {
   if (byDeal) return byDeal;
   if (!contactId) return null;
   return db.one(
-    `${select} WHERE (n.contact_id = ? OR n.co_borrower_id = ?) AND n.status = 'active' AND n.fixed_expiry_date >= ?
+    `${select} WHERE (n.contact_id = ? OR n.id IN (SELECT loan_id FROM loan_borrowers WHERE contact_id = ?)) AND n.status = 'active' AND n.fixed_expiry_date >= ?
      ORDER BY n.fixed_expiry_date LIMIT 1`,
     contactId, contactId, today(),
   );
@@ -239,9 +239,10 @@ ${received.length ? `<div style="font-size:13px;font-weight:bold;margin:14px 0 4
 <td style="font-weight:bold;color:${c.dark};">${logoImg(l.logo_id, l.name, 90, 22)}${l.logo_id ? '&nbsp; ' : ''}${esc(l.name)}</td><td align="right" style="font-weight:bold;color:${c.dark};">${esc(compact(l.total))}</td></tr></table></td></tr>
 ${l.loans.map((n) => {
     const secured = n.security_ids.map((id) => props.get(id)).filter(Boolean).map((p) => shortAddress(p.address));
+    const others = (n.other_securities || []).map((x) => x.summary);
     return `<tr><td style="padding:8px 12px;border-top:1px solid #f0f2f5;font-size:14px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
 <td><strong>${esc(loanLabel(n.loan_type))}</strong> <span style="color:${MUTED};font-size:13px;">${esc([rateText(n), n.repayment_type === 'io' ? 'interest only' : null].filter(Boolean).join(' · '))}</span><br>
-<span style="font-size:12px;color:${MUTED};">${secured.length ? `&#8627; Secured by ${esc(secured.join(' + '))}${secured.length > 1 ? ' <span style="color:#c27c0e;font-weight:bold;">(cross-secured)</span>' : ''}` : 'Unsecured'}</span></td>
+<span style="font-size:12px;color:${MUTED};">${secured.length ? `&#8627; Secured by ${esc(secured.join(' + '))}${secured.length > 1 ? ' <span style="color:#c27c0e;font-weight:bold;">(cross-secured)</span>' : ''}` : others.length ? '' : 'Unsecured'}${others.length ? `${secured.length ? '<br>' : ''}&#8627; ${esc(others.join(' · '))}` : ''}</span></td>
 <td align="right" valign="top" style="font-weight:bold;white-space:nowrap;">${esc(compact(n.owing))}</td></tr></table></td></tr>`;
   }).join('')}</table>`).join('');
     const propBlocks = s.structure.properties.map((p) => `<tr><td style="padding:8px 0;border-bottom:1px solid #f0f2f5;">
@@ -251,7 +252,7 @@ ${l.loans.map((n) => {
     const html = card(c, 'How your lending is structured', `${lenderBlocks}
 ${propBlocks ? `<div style="font-size:13px;font-weight:bold;margin:12px 0 2px 0;">Your properties</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${propBlocks}</table>` : ''}`);
     const text = ['How your lending is structured',
-      ...s.structure.lenders.flatMap((l) => [`${l.name} – ${compact(l.total)}`, ...l.loans.map((n) => `  - ${loanLabel(n.loan_type)} ${compact(n.owing)}${rateText(n) ? ` at ${rateText(n)}` : ''}, ${n.security_ids.length ? `secured by ${n.security_ids.map((id) => shortAddress(props.get(id)?.address)).join(' + ')}` : 'unsecured'}`)]),
+      ...s.structure.lenders.flatMap((l) => [`${l.name} – ${compact(l.total)}`, ...l.loans.map((n) => `  - ${loanLabel(n.loan_type)} ${compact(n.owing)}${rateText(n) ? ` at ${rateText(n)}` : ''}, ${[n.security_ids.length ? `secured by ${n.security_ids.map((id) => shortAddress(props.get(id)?.address)).join(' + ')}` : null, ...(n.other_securities || []).map((x) => x.summary)].filter(Boolean).join(', ') || 'unsecured'}`)]),
       ...s.structure.properties.map((p) => `${shortAddress(p.address)}: value ${compact(p.current_value || 0)}, LVR ${pct(p.lvr)}`)].join('\n');
     return { html, text };
   },
@@ -293,12 +294,15 @@ ${bar([[debt, debtColour], [Math.max(0, scale - debt), equityColour]], 18)}
 <table role="presentation" width="70%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="${colour}" height="${hgt}" style="background:${colour};height:${hgt}px;line-height:${hgt}px;font-size:1px;border-radius:3px 3px 0 0;">&nbsp;</td></tr></table></td>`;
     });
     const labels = vals.map((v) => `<td align="center" valign="top" style="padding:5px 2px 0 2px;font-size:11px;color:${MUTED};border-top:1px solid ${BORDER};">${esc(new Date(`${v.valuation_date}T00:00:00Z`).toLocaleDateString('en-AU', { month: 'short', year: 'numeric', timeZone: 'UTC' }))}<br>${esc(v.method_label)}</td>`);
+    // What each valuation type in the chart means.
+    const types = require('./tracker').valuationGlossary(vals.map((v) => v.method || v.method_label));
     const first = vals[0];
     const last = vals[vals.length - 1];
     const growth = first.amount ? Math.round(((last.amount - first.amount) / first.amount) * 1000) / 10 : null;
     const html = card(c, `${shortAddress(prop.address)}: estimated value`, `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed;"><tr>${cols.join('')}</tr><tr>${labels.join('')}</tr></table>
-${growth !== null ? `<div style="font-size:13px;margin-top:10px;">${growth >= 0 ? 'Up' : 'Down'} <strong style="color:${growth >= 0 ? '#1e8e4e' : '#c0392b'};">${pct(Math.abs(growth))}</strong> since ${esc(formatDate(first.valuation_date))}.</div>` : ''}`);
-    return { html, text: `${shortAddress(prop.address)}: estimated value\n${vals.map((v) => `${formatDate(v.valuation_date)}: ${money(v.amount)} (${v.method_label})`).join('\n')}` };
+${growth !== null ? `<div style="font-size:13px;margin-top:10px;">${growth >= 0 ? 'Up' : 'Down'} <strong style="color:${growth >= 0 ? '#1e8e4e' : '#c0392b'};">${pct(Math.abs(growth))}</strong> since ${esc(formatDate(first.valuation_date))}.</div>` : ''}
+${types.length ? `<div style="font-size:11px;line-height:1.45;color:${MUTED};margin-top:10px;border-top:1px solid ${BORDER};padding-top:8px;">${types.map(([k, v]) => `<div style="margin:2px 0;"><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('')}</div>` : ''}`);
+    return { html, text: `${shortAddress(prop.address)}: estimated value\n${vals.map((v) => `${formatDate(v.valuation_date)}: ${money(v.amount)} (${v.method_label})`).join('\n')}${types.length ? `\n\n${types.map(([k, v]) => `${k}: ${v}`).join('\n')}` : ''}` };
   },
 
   fixed_rate(src, c) {

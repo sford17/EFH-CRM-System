@@ -5,16 +5,26 @@
 const db = require('../db');
 const { today, nowIso, addMonths } = require('../util');
 
+// Each kind of valuation, with a plain-English description for clients (shown under reports that use it).
 const VALUATION_METHODS = [
-  { key: 'full', label: 'Full valuation' },
-  { key: 'desktop', label: 'Desktop valuation' },
-  { key: 'kerbside', label: 'Kerbside valuation' },
-  { key: 'avm', label: 'AVM' },
-  { key: 'contract_price', label: 'Contract price' },
-  { key: 'agent_appraisal', label: 'Agent appraisal' },
-  { key: 'client_estimate', label: 'Client estimate' },
-  { key: 'other', label: 'Other' },
+  { key: 'full', label: 'Full valuation', description: 'A qualified valuer inspects the property inside and out and compares it with recent nearby sales. The most thorough type, and the one lenders rely on most.' },
+  { key: 'desktop', label: 'Desktop valuation', description: 'A valuer assesses the property from their desk, using recent sales, property records and market data, without visiting. Quicker than a full valuation, but less precise.' },
+  { key: 'kerbside', label: 'Kerbside valuation', description: 'A valuer views the property from the street, without going inside, and combines this with sales data. More detailed than a desktop valuation, less than a full one.' },
+  { key: 'avm', label: 'AVM', description: 'An automated valuation model: a computer-generated estimate based on sales data and property details. Instant, but it can\'t see a property\'s condition, renovations or special features.' },
+  { key: 'contract_price', label: 'Contract price', description: 'The price agreed on the contract of sale when the property was bought. It reflects the market at that time.' },
+  { key: 'agent_appraisal', label: 'Agent appraisal', description: 'A real estate agent\'s opinion of what the property could sell for, based on their local knowledge. A useful guide, but not a formal valuation.' },
+  { key: 'client_estimate', label: 'Client estimate', description: 'The owner\'s own estimate of what the property is worth. A helpful starting point that hasn\'t been independently checked.' },
+  { key: 'other', label: 'Other', description: 'A value from another source, as noted.' },
 ];
+const PURCHASE_PRICE = { key: 'purchase_price', label: 'Purchase price', description: 'What was paid for the property when it was bought.' };
+
+// [label, description] for the valuation types mentioned (by key or label), in a fixed order.
+function valuationGlossary(mentioned) {
+  const seen = new Set([...mentioned].filter(Boolean).map((m) => String(m).toLowerCase()));
+  return [...VALUATION_METHODS, PURCHASE_PRICE]
+    .filter((m) => seen.has(m.key) || seen.has(m.label.toLowerCase()))
+    .map((m) => [m.label, m.description]);
+}
 const USABLE_EQUITY_LVR = 0.8;
 const PURCHASE_PURPOSES = ['purchase', 'first_home', 'investment', 'construction'];
 
@@ -60,9 +70,11 @@ function createFromDeal(dealId, { importId = null } = {}) {
     co_borrower_id: deal.co_borrower_id,
     deal_id: deal.id,
     lender_id: deal.lender_id,
-    loan_type: deal.loan_purpose === 'investment' ? 'investment_loan'
+    loan_type: deal.loan_type && deal.loan_type !== 'other' ? deal.loan_type
+      : deal.loan_purpose === 'investment' ? 'investment_loan'
       : deal.loan_purpose === 'construction' ? 'construction'
-        : deal.loan_purpose === 'commercial' ? 'commercial' : 'home_loan',
+        : deal.loan_purpose === 'commercial' ? 'commercial'
+          : deal.loan_purpose === 'business_loan' ? 'business_loan' : 'home_loan',
     account_number: deal.application_ref,
     product_name: deal.product_name,
     limit_amount: deal.loan_amount,
@@ -76,6 +88,10 @@ function createFromDeal(dealId, { importId = null } = {}) {
     loan_term_years: deal.loan_term_years,
   });
   if (propertyId) db.run('INSERT OR IGNORE INTO loan_securities (loan_id, property_id) VALUES (?, ?)', loanId, propertyId);
+  // Rent roll, GSA or guarantee recorded on the deal.
+  require('./securities').copyDealToLoan(deal.id, loanId);
+  // Everyone on the deal is on the loan.
+  require('./borrowers').setCo('loan', loanId, require('./borrowers').coIds('deal', deal.id));
   return loanId;
 }
 
@@ -160,15 +176,16 @@ function chooseValuation(p, rules = valuationRules()) {
 function loansFor(ids) {
   const loans = db.all(
     `SELECT n.*, COALESCE(l.name, n.lender_name, 'Unknown lender') AS lender_display, l.logo_asset_id AS lender_logo_id,
-            b.first_name || ' ' || COALESCE(b.last_name,'') AS co_borrower_name, m.first_name || ' ' || COALESCE(m.last_name,'') AS borrower_name
-     FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id LEFT JOIN contacts b ON b.id = n.co_borrower_id
+            ${require('./borrowers').coNamesSql('loan', 'n')} AS co_borrower_name, m.first_name || ' ' || COALESCE(m.last_name,'') AS borrower_name
+     FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id
      LEFT JOIN contacts m ON m.id = n.contact_id
-     WHERE n.contact_id IN (${inList(ids)}) OR n.co_borrower_id IN (${inList(ids)})
+     WHERE ${require('./borrowers').involving('loan', 'n', ids)}
      ORDER BY n.status != 'active', lender_display, n.id`,
     ...ids, ...ids,
   );
   for (const n of loans) {
     n.security_ids = db.all('SELECT property_id FROM loan_securities WHERE loan_id = ?', n.id).map((r) => r.property_id);
+    n.other_securities = require('./securities').forLoan(n.id);
     n.owing = n.balance ?? n.limit_amount ?? 0;
     n.net_owing = Math.max(0, n.owing - (n.offset_balance || 0));
   }
@@ -284,4 +301,4 @@ function touch(table, id) {
   db.run(`UPDATE ${table} SET updated_at = ? WHERE id = ?`, nowIso(), id);
 }
 
-module.exports = { createFromDeal, summary, structure, chooseValuation, valuationRules, VALUATION_METHODS, methodLabel, touch };
+module.exports = { createFromDeal, summary, structure, chooseValuation, valuationRules, VALUATION_METHODS, methodLabel, valuationGlossary, touch };

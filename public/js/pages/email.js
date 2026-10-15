@@ -58,7 +58,7 @@ export async function openEmail(id) {
 // New email to a contact, optionally starting from a template.
 // `toParty` is set when writing to the agent/solicitor etc. on a deal.
 export async function composeDialog({ contactId, dealId, to, subject = '', body = '', toParty = null }) {
-  const [{ rows: templates }, status, members] = await Promise.all([api('/templates'), api('/outlook/status'), householdOf(contactId)]);
+  const [{ rows: templates }, status, members] = await Promise.all([api('/templates'), api('/outlook/status'), householdOf(contactId, dealId)]);
   let addressees = [Number(contactId)].filter(Boolean);
   const fields = [
     { name: 'to_email', label: 'To (separate several addresses with commas)', required: true, full: true },

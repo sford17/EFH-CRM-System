@@ -10,9 +10,9 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const STATUSES = { needs_review: 'Needs review', in_progress: 'In progress', completed: 'Completed' };
 const LOAN_TYPES = {
   home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', construction: 'Construction',
-  bridging: 'Bridging', commercial: 'Commercial', personal: 'Personal', car: 'Car', other: 'Other',
+  bridging: 'Bridging', commercial: 'Commercial', business_loan: 'Business loan', smsf: 'SMSF loan', personal: 'Personal', car: 'Car', other: 'Other',
 };
-const PURPOSE_TYPE = { investment: 'investment_loan', construction: 'construction', commercial: 'commercial' };
+const PURPOSE_TYPE = { investment: 'investment_loan', construction: 'construction', commercial: 'commercial', business_loan: 'business_loan' };
 const SIDE = ['lender_id', 'lender_name', 'borrowers', 'account_number', 'product', 'loan_type', 'loan_amount', 'interest_rate', 'rate_type', 'settlement_date', 'broker_id', 'loan_id'];
 const FIELDS = [
   'contact_id', 'client_name', 'status', 'reason', 'clawback_amount', 'cashback', 'notes', 'new_deal_id', 'old_balance', 'old_discharge_date',
@@ -213,8 +213,8 @@ function remove(id) {
 
 // ---- Prefill from the client's tracker loans and deals ----------------------
 
-function borrowersOf(contactId, coId) {
-  return [contactId, coId].filter(Boolean).map((cid) => nameOf(db.one('SELECT first_name, last_name FROM contacts WHERE id = ?', cid))).filter(Boolean).join(' & ');
+function borrowersOf(kind, id) {
+  return require('./borrowers').all(kind, id).map((b) => nameOf(b)).filter(Boolean).join(' & ');
 }
 
 function loanSide(prefix, n) {
@@ -222,7 +222,7 @@ function loanSide(prefix, n) {
     [`${prefix}_loan_id`]: n.id,
     [`${prefix}_lender_id`]: n.lender_id,
     [`${prefix}_lender_name`]: n.lender || n.lender_name,
-    [`${prefix}_borrowers`]: borrowersOf(n.contact_id, n.co_borrower_id),
+    [`${prefix}_borrowers`]: borrowersOf('loan', n.id),
     [`${prefix}_account_number`]: n.account_number,
     [`${prefix}_product`]: n.product_name,
     [`${prefix}_loan_type`]: n.loan_type,
@@ -240,7 +240,7 @@ function dealSide(d) {
     new_deal_id: d.id,
     new_lender_id: d.lender_id,
     new_lender_name: d.lender,
-    new_borrowers: borrowersOf(d.contact_id, d.co_borrower_id),
+    new_borrowers: borrowersOf('deal', d.id),
     new_account_number: d.application_ref,
     new_product: d.product_name,
     new_loan_type: PURPOSE_TYPE[d.loan_purpose] || 'home_loan',
@@ -266,8 +266,8 @@ function options(contactId) {
   const members = household.household(contactId);
   const ids = members.map((m) => m.id);
   const inIds = ids.map(() => '?').join(',');
-  const loans = db.all(`${LOANS_SQL} WHERE n.contact_id IN (${inIds}) OR n.co_borrower_id IN (${inIds}) ORDER BY n.status = 'active' DESC, n.settlement_date DESC`, ...ids, ...ids);
-  const deals = db.all(`${DEALS_SQL} WHERE (d.contact_id IN (${inIds}) OR d.co_borrower_id IN (${inIds})) AND d.stage != 'lost' ORDER BY d.id DESC`, ...ids, ...ids);
+  const loans = db.all(`${LOANS_SQL} WHERE n.contact_id IN (${inIds}) OR n.id IN (SELECT loan_id FROM loan_borrowers WHERE contact_id IN (${inIds})) ORDER BY n.status = 'active' DESC, n.settlement_date DESC`, ...ids, ...ids);
+  const deals = db.all(`${DEALS_SQL} WHERE (d.contact_id IN (${inIds}) OR d.id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id IN (${inIds}))) AND d.stage != 'lost' ORDER BY d.id DESC`, ...ids, ...ids);
   const loanLabel = (n) => [n.lender || n.lender_name || 'Loan', LOAN_TYPES[n.loan_type], n.account_number ? `#${n.account_number}` : null,
     n.limit_amount ? `$${Math.round(n.limit_amount).toLocaleString('en-AU')}` : null, n.status !== 'active' ? `(${n.status})` : null, n.arranged_by_us ? null : '(arranged elsewhere)'].filter(Boolean).join(' · ');
   return {
@@ -291,10 +291,10 @@ function detectFromDeal(dealId) {
   if (!d || d.stage !== 'settled' || d.loan_purpose !== 'refinance') return null;
   if (db.one('SELECT id FROM internal_refinances WHERE new_deal_id = ?', dealId)) return null;
   const ids = household.householdIds(d.contact_id);
-  if (d.co_borrower_id && !ids.includes(d.co_borrower_id)) ids.push(d.co_borrower_id);
+  for (const cid of require('./borrowers').coIds('deal', d.id)) if (!ids.includes(cid)) ids.push(cid);
   const inIds = ids.map(() => '?').join(',');
   const candidates = db.all(
-    `${LOANS_SQL} WHERE (n.contact_id IN (${inIds}) OR n.co_borrower_id IN (${inIds}))
+    `${LOANS_SQL} WHERE (n.contact_id IN (${inIds}) OR n.id IN (SELECT loan_id FROM loan_borrowers WHERE contact_id IN (${inIds})))
        AND n.status = 'active' AND n.arranged_by_us = 1 AND (n.deal_id IS NULL OR n.deal_id != ?)
        AND n.loan_type NOT IN ('personal','car','credit_card','hecs')
        AND (n.settlement_date IS NULL OR n.settlement_date <= ?)`,

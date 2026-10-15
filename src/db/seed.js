@@ -189,7 +189,7 @@ const AUTOMATIONS = [
   },
 ];
 
-TEMPLATES.push(RATE_REDUCTION_TEMPLATE, ...PARTY_TEMPLATES);
+TEMPLATES.push(RATE_REDUCTION_TEMPLATE, ...PARTY_TEMPLATES, require('./migrations').REFERRAL_INVOICE_TEMPLATE);
 for (const a of AUTOMATIONS) {
   if (STAGE_SMS[a.name]) a.actions.push({ type: 'send_sms', message: STAGE_SMS[a.name] });
   if (a.name === BIRTHDAY_SMS.automation) a.actions.push({ type: 'send_sms', message: BIRTHDAY_SMS.message, marketing: true });

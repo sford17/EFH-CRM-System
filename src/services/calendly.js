@@ -174,7 +174,7 @@ async function upsertEvent(account, token, ev) {
   const match = existing?.contact_id ? { id: existing.contact_id, created: false } : findContact(invitee, account.user_id);
   let dealId = existing?.deal_id ?? null;
   if (!dealId && match) {
-    const open = db.all("SELECT id FROM deals WHERE (contact_id = ? OR co_borrower_id = ?) AND stage NOT IN ('settled','lost')", match.id, match.id);
+    const open = db.all("SELECT id FROM deals WHERE (contact_id = ? OR id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id = ?)) AND stage NOT IN ('settled','lost')", match.id, match.id);
     if (open.length === 1) dealId = open[0].id;
   }
   const qa = (invitee?.questions_and_answers || []).map((q) => `${q.question}: ${q.answer}`).join('\n');

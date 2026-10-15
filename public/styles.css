@@ -918,3 +918,125 @@ p.sl-ai { display: block; }
 .mfa-codes li { margin: .2rem 0; }
 .mfa-left { justify-content: flex-start; flex-wrap: wrap; }
 .restore-box { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .9rem; margin: .8rem 0; }
+
+/* ---- Automations as a diagram ---- */
+.flow-mini { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .3rem; margin-top: .35rem; }
+.flow-chip { display: inline-flex; align-items: center; gap: .2rem; font-size: 12px; line-height: 1.3; padding: .15rem .5rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); max-width: 100%; }
+.flow-chip.when { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
+.flow-chip.cond { border-style: dashed; }
+.flow-arrow { color: var(--muted); font-size: 12px; }
+.flow-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 1rem; align-items: start; }
+.flow-side { position: sticky; top: 1rem; }
+.flow-card { padding: 1.5rem 1rem; }
+.flow { display: flex; flex-direction: column; align-items: center; }
+.flow-node { position: relative; width: 100%; max-width: 480px; border: 1px solid var(--border); border-left: 5px solid var(--muted); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); transition: box-shadow .12s, border-color .12s; }
+.flow-node:hover { box-shadow: 0 2px 10px rgba(16, 24, 40, .12); }
+.flow-node.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+.flow-node.when { border-left-color: var(--accent); background: var(--accent-soft); }
+.flow-node.cond { border-left-color: var(--text-2); }
+.flow-node.cond.empty { border-style: dashed; border-left-style: solid; box-shadow: none; background: transparent; }
+.flow-node.g-talk { border-left-color: var(--accent); }
+.flow-node.g-task { border-left-color: var(--ok); }
+.flow-node.g-update { border-left-color: var(--warn); }
+.flow-node.g-admin { border-left-color: var(--muted); }
+.flow-node-btn { display: block; width: 100%; text-align: left; background: none; border: 0; color: inherit; font: inherit; padding: .75rem 6.5rem .75rem 1rem; cursor: pointer; border-radius: 10px; }
+.flow-node.when .flow-node-btn, .flow-node.cond .flow-node-btn { padding-right: 1rem; }
+.flow-node-btn:hover { background: none; }
+.flow-node-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.flow-kicker { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: .15rem; }
+.flow-node.when .flow-kicker { color: var(--accent); }
+.flow-title { font-weight: 600; display: flex; align-items: center; gap: .45rem; }
+.flow-icon { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 6px; background: var(--surface-2); font-size: 14px; flex: none; }
+.flow-sub { color: var(--text-2); font-size: 13px; margin-top: .2rem; overflow-wrap: anywhere; }
+.flow-issue { color: var(--danger); font-size: 13px; font-weight: 600; margin-top: .25rem; }
+.flow-conds { margin: .2rem 0 0; padding-left: 1.1rem; font-size: 14px; }
+.flow-tools { position: absolute; top: .45rem; right: .45rem; display: flex; gap: .1rem; }
+.flow-tools .icon { width: 1.6rem; height: 1.6rem; font-size: 14px; color: var(--muted); }
+.flow-tools .icon:hover:not(:disabled) { color: var(--text); background: var(--surface-2); }
+.flow-tools .icon:disabled { opacity: .3; cursor: default; }
+.flow-link { display: flex; flex-direction: column; align-items: center; }
+.flow-line { display: block; width: 2px; height: 14px; background: var(--border); }
+.flow-wait { font-size: 12px; color: var(--warn); background: var(--warn-soft); padding: .1rem .55rem; border-radius: 999px; margin: 2px 0; }
+.flow-add { display: inline-flex; align-items: center; gap: .4rem; border: 1px dashed var(--accent); background: var(--surface); color: var(--accent); border-radius: 999px; min-width: 2rem; height: 2rem; padding: 0 .55rem; justify-content: center; font-weight: 600; cursor: pointer; }
+.flow-add > span:first-child { font-size: 18px; line-height: 1; }
+.flow-add:hover { background: var(--accent-soft); }
+.flow-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.flow-add-text { font-size: 14px; }
+.flow-end { margin-top: .6rem; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: .2rem .8rem; }
+.flow-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem; display: flex; flex-direction: column; gap: .7rem; min-width: 0; }
+.flow-panel[hidden] { display: none; }
+.flow-panel-head { position: relative; padding-right: 2rem; }
+.flow-panel-head h2 { margin: 0; }
+.flow-panel-head p { margin: .2rem 0 0; }
+.flow-panel-close { position: absolute; top: -.2rem; right: -.2rem; }
+.flow-panel-empty { text-align: center; padding: 1.5rem .5rem; }
+.flow-panel .action-fields { grid-template-columns: 1fr; }
+.flow-panel .action-fields .field:first-child { grid-column: auto; }
+.flow-panel-actions { display: flex; gap: .5rem; justify-content: space-between; border-top: 1px solid var(--border); padding-top: .7rem; }
+.cond-list { display: flex; flex-direction: column; gap: .6rem; }
+.cond-card { border: 1px solid var(--border); border-radius: 8px; padding: .6rem; display: flex; flex-direction: column; gap: .45rem; background: var(--surface-2); align-items: flex-start; }
+.cond-line { display: grid; grid-template-columns: 1.4fr 1fr; gap: .4rem; width: 100%; }
+.cond-value-box { width: 100%; }
+.cond-value-box > input, .cond-value-box > select { width: 100%; }
+.cond-ticks { display: flex; flex-wrap: wrap; gap: .25rem .8rem; font-size: 14px; }
+.picker h3 { margin: 1rem 0 .5rem; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.picker h3:first-child { margin-top: 0; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .5rem; }
+.pick-card { display: flex; gap: .6rem; align-items: flex-start; text-align: left; padding: .65rem .75rem; border: 1px solid var(--border); border-left: 4px solid var(--muted); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.pick-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+.pick-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pick-card.suggest { border-left-color: var(--accent); background: var(--surface-2); }
+.pick-card.g-talk { border-left-color: var(--accent); }
+.pick-card.g-task { border-left-color: var(--ok); }
+.pick-card.g-update { border-left-color: var(--warn); }
+.pick-icon { font-size: 18px; line-height: 1.3; flex: none; }
+.pick-text { display: flex; flex-direction: column; gap: .1rem; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 999px) {
+  .flow-layout { grid-template-columns: minmax(0, 1fr); }
+  .flow-side { display: none; }
+  .flow > .flow-panel { width: 100%; max-width: 480px; margin-top: .5rem; border-color: var(--accent); }
+}
+@media (max-width: 560px) {
+  .flow-card { padding: 1rem .5rem; }
+  .cond-line { grid-template-columns: 1fr; }
+  .pick-grid { grid-template-columns: 1fr; }
+}
+.flow-node-btn, .pick-card { white-space: normal; }
+.badge[hidden] { display: none; }
+
+/* ---- Borrowers, companies & trusts ---- */
+.badge.entity { font-size: 11px; vertical-align: middle; }
+.badge.entity.company { background: var(--accent-soft); color: var(--accent); }
+.badge.entity.trust { background: var(--ok-soft); color: var(--ok); }
+.borrowers-fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem .9rem .6rem; display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
+.borrowers-fieldset legend { font-weight: 600; padding: 0 .3rem; }
+.borrower-rows { display: flex; flex-direction: column; gap: .5rem; }
+.borrower-row { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) auto; gap: .5rem; align-items: center; }
+.borrower-row.borrower-main { grid-template-columns: 9.5rem minmax(0, 1fr); }
+.borrower-row select { width: 100%; min-width: 0; }
+.borrower-tag { font-size: 13px; color: var(--muted); font-weight: 600; }
+.borrower-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.borrowers-fieldset p { margin: 0; }
+.deal-borrowers .badge { margin-left: .25rem; }
+@media (max-width: 560px) {
+  .borrower-row, .borrower-row.borrower-main { grid-template-columns: minmax(0, 1fr) auto; }
+  .borrower-tag { grid-column: 1 / -1; }
+}
+.card-head-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
+.method-hint { margin: .3rem 0 0; }
+
+/* ---- Rent roll, GSA, guarantee ---- */
+.other-securities h3 { margin: .25rem 0 .4rem; font-size: 1rem; }
+.security-list li { padding: .45rem 0; border-bottom: 1px solid var(--border); }
+.security-list li:last-child { border-bottom: 0; }
+.security-add { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+
+/* ---- Referral fee invoice request ---- */
+.ri-block { border: 1px solid var(--border); border-radius: 8px; padding: .6rem .75rem; margin: 0 0 .75rem; display: flex; flex-direction: column; gap: .35rem; align-items: flex-start; background: var(--surface-2); }
+.ri-form { display: flex; flex-direction: column; gap: .7rem; }
+.ri-form textarea { width: 100%; font: inherit; }
+.ri-fee { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: 1rem; align-items: end; }
+.ri-sums { display: grid; gap: .2rem; font-size: 14px; }
+.ri-sums div { display: flex; justify-content: space-between; gap: 1rem; }
+.ri-sums .total { border-top: 1px solid var(--border); padding-top: .2rem; }
+@media (max-width: 560px) { .ri-fee { grid-template-columns: minmax(0, 1fr); } }

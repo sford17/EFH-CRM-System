@@ -2,7 +2,10 @@ import {
   api, h, table, badge, date, money, money2, pct, pageHeader, formModal, attempt, confirmDialog, state, stageLabel,
   label, userOptions, todayStr, relDays, opts, dateTime, lenderTag, lenderLogo,
 } from '../core.js';
-import { dealFields, coBorrowerField, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
+import { borrowersFieldset, entityBadge } from './borrowers.js';
+import { securitiesSection } from './securities.js';
+import { referralInvoiceBlock } from './referralInvoice.js';
+import { dealFields, linkLoanType, newDeal, newTask, taskTable, timeline, sendTemplateDialog, refresh } from './forms.js';
 import { emailsCard, composeDialog } from './email.js';
 import { partiesCard } from './parties.js';
 import { emailLenderDialog } from './lenders.js';
@@ -152,7 +155,7 @@ function documentsCard(deal) {
 
 function commissionsCard(deal) {
   if (!deal.commissions.length) {
-    return h('section.card', h('h2', 'Commissions'),
+    return h('section.card', h('h2', 'Commissions'), referralInvoiceBlock(deal, refresh),
       h('p.empty', deal.stage === 'settled' ? 'No commission entries. Set a lender and loan amount, then generate.' : 'Commission entries are created automatically when the deal settles.'),
       deal.stage === 'settled' ? h('button.small', { type: 'button', onclick: async () => { await attempt(() => api(`/deals/${deal.id}/commissions/generate`, { method: 'POST', body: {} }), 'Generated'); refresh(); } }, 'Generate commissions') : null);
   }
@@ -160,6 +163,7 @@ function commissionsCard(deal) {
   const received = deal.commissions.filter((c) => ['received', 'paid'].includes(c.status)).reduce((s, c) => s + c.amount, 0);
   return h('section.card', h('h2', 'Commissions'),
     h('p', h('strong', money2(total)), ' expected · ', h('strong', money2(received)), ' received'),
+    referralInvoiceBlock(deal, refresh),
     h('details', h('summary', `${deal.commissions.length} entries`),
       table([
         { label: 'Type', value: (c) => label(c.type) },
@@ -171,10 +175,13 @@ function commissionsCard(deal) {
 
 export async function dealPage(id) {
   const deal = await api(`/deals/${id}`);
-  const edit = async () => formModal(`Edit ${deal.title}`, [(await coBorrowerField(deal.contact_id, deal.co_borrower_id)).field, ...dealFields()], deal, async (v) => {
-    await attempt(() => api(`/deals/${id}`, { method: 'PATCH', body: v }), 'Saved');
-    refresh();
-  });
+  const edit = async () => {
+    const who = await borrowersFieldset({ mainId: deal.contact_id, coIds: deal.co_borrower_ids, chooseMain: true });
+    linkLoanType(formModal(`Edit ${deal.title}`, dealFields(), deal, async (v) => {
+      await attempt(() => api(`/deals/${id}`, { method: 'PATCH', body: { ...v, ...who.read() } }), 'Saved');
+      refresh();
+    }, { before: who.el }));
+  };
   const remove = async () => {
     if (!(await confirmDialog(`Delete "${deal.title}"? Its tasks, documents and commissions will also be removed.`))) return;
     await attempt(() => api(`/deals/${id}`, { method: 'DELETE' }), 'Deal deleted');
@@ -187,8 +194,9 @@ export async function dealPage(id) {
   return h('div',
     h('div.page-header',
       h('div', h('h1', deal.title, ' ', deal.priority === 'high' ? badge('high priority', 'danger') : null),
-        h('div.muted', 'Borrower: ', h('a', { href: `#/contacts/${deal.contact_id}` }, deal.contact_name),
-          deal.co_borrower_name ? [' & ', h('a', { href: `#/contacts/${deal.co_borrower_id}` }, deal.co_borrower_name)] : null)),
+        h('div.muted.deal-borrowers', deal.borrowers.length > 1 ? 'Borrowers: ' : 'Borrower: ',
+          deal.borrowers.flatMap((b, i) => [i ? (i === deal.borrowers.length - 1 ? ' & ' : ', ') : null,
+            h('a', { href: `#/contacts/${b.id}` }, b.full_name), entityBadge(b)]))),
       h('div.actions',
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ dealId: deal.id, contactId: deal.contact_id, parties: deal.parties }) }, 'Send template'),
         deal.stage === 'settled' ? h('button.secondary', { type: 'button', onclick: async () => requestReviewDialog({ contact: await api(`/contacts/${deal.contact_id}`), dealId: deal.id }) }, '⭐ Review request') : null,
@@ -206,6 +214,7 @@ export async function dealPage(id) {
       h('div.col-side',
         h('section.card', h('h2', 'Loan'), h('dl.info',
           info('Purpose', label(deal.loan_purpose)),
+          info('Loan type', state.meta.loan_types?.find((t) => t.key === deal.loan_type)?.label),
           info('Property', deal.property_address),
           info('Property value', deal.property_value ? money(deal.property_value) : null),
           info('Loan amount', deal.loan_amount ? money(deal.loan_amount) : null),
@@ -225,6 +234,11 @@ export async function dealPage(id) {
           info('App ref', deal.application_ref),
           info('Broker', deal.owner_name),
           info('Referral partner', deal.partner_name))),
+        // Rent roll, GSA, guarantee (commercial and business loans).
+        (() => {
+          const sec = securitiesSection({ items: deal.other_securities, parent: { deal_id: deal.id }, loanType: deal.loan_type, onChange: refresh, heading: false });
+          return sec ? h('section.card', h('h2', 'Other securities'), h('p.muted.small', 'Securities besides the property: these carry over to the loan on the mortgage tracker when the deal settles.'), sec) : null;
+        })(),
         partiesCard(deal, { compose: (p) => composeDialog({ contactId: deal.contact_id, dealId: deal.id, to: p.email, toParty: p }) }),
         h('section.card', h('h2', 'Key dates'), h('dl.info',
           info('Pre-approval expires', deal.pre_approval_expiry ? `${date(deal.pre_approval_expiry)} (${relDays(deal.pre_approval_expiry)})` : '—'),
@@ -238,7 +252,7 @@ export async function dealPage(id) {
           h('div.muted', `${dateTime(s.changed_at)}${s.user_name ? ` · ${s.user_name}` : ''}`)))))),
       h('div.col-main',
         await settlementLetterCard(deal),
-        await quickliCard(deal),
+        await quickliCard(deal).catch(() => null),
         await dealPurchaseCard(deal),
         documentsCard(deal),
         h('section.card',

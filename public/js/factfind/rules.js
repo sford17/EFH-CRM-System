@@ -38,7 +38,7 @@ export const TIMEFRAME = [['asap', 'As soon as possible'], ['1_3', '1–3 months
 export const PROPERTY_TYPES = [['house', 'House'], ['unit', 'Unit / apartment'], ['townhouse', 'Townhouse'], ['land', 'Land'], ['off_the_plan', 'Off the plan']];
 export const PROPERTY_USAGE = [['owner_occupied', 'I live in it'], ['investment', 'Investment (rented out)'], ['holiday', 'Holiday home'], ['vacant', 'Vacant land']];
 export const ASSET_TYPES = [['savings', 'Savings or transaction account'], ['term_deposit', 'Term deposit'], ['superannuation', 'Superannuation'], ['shares', 'Shares and managed funds'], ['vehicle', 'Car or other vehicle'], ['contents', 'Home contents'], ['business', 'Business'], ['other', 'Other']];
-export const LIABILITY_TYPES = [['home_loan', 'Home loan'], ['credit_card', 'Credit card'], ['personal', 'Personal loan'], ['car', 'Car loan or lease'], ['hecs', 'HECS-HELP / student loan'], ['bnpl', 'Buy now, pay later'], ['tax', 'Tax debt'], ['other', 'Other debt']];
+export const LIABILITY_TYPES = [['home_loan', 'Home loan'], ['credit_card', 'Credit card'], ['personal', 'Personal loan'], ['car', 'Car loan or lease'], ['business_loan', 'Business loan'], ['hecs', 'HECS-HELP / student loan'], ['bnpl', 'Buy now, pay later'], ['tax', 'Tax debt'], ['other', 'Other debt']];
 
 // Living expenses, by Quickli category. `when` decides whether to ask.
 export const EXPENSES = [

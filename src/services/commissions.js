@@ -1,14 +1,14 @@
 'use strict';
 const db = require('../db');
-const { addMonths, today } = require('../util');
+const { today } = require('../util');
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
-// Creates expected upfront, referral fee and first-year trail entries for a
-// settled deal. Safe to call repeatedly: does nothing if upfront already exists.
+// Creates expected upfront and referral fee entries for a settled deal
+// (trail commission isn't tracked). Safe to call repeatedly: does nothing if upfront already exists.
 function generateForDeal(dealId) {
   const deal = db.one(
-    `SELECT d.*, l.upfront_pct, l.trail_pct, p.referral_fee_pct, p.name AS partner_name
+    `SELECT d.*, l.upfront_pct, p.referral_fee_pct, p.name AS partner_name
      FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id
      LEFT JOIN referral_partners p ON p.id = d.referral_partner_id WHERE d.id = ?`,
     dealId,
@@ -32,13 +32,6 @@ function generateForDeal(dealId) {
         notes: `${deal.referral_fee_pct}% of upfront to ${deal.partner_name}`,
       });
       created++;
-    }
-    if (deal.trail_pct > 0) {
-      const monthly = round2((deal.loan_amount * deal.trail_pct) / 100 / 12);
-      for (let m = 1; m <= 12; m++) {
-        db.insert('commissions', { deal_id: dealId, type: 'trail', amount: monthly, period: addMonths(settled, m).slice(0, 7) });
-        created++;
-      }
     }
   });
   return created;

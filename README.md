@@ -30,7 +30,7 @@ A CRM built for a mortgage broking business. It tracks leads, clients and loans 
 | **Email graphics** | Charts and diagrams built from each client's details, in your brand colours: loan progress tracker, loan details card, key dates, document checklist, position summary, lending structure diagram, equity chart, property value chart and fixed-rate countdown. Also branded buttons (e.g. "Book a time") and your own images. They show even when a client's email blocks pictures |
 | **Settlement letters** | A branded letter and email for the client when their loan settles: borrowers, loan amount and splits, interest rate, repayments, direct debit account and first repayment date, with the letter attached as a PDF. Fill it in by hand, or upload the loan documents and AI (Claude) fills it in for you to check |
 | **Quickli** | Send a deal's borrowers, household, income, properties, existing loans, debts and the new loan to Quickli as a servicing scenario in one click (and update it later), see what Quickli still needs, link existing scenarios, and record the results (max borrowing, lenders passing, best lender, surplus) on the deal |
-| **Commissions** | Upfront, trail (first 12 months), referral fees and clawbacks, generated automatically at settlement from lender rates. Ledger with received tracking and a clawback-exposure report |
+| **Commissions** | Upfront commission, referral fees and clawbacks, generated automatically at settlement from lender rates (trail commission isn't tracked). Ledger with received tracking and a clawback-exposure report |
 | **Partners & agents** | One directory of real estate agents, buyer's agents, solicitors, conveyancers, accountants, planners and builders, with referral counts, settled volume, fee splits and the deals they're on |
 | **Lenders** | Your accreditation numbers (each broker's own, with renewal dates), BDMs and other lender contacts, emailing the BDM (filed on the client when it's about one, replies included), commission rates, clawback periods, settled volume, and logos shown across the pipeline, tracker, review documents and client emails |
 | **Internal refinance register** | A record of every client you've moved from one of your loans to a new one, with the existing loan beside the new loan (borrowers, lender, account, product, amounts, rates, settlement and pay-out dates, broker), plus the reason, clawback and cashback. Every field is editable. It's added automatically when a refinance deal settles, and a CSV export is there for sale or trail-book records |
@@ -77,6 +77,15 @@ Open a contact and choose the **Mortgage tracker** tab.
 
 When a deal settles, its loan, security property and recorded value are added to the tracker automatically. Imported settled loans are added too. **Fixed-rate expiry** reminders run from tracker loans, so they also cover loans arranged elsewhere or refixed since. There's also an **Interest-only period ending** reminder (90 days ahead by default). Templates can use `{{loan.lender_name}}`, `{{loan.fixed_expiry_date|date}}`, `{{loan.io_expiry_date|date}}`, `{{loan.balance|money}}` and `{{loan.interest_rate}}`.
 
+## Valuation types explained
+
+When a client document shows how a property was valued, a short **About the valuation types** section underneath explains each type that appears, in plain words. Only the types actually shown are explained, for example full valuation, desktop, kerbside, AVM, contract price, agent appraisal, client estimate or purchase price. It appears in:
+- the property report (PDF, preview and email)
+- the client lending review (PDF, Word and preview)
+- the *property value chart* graphic in emails
+
+The same description shows under the method when you add or edit a valuation on the Mortgage tracker tab.
+
 ## Lender logos
 
 On **Lenders**, each lender has **Upload** (PNG/JPG) and **Fetch** buttons. *Fetch* uses the lender's website icon and is quick but low resolution. For the best result, upload the logo from the lender's broker portal or your aggregator. Website addresses are pre-filled for the standard lenders.
@@ -95,6 +104,23 @@ On a contact, click **Lending review** (or **+ New review** under *Lending revie
 - **Commentary:** there are four sections: *Loan Review*, *Actions to Consider*, *Broker to Action* (shown to the client as "What we'll do") and *Next Steps*. They start with suggestions drawn from the figures, covering fixed-rate and interest-only expiries, cross-collateralisation, LVRs over 80%, rates worth repricing, expensive unsecured debt, usable equity, savings without an offset, and valuations older than 12 months. Edit them freely, and use "-" or "•" for bullet points. The preview updates as you type.
 - **Download** as **PDF** or **Word** (.docx, editable).
 - **Email to client** sends the PDF as an attachment from your Outlook, with your signature added. The review is marked *Sent*, a timeline entry is added, and the client's next review date is set 12 months out if they don't already have a future one.
+
+## Borrowers: several co-borrowers, companies and trusts
+
+**Several co-borrowers:** a deal can have as many borrowers as the loan has. In the **Borrowers** box on the New deal and Edit forms, the main borrower is at the top (on Edit you can change who that is). Below it:
+- **+ Add co-borrower** adds another row. The client's related contacts come first in the list, then everyone else.
+- **×** removes a co-borrower. The order you set is the order they're shown in.
+- The client's partner is added for you on a new deal.
+
+Everyone on the deal sees it on their own contact page, deal search finds it by any borrower's name, and the loan created at settlement carries every borrower to the mortgage tracker. Emails and automations addressed to "the client" go to all the borrowers ("Hi Mia, Tom and Ava"). Settlement letters, the internal refinance register and the settlements report list them all.
+
+**Companies and trusts:** a contact can be a **Person**, a **Company** or a **Trust**. Choose at the top of **+ New contact**, or click **+ Company or trust** on a client's *Related contacts* card, which creates it already linked to that client.
+- A company or trust has a name, ABN, ACN (for a trust, its corporate trustee's) and the kind of trust. Personal details like date of birth and income are left off, and it starts opted out of marketing.
+- **Linking people:** link its directors, shareholders, trustees, beneficiaries, appointors or guarantors on its page (**+ Link person**). The client's page shows *Trustee of Jones Family Trust* and so on, and lists the trust's or company's deals too.
+- **As a borrower:** pick it in the Borrowers box like anyone else, or click **+ New company or trust** right there.
+- **Emails** about its loans go to the people linked to it, since a company or trust can't read email. They're greeted by name, not as "Hi Jones Family Trust".
+- **Quickli:** its directors or trustees are sent as the applicants, with a reminder to add the trust's or company's own income in Quickli.
+- **Automations:** creating a company or trust doesn't trigger new-lead automations.
 
 ## Related contacts & households
 
@@ -504,6 +530,37 @@ Stamp duty and LMI are estimates: type over either one to use your own figure, a
 
 Choose a single broker at the top to see just their loans, and use **Export CSV** to open the report in Excel.
 
+## Rent rolls, GSAs and guarantees
+
+Commercial and business loans can be secured by more than property. On a deal, the **Other securities** card offers:
+- **Rent roll:** its name, number of managements, value, owner and details.
+- **GSA (General Security Agreement):** the grantor (a company or trust in the CRM, or a name), what it covers (*All present and after-acquired property* to start with), the value of the secured assets and the PPSR registration number.
+- **Guarantee:** the guarantor (anyone in the CRM, or a name), the limit (blank = unlimited) and the kind, e.g. director's guarantee.
+
+They move onto the loan in the mortgage tracker when the deal settles. On the tracker, open a commercial or business loan to add more, change them or remove them. They appear:
+- in the *Secured by* column, e.g. *GSA – Harbour Realty Pty Ltd*, *Guarantee – Mia Jones (limit $250k)*
+- on lending reviews
+- in the lending structure email graphic
+
+A loan backed only by a GSA or guarantee isn't marked "unsecured", but LVR and usable equity still count property only.
+
+## Loan types report
+
+Every deal has a **Loan type**: Home loan, Investment loan, Commercial loan, Business loan, SMSF loan, Construction loan, Bridging loan, Line of credit, Car / asset finance, Personal loan or Other.
+- It's chosen on the New deal and Edit deal forms, next to *Loan purpose*. Picking a purpose sets the usual type (e.g. Investment → Investment loan) until you choose one yourself.
+- Existing deals were given a type from their purpose, or from their loan on the tracker once settled.
+- When a deal settles, its loan goes onto the mortgage tracker with the same type.
+
+**Reports → Loan types** (for a financial year, calendar year or custom dates, for everyone or one broker) shows:
+- **Totals:** volume and number of loans settled, commission (upfront, after referral fees), and the biggest loan type.
+- **Settled by loan type:** a chart and table with loans, volume, share, average loan size and commission for each type.
+- **Month by month:** loans and volume for each type, each month.
+- **In the pipeline now:** open deals by type.
+- **Your loan book:** active loans you arranged on your clients' mortgage trackers, by type, with the amount owing.
+- **Export CSV:** every settled loan in the period with its type, purpose, client, lender, amount, commission and broker.
+
+The Settlements report shows the type too, e.g. *Home loan · Refinance*. SMSF loans aren't sent to Quickli, because they're the super fund's debt, not the clients'; you'll see a note when you send a scenario.
+
 ## Running costs (Claude and SMS)
 
 **Reports → Running costs** shows what the CRM's AI features and text messages have cost: this month, the chosen period and a running total since you started, plus a month-by-month table and chart.
@@ -615,6 +672,29 @@ A bell notification appears in the CRM too.
 - **Email me (the broker) a reminder** is also available as an action in any automation, e.g. a reminder before a fixed rate expires.
 - These reminders go to the broker's own email address from Outlook (or SMTP). They aren't filed on the client's timeline or emails, and they show as *🔔 reminder to you* in the Outbox.
 - **Links in the email** use **Settings → Business → CRM web address**. Leave it blank if you only use the CRM on this computer (it defaults to http://localhost:3000). If you've put the CRM on a server, enter that address instead.
+
+## Asking a referral partner for their invoice
+
+When a loan settles and the referral partner gets a referral fee, the deal's **Commissions** card shows who's owed what, e.g. *Alex Morgan (Harbourside Realty) · $357.50 incl. GST*, with a **✉ Request invoice** button.
+
+The button opens an email to the partner, ready to check and send. It asks for a tax invoice and lists:
+- the client(s)
+- the loan amount
+- the lender
+- the settlement date
+- the referral fee, e.g. *$325.00 + GST $32.50 = $357.50 (including GST)*
+
+You can correct the fee before sending, and the GST and message update to match.
+
+**Sending:**
+- The email goes from your Outlook and is noted on the deal's timeline.
+- The deal shows when the invoice was requested; use **Request invoice again** to follow up.
+- The **Commissions** page also has *Request invoice* (and *Mark paid*) on each referral fee.
+
+**Where the figures come from:**
+- **The fee** is the referral fee entry created at settlement: the partner's % of your upfront commission.
+- **GST:** 10% is added unless the partner is marked as not registered. Untick *Registered for GST* on the **Partners & agents** page to change that.
+- **Wording:** change the standard text in **Email templates → Referral fee invoice request**. Merge fields include `{{referral.client}}`, `{{referral.fee_text}}`, `{{referral.fee_ex_gst|money}}`, `{{referral.gst|money}}` and `{{referral.fee_inc_gst|money}}`.
 
 ## Thanking referral partners
 
@@ -800,6 +880,18 @@ Each automation has three parts:
    - add the document checklist
    - generate commissions
 
+### Changing an automation (the diagram)
+
+Click an automation to see it as a diagram, read top to bottom: **When** → **Only if** → each step in order → **End**. The Automations list shows the same flow in a single line under each name.
+
+- **Change a step:** click it. Its settings open in the panel on the right (on a phone, just below the step). The diagram updates as you type.
+- **Add a step:** click a **+** between two steps (or **Add another step** at the bottom). Pick one of the **Suggestions**, such as *Call the client tomorrow*, *Text the client an update*, *Remind me in 3 days* or *Ask for documents*. These come filled in ready to adjust. Or pick any kind of step from the list below the suggestions.
+- **Reorder, copy or delete:** use **↑ ↓**, **⧉** and **×** on the step.
+- **Waits:** a step with *Wait before sending* shows **⏱ wait N days** on the line above it.
+- **Conditions:** click **Only if** to add them in plain words, e.g. *New deal stage is Settled*. Stages and statuses are picked from a list.
+- **Problems:** a step that still needs something, such as an email without a template, is flagged in red, and Save takes you to it.
+- **Saving:** click **Save** when you're done. *Unsaved changes* shows until you do.
+
 Merge fields such as `{{contact.first_name}}`, `{{deal.loan_amount|money}}` and `{{deal.fixed_expiry_date|date}}` work in task titles, notes and email templates. Templates in the `marketing` category are never sent to contacts who have opted out.
 
 ### Included automations
@@ -840,6 +932,18 @@ src/
 public/                single-page web app (no build step)
 test/                  API tests (node:test)
 ```
+
+## Adding your team
+
+In **Settings → Team**, click **+ Add user**. Enter their name, work email and role (Admin, Broker or Assistant), and leave **Email them a welcome link** ticked.
+
+- **The welcome email** comes from your Outlook with a **Choose your password** button. The link works once and lasts 7 days. It also lists their first steps: two-factor sign-in, connecting their Outlook and (for brokers) their mobile for texts.
+- **They click the button**, choose a password and are signed in. If two-factor sign-in is required, the CRM walks them through setting it up straight away.
+- **The Team list** shows when each person last signed in, or *Not yet (welcome email sent …)*. Use **✉ Send again** if the email went astray; the earlier link then stops working.
+- **Forgotten password:** for someone who has signed in before, the button is **✉ Password link**. It emails a link to choose a new password, which lasts 24 hours. Their two-factor sign-in stays the same.
+- **If the email can't be sent** (for example, your Outlook isn't connected), the CRM shows you the link to pass on by text or Teams instead.
+
+Nobody's password is ever emailed, and the link is removed from the Outbox once it's sent. You can still set a password for someone yourself if you prefer.
 
 ## Two-factor sign-in
 

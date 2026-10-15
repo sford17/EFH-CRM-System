@@ -225,9 +225,54 @@ async function route() {
   refreshNotifications();
 }
 
+// The page a welcome email (or new-password email) links to: choose a password, then sign in.
+async function welcomeScreen(token) {
+  const done = async (user) => { state.user = user; location.hash = '#/'; await boot(); };
+  let info;
+  try {
+    info = await api(`/auth/welcome/${encodeURIComponent(token)}`);
+  } catch (err) {
+    const back = h('button', { type: 'button', onclick: () => { location.hash = '#/login'; boot(); } }, 'Go to sign in');
+    clear(app).append(h('div.auth-wrap', h('div.auth-card', brandMark(true), h('h1', 'This link has expired'), h('p', err.message), back)));
+    return;
+  }
+  const pw = h('input', { id: 'w_pw', type: 'password', autocomplete: 'new-password', minlength: 8, required: true });
+  const pw2 = h('input', { id: 'w_pw2', type: 'password', autocomplete: 'new-password', minlength: 8, required: true });
+  const reset = info.kind === 'reset';
+  const form = h('form.auth-card',
+    brandMark(true),
+    h('h1', reset ? 'Choose a new password' : `Welcome, ${info.name.split(/\s+/)[0]}`),
+    h('p.muted', reset ? `For ${info.email}.` : `Choose a password for your account (${info.email}). You'll sign in with your email and this password from now on.`),
+    h('input', { type: 'email', value: info.email, autocomplete: 'username', hidden: true, readonly: true }),
+    h('div.field', h('label', { for: 'w_pw' }, 'Password (8+ characters)'), pw),
+    h('div.field', h('label', { for: 'w_pw2' }, 'Type it again'), pw2),
+    !reset && info.mfa_required ? h('p.small.muted', 'Next, you\'ll set up two-factor sign-in with an authenticator app on your phone.') : null,
+    h('button', { type: 'submit' }, reset ? 'Save and sign in' : 'Save and continue'));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (pw.value !== pw2.value) { toast('The two passwords don\'t match', 'error'); return; }
+    try {
+      const r = await attempt(() => api(`/auth/welcome/${encodeURIComponent(token)}`, { method: 'POST', body: { password: pw.value } }));
+      history.replaceState(null, '', '#/'); // the link is used up
+      if (r.mfa_required) {
+        codeScreen(app, { brandMark, challenge: r.challenge, onSignedIn: done, onBack: () => authScreen(false) });
+        return;
+      }
+      await done(r.user);
+    } catch { /* toasted */ }
+  });
+  clear(app).append(h('div.auth-wrap', form));
+  pw.focus();
+}
+
 async function boot() {
   const status = await api('/auth/status');
   state.brand = status.brand;
+  const welcome = location.hash.match(/^#\/welcome\/([\w-]+)$/);
+  if (welcome) {
+    await welcomeScreen(welcome[1]);
+    return;
+  }
   if (!status.user) {
     authScreen(status.needs_setup);
     return;
@@ -246,7 +291,8 @@ async function boot() {
 window.addEventListener('hashchange', () => {
   // Pop-ups belong to the page they were opened on.
   for (const d of document.querySelectorAll('dialog[open]')) d.close();
-  if (state.user) route();
+  if (location.hash.startsWith('#/welcome/')) boot();
+  else if (state.user) route();
 });
 // Lets pages re-render the current route after a change.
 window.addEventListener('crm:refresh', () => route());

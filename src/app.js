@@ -63,6 +63,7 @@ function createApp() {
   app.get('/api/meta', (req, res) => res.json({
     stages: STAGES,
     document_checklist: DOCUMENT_CHECKLIST,
+    loan_types: require('./constants').LOAN_TYPES,
     party_roles: Object.entries(require('./services/parties').ROLES).map(([key, r]) => ({ key, label: r.label, types: r.types })),
     email_graphics: require('./services/emailGraphics').GRAPHICS,
   }));

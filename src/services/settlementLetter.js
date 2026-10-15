@@ -131,7 +131,7 @@ function dealFor(dealId) {
 }
 
 function borrowersOf(deal) {
-  const people = [deal.contact_id, deal.co_borrower_id].filter(Boolean).map((id) => db.one('SELECT id, first_name, last_name, email FROM contacts WHERE id = ?', id)).filter(Boolean);
+  const people = require('./borrowers').all('deal', deal.id);
   return people;
 }
 

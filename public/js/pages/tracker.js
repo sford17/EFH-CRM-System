@@ -3,15 +3,16 @@
 import {
   api, h, attempt, formModal, modal, confirmDialog, field, readForm, money, date, pct, label, opts, badge, lenderOptions, todayStr, lenderLogo,
 } from '../core.js';
+import { securitiesSection, SECURITY_LOAN_TYPES } from './securities.js';
 import { propertyReportsCard } from './propertyReports.js';
 
 const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 const compactMoney = (n) => (n === null || n === undefined ? '—' : n >= 1e6 ? `$${(n / 1e6).toFixed(2).replace(/\.?0+$/, '')}m` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : money(n));
 const PROPERTY_TYPES = ['house', 'unit', 'townhouse', 'land', 'rural', 'commercial', 'other'];
 const USAGES = ['owner_occupied', 'investment', 'holiday', 'vacant', 'business', 'other'];
-const LOAN_TYPES = ['home_loan', 'investment_loan', 'line_of_credit', 'construction', 'bridging', 'commercial', 'personal', 'car', 'credit_card', 'hecs', 'other'];
+const LOAN_TYPES = ['home_loan', 'investment_loan', 'line_of_credit', 'construction', 'bridging', 'commercial', 'business_loan', 'smsf', 'personal', 'car', 'credit_card', 'hecs', 'other'];
 const ASSET_TYPES = ['savings', 'superannuation', 'shares', 'vehicle', 'business', 'contents', 'other'];
-const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP' };
+const LOAN_LABELS = { home_loan: 'Home loan', investment_loan: 'Investment loan', line_of_credit: 'Line of credit', credit_card: 'Credit card', hecs: 'HECS-HELP', business_loan: 'Business loan', smsf: 'SMSF loan' };
 const loanType = (t) => LOAN_LABELS[t] || label(t);
 const shortAddress = (a) => String(a || '').split(',')[0];
 // "highest of 3" / "chosen" beside the valuation a property's value uses.
@@ -204,14 +205,25 @@ export async function trackerTab(contact) {
     await attempt(() => api(`/tracker/properties/${p.id}`, { method: 'DELETE' }), 'Property deleted');
     refresh();
   };
-  const addValuation = (p) => formModal(`New valuation – ${shortAddress(p.address)}`, valuationFields(), {}, async (v) => {
+  // Explains the chosen valuation type under the picker.
+  const methodHint = (d, name = 'method') => {
+    const sel = d.querySelector(`select[name=${name}]`);
+    if (!sel) return d;
+    const hint = h('p.small.muted.method-hint');
+    const show = () => { hint.textContent = methods.find((m) => m.key === sel.value)?.description || ''; };
+    sel.addEventListener('change', show);
+    sel.closest('.field').append(hint);
+    show();
+    return d;
+  };
+  const addValuation = (p) => methodHint(formModal(`New valuation – ${shortAddress(p.address)}`, valuationFields(), {}, async (v) => {
     await attempt(() => api(`/tracker/properties/${p.id}/valuations`, { method: 'POST', body: v }), 'Valuation added');
     refresh();
-  });
-  const editValuation = (v) => formModal('Edit valuation', valuationFields(), v, async (vals) => {
+  }));
+  const editValuation = (v) => methodHint(formModal('Edit valuation', valuationFields(), v, async (vals) => {
     await attempt(() => api(`/tracker/valuations/${v.id}`, { method: 'PATCH', body: vals }), 'Saved');
     refresh();
-  });
+  }));
   // Fix the valuation used for a property's value, or go back to the automatic choice.
   const useValuation = async (p, v) => {
     await attempt(() => api(`/tracker/properties/${p.id}`, { method: 'PATCH', body: { valuation_id: v ? v.id : null } }),
@@ -305,7 +317,16 @@ export async function trackerTab(contact) {
       props.filter((p) => p.status !== 'sold' || current.has(p.id)).length
         ? props.filter((p) => p.status !== 'sold' || current.has(p.id)).map((p) => h('label.field.check', h('input', { type: 'checkbox', value: p.id, checked: current.has(p.id) }), p.address))
         : h('p.muted.small', 'No properties yet – add one first, or leave this loan unsecured (e.g. a car loan or credit card).'));
-    const form = h('form.grid-form', fields.map((f) => field(f, loan?.[f.name])), securities,
+    // Rent roll, GSA or guarantee, for commercial and business loans.
+    const otherBox = h('div.full');
+    const showOther = (type) => {
+      if (!loan) {
+        otherBox.replaceChildren(SECURITY_LOAN_TYPES.includes(type) ? h('p.muted.small', 'Save the loan, then open it again to add a rent roll, GSA or guarantee.') : '');
+        return;
+      }
+      otherBox.replaceChildren(securitiesSection({ items: loan.other_securities, parent: { loan_id: loan.id }, loanType: type, onChange: () => { d.close(); refresh(); } }) || '');
+    };
+    const form = h('form.grid-form', fields.map((f) => field(f, loan?.[f.name])), securities, otherBox,
       h('div.actions.full',
         loan ? h('button.danger.ghost', { type: 'button', onclick: async () => {
           if (!(await confirmDialog('Delete this loan from the tracker?'))) return;
@@ -315,6 +336,8 @@ export async function trackerTab(contact) {
         } }, 'Delete') : null,
         h('button', { type: 'submit' }, loan ? 'Save loan' : 'Add loan')));
     const d = modal(loan ? `${loan.lender_display} ${loanType(loan.loan_type).toLowerCase()}` : 'Add loan', form, { wide: true });
+    form.elements.loan_type.addEventListener('change', () => showOther(form.elements.loan_type.value));
+    showOther(loan?.loan_type || form.elements.loan_type.value);
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const body = { ...readForm(form, fields), security_ids: [...securities.querySelectorAll('input:checked')].map((i) => Number(i.value)) };
@@ -342,8 +365,9 @@ export async function trackerTab(contact) {
             ? `${label(n.rate_type)}${n.fixed_expiry_date ? ` to ${date(n.fixed_expiry_date)}` : ''}` : 'Variable')),
           h('td', n.repayment_type === 'io' ? 'Interest only' : 'P&I', n.io_expiry_date && n.repayment_type === 'io' ? h('div.muted.small', `IO ends ${date(n.io_expiry_date)}`) : null,
             n.repayment_amount ? h('div.muted.small', `${money(n.repayment_amount)} ${n.repayment_frequency}`) : null),
-          h('td.small', n.security_ids.length ? n.security_ids.map((id) => propName.get(id)).join(' + ') : badge('unsecured'),
-            n.security_ids.length > 1 ? h('div', badge('cross-collateralised', 'warn')) : null),
+          h('td.small', n.security_ids.length ? n.security_ids.map((id) => propName.get(id)).join(' + ') : n.other_securities?.length ? null : badge('unsecured'),
+            n.security_ids.length > 1 ? h('div', badge('cross-collateralised', 'warn')) : null,
+            (n.other_securities || []).map((s) => h('div', s.summary))),
           h('td', badge(n.status, n.status === 'active' ? 'ok' : ''))))))) : h('p.empty', 'No loans recorded yet.'));
   }
 

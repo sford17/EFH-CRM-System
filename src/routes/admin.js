@@ -9,16 +9,27 @@ const { pick, requireFields, notFound, intParam } = require('./helpers');
 const users = express.Router();
 
 users.get('/', (req, res) => {
-  res.json({ rows: db.all('SELECT id, name, email, role, phone, active, created_at, (totp_enabled_at IS NOT NULL) AS mfa_enabled FROM users ORDER BY active DESC, name') });
+  res.json({
+    rows: db.all(`SELECT id, name, email, role, phone, active, created_at, last_login_at, (totp_enabled_at IS NOT NULL) AS mfa_enabled,
+        (SELECT MAX(created_at) FROM user_invites i WHERE i.user_id = users.id AND i.used_at IS NULL AND i.expires_at > ?) AS link_sent_at
+      FROM users ORDER BY active DESC, name`, new Date().toISOString()),
+  });
 });
 
+// Without a password, the person chooses their own from the welcome email.
 users.post('/', auth.requireRole('admin'), (req, res) => {
   const row = pick(req.body, ['name', 'email', 'role', 'phone', 'password']);
-  requireFields(row, ['name', 'email', 'password']);
-  if (String(row.password).length < 8) throw new HttpError(400, 'Password must be at least 8 characters');
+  requireFields(row, ['name', 'email']);
+  if (row.password && String(row.password).length < 8) throw new HttpError(400, 'Password must be at least 8 characters');
+  if (db.one('SELECT 1 FROM users WHERE email = ?', String(row.email).trim())) throw new HttpError(409, 'Someone on the team already uses that email address');
   const { password, ...rest } = row;
-  const id = db.insert('users', { ...rest, password_hash: auth.hashPassword(password) });
+  const id = db.insert('users', { ...rest, email: String(rest.email).trim(), password_hash: password ? auth.hashPassword(password) : require('../services/invites').unusablePassword() });
   res.status(201).json(db.one('SELECT id, name, email, role, phone, active FROM users WHERE id = ?', id));
+});
+
+// Emails a welcome link (or, for someone who has signed in before, a link to choose a new password).
+users.post('/:id/welcome', auth.requireRole('admin'), async (req, res) => {
+  res.json(await require('../services/invites').send(intParam(req.params.id), req.user.id, `${req.protocol}://${req.get('host')}`));
 });
 
 users.patch('/:id', auth.requireRole('admin'), (req, res) => {
@@ -89,7 +100,7 @@ function simpleCrud(table, fields, { required = ['name'], list, label = 'Record'
 
 const lenders = simpleCrud(
   'lenders',
-  ['name', 'website', 'upfront_pct', 'trail_pct', 'clawback_months', 'notes', 'active'],
+  ['name', 'website', 'upfront_pct', 'clawback_months', 'notes', 'active'],
   {
     label: 'Lender',
     // Includes the primary BDM and the signed-in broker's own accreditation.
@@ -158,7 +169,7 @@ lenders.delete('/accreditations/:accId', (req, res) => {
 
 const partners = simpleCrud(
   'referral_partners',
-  ['name', 'company', 'type', 'email', 'phone', 'mobile', 'referral_fee_pct', 'sms_updates', 'newsletter_opt_in', 'notes', 'active'],
+  ['name', 'company', 'type', 'email', 'phone', 'mobile', 'referral_fee_pct', 'gst_registered', 'sms_updates', 'newsletter_opt_in', 'notes', 'active'],
   {
     label: 'Partner',
     list: () => db.all(

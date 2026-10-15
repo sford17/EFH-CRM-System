@@ -393,7 +393,7 @@ function rateCheck(contactId, rates) {
   const ids = require('./household').householdIds(contactId);
   const loans = db.all(
     `SELECT n.*, COALESCE(l.name, n.lender_name) AS lender, l.logo_asset_id FROM loans n LEFT JOIN lenders l ON l.id = n.lender_id
-     WHERE (n.contact_id IN (${ids.map(() => '?').join(',')}) OR n.co_borrower_id IN (${ids.map(() => '?').join(',')}))
+     WHERE (n.contact_id IN (${ids.map(() => '?').join(',')}) OR n.id IN (SELECT loan_id FROM loan_borrowers WHERE contact_id IN (${ids.map(() => '?').join(',')})))
        AND n.status = 'active' AND n.interest_rate > 0 AND n.loan_type IN (${HOME_LOAN_TYPES.map(() => '?').join(',')})
      ORDER BY COALESCE(n.balance, n.limit_amount) DESC LIMIT 6`,
     ...ids, ...ids, ...HOME_LOAN_TYPES,

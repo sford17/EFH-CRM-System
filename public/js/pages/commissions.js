@@ -1,4 +1,5 @@
 import { api, h, pageHeader, table, badge, money2, money, date, attempt, label, formModal, todayStr } from '../core.js';
+import { referralInvoiceDialog } from './referralInvoice.js';
 import { refresh } from './forms.js';
 
 const f = { status: '', type: '', from: '', to: '' };
@@ -20,7 +21,7 @@ export async function commissionsPage() {
     const { rows } = await api('/deals?stage=settled');
     formModal('Record commission / clawback', [
       { name: 'deal_id', label: 'Deal', type: 'select', required: true, full: true, options: rows.map((d) => [d.id, d.title]) },
-      { name: 'type', label: 'Type', type: 'select', required: true, options: ['upfront', 'trail', 'clawback', 'referral_fee', 'other'].map((t) => [t, label(t)]) },
+      { name: 'type', label: 'Type', type: 'select', required: true, options: ['upfront', 'clawback', 'referral_fee', 'other'].map((t) => [t, label(t)]) },
       { name: 'amount', label: 'Amount ($) – clawbacks are saved as negative', type: 'number', required: true },
       { name: 'period', label: 'Period (YYYY-MM)', default: todayStr().slice(0, 7) },
       { name: 'status', label: 'Status', type: 'select', required: true, options: [['expected', 'Expected'], ['received', 'Received'], ['paid', 'Paid']], default: 'received' },
@@ -36,18 +37,22 @@ export async function commissionsPage() {
       h('div.tile', h('div.tile-label', 'Received (filtered)'), h('div.tile-value', money(data.totals.received))),
       h('div.tile', h('div.tile-label', 'Deals in clawback window'), h('div.tile-value', String(data.clawback_exposure.length)),
         h('div.tile-sub', `${money(data.clawback_exposure.reduce((s, d) => s + d.upfront, 0))} upfront at risk`))),
-    h('div.filters', sel('status', 'All statuses', ['expected', 'received', 'paid', 'cancelled']), sel('type', 'All types', ['upfront', 'trail', 'clawback', 'referral_fee', 'other']), month('from', 'From month'), month('to', 'To month')),
+    h('div.filters', sel('status', 'All statuses', ['expected', 'received', 'paid', 'cancelled']), sel('type', 'All types', ['upfront', 'clawback', 'referral_fee', 'other']), month('from', 'From month'), month('to', 'To month')),
     h('section.card', h('h2', 'Ledger'), table([
       { label: 'Period', value: (c) => c.period || '—' },
       { label: 'Deal', value: (c) => h('a', { href: `#/deals/${c.deal_id}` }, c.deal_title) },
       { label: 'Lender', value: (c) => c.lender_name || '—' },
-      { label: 'Type', value: (c) => label(c.type) },
+      { label: 'Type', value: (c) => h('span', label(c.type), c.type === 'referral_fee' && c.invoice_requested_at ? h('div.muted.small', `invoice requested ${date(c.invoice_requested_at)}`) : null) },
       { label: 'Amount', value: (c) => h(`span${c.amount < 0 ? '.text-danger' : ''}`, money2(c.amount)), class: 'num' },
       { label: 'Status', value: (c) => badge(c.status, { received: 'ok', paid: 'ok', expected: 'warn', cancelled: '' }[c.status]) },
       {
-        label: '', value: (c) => (c.status === 'expected'
-          ? h('button.link.small', { type: 'button', onclick: () => setStatus(c, 'received') }, 'Mark received')
-          : c.status === 'received' ? h('button.link.small', { type: 'button', onclick: () => setStatus(c, 'expected') }, 'Undo') : null),
+        label: '', value: (c) => (c.type === 'referral_fee'
+          ? h('div.row-actions',
+            h('button.link.small', { type: 'button', onclick: () => referralInvoiceDialog(c.deal_id, () => window.dispatchEvent(new Event('crm:refresh'))) }, c.invoice_requested_at ? 'Request invoice again' : 'Request invoice'),
+            c.status === 'expected' ? h('button.link.small', { type: 'button', onclick: () => setStatus(c, 'paid') }, 'Mark paid') : c.status === 'paid' ? h('button.link.small', { type: 'button', onclick: () => setStatus(c, 'expected') }, 'Undo') : null)
+          : c.status === 'expected'
+            ? h('button.link.small', { type: 'button', onclick: () => setStatus(c, 'received') }, 'Mark received')
+            : c.status === 'received' ? h('button.link.small', { type: 'button', onclick: () => setStatus(c, 'expected') }, 'Undo') : null),
       },
     ], data.rows, { empty: 'No commission entries. They are created automatically when deals settle.' })),
     h('section.card', h('h2', 'Clawback exposure'), h('p.muted', 'Settled loans still inside the lender\'s clawback period. If one of these is discharged or refinanced, upfront commission may be clawed back.'),

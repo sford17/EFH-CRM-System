@@ -76,6 +76,25 @@ const SCHEDULED_TRIGGERS = [
   { key: 'schedule.stale_lead', label: 'Lead not contacted (days_inactive)' },
   { key: 'schedule.appointment_upcoming', label: 'Appointment coming up (days_before)' },
 ];
+// Kinds of loan, for deals (and the tracker), with how they're named in reports.
+const LOAN_TYPES = [
+  { key: 'home_loan', label: 'Home loan' },
+  { key: 'investment_loan', label: 'Investment loan' },
+  { key: 'commercial', label: 'Commercial loan' },
+  { key: 'business_loan', label: 'Business loan' },
+  { key: 'smsf', label: 'SMSF loan' },
+  { key: 'construction', label: 'Construction loan' },
+  { key: 'bridging', label: 'Bridging loan' },
+  { key: 'line_of_credit', label: 'Line of credit' },
+  { key: 'car', label: 'Car / asset finance' },
+  { key: 'personal', label: 'Personal loan' },
+  { key: 'other', label: 'Other' },
+];
+const LOAN_TYPE_KEYS = LOAN_TYPES.map((t) => t.key);
+const loanTypeLabel = (key) => LOAN_TYPES.find((t) => t.key === key)?.label || 'Other';
+// The usual loan type for a deal's purpose (a starting point; it can be changed).
+const loanTypeForPurpose = (purpose) => ({ investment: 'investment_loan', commercial: 'commercial', business_loan: 'business_loan', construction: 'construction' }[purpose] || 'home_loan');
+
 const ACTION_TYPES = [
   'create_task', 'send_email', 'send_sms', 'add_note', 'add_tag', 'remove_tag',
   'set_contact_status', 'set_deal_stage', 'notify', 'email_broker', 'create_document_checklist', 'generate_commissions',
@@ -84,5 +103,5 @@ const ACTION_TYPES = [
 
 module.exports = {
   STAGES, STAGE_KEYS, OPEN_STAGES, DOCUMENT_CHECKLIST,
-  EVENT_TRIGGERS, SCHEDULED_TRIGGERS, ACTION_TYPES,
+  EVENT_TRIGGERS, SCHEDULED_TRIGGERS, ACTION_TYPES, LOAN_TYPES, LOAN_TYPE_KEYS, loanTypeLabel, loanTypeForPurpose,
 };

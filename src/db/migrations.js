@@ -163,6 +163,43 @@ function addTrackerDefaults(db) {
   }
 }
 
+// Changes a CHECK constraint by rebuilding the table (SQLite's documented
+// procedure): same columns and data, with its indexes and any triggers that
+// mention it recreated afterwards.
+function rebuildWithCheck(db, table, from, to) {
+  const { sql } = db.one("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", table);
+  if (!sql.includes(from)) throw new Error(`Couldn't find ${from} in ${table}`);
+  const mentions = new RegExp(`\\b${table}\\b`);
+  const extras = db.all("SELECT type, name, tbl_name, sql FROM sqlite_master WHERE type IN ('index', 'trigger') AND sql IS NOT NULL")
+    .filter((o) => o.tbl_name === table || (o.type === 'trigger' && mentions.test(o.sql)));
+  for (const t of extras.filter((o) => o.type === 'trigger')) db.run(`DROP TRIGGER "${t.name}"`);
+  db.run(sql.replace(from, to).replace(/^CREATE TABLE\s+("?)(\w+)\1/, `CREATE TABLE ${table}__new`));
+  db.run(`INSERT INTO ${table}__new SELECT * FROM ${table}`);
+  db.run(`DROP TABLE ${table}`);
+  db.run(`ALTER TABLE ${table}__new RENAME TO ${table}`);
+  for (const o of extras) db.run(o.sql);
+}
+
+// Sent to a referral partner after settlement, asking for a tax invoice for their fee.
+const REFERRAL_INVOICE_TEMPLATE = ['Referral fee invoice request', 'settlement', 'Referral fee invoice: {{referral.client}}',
+  `Hi {{referrer.first_name}},
+
+Thank you for referring {{referral.client}} to us. Their loan has now settled, so we'd like to pay your referral fee.
+
+Could you please send us a tax invoice for the amount below?
+
+- Client: {{referral.client}}
+- Loan amount: {{deal.loan_amount|money}}
+- Lender: {{deal.lender_name}}
+- Settled: {{deal.settlement_date|date}}
+- Referral fee: {{referral.fee_text}}
+
+Please make the invoice out to {{business.name}} and include your ABN and bank details, and we'll arrange payment.
+
+Thanks again for thinking of us.
+
+Kind regards,`];
+
 const MIGRATIONS = [
   // 1. Outlook email sync
   `
@@ -1046,10 +1083,165 @@ MIGRATIONS.push(
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   );
   `,
+  // 32. Welcome emails for new team members (and password reset links)
+  `
+  ALTER TABLE users ADD COLUMN last_login_at TEXT;
+  UPDATE users SET last_login_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    WHERE id IN (SELECT user_id FROM sessions) OR totp_enabled_at IS NOT NULL;
+  CREATE TABLE user_invites (
+    token_hash TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL DEFAULT 'welcome' CHECK (kind IN ('welcome','reset')),
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    expires_at TEXT NOT NULL,
+    used_at    TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  );
+  `,
+  // 33. More than one co-borrower; companies and trusts as borrowers, linked to their people
+  `
+  ALTER TABLE contacts ADD COLUMN entity_type TEXT NOT NULL DEFAULT 'person' CHECK (entity_type IN ('person','company','trust'));
+  ALTER TABLE contacts ADD COLUMN abn TEXT;
+  ALTER TABLE contacts ADD COLUMN acn TEXT;
+  ALTER TABLE contacts ADD COLUMN trust_type TEXT;
+  CREATE TABLE contact_relationships_new (
+    id              INTEGER PRIMARY KEY,
+    contact_id      INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    related_id      INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    relationship    TEXT NOT NULL DEFAULT 'spouse' CHECK (relationship IN
+                    ('spouse','de_facto','partner','parent','child','sibling','relative','business_partner','guarantor','accountant','solicitor','other',
+                     'director','shareholder','trustee','beneficiary','appointor')),
+    shared_finances INTEGER NOT NULL DEFAULT 0,
+    notes           TEXT,
+    created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    UNIQUE (contact_id, related_id),
+    CHECK (contact_id != related_id)
+  );
+  INSERT INTO contact_relationships_new SELECT id, contact_id, related_id, relationship, shared_finances, notes, created_at FROM contact_relationships;
+  DROP TABLE contact_relationships;
+  ALTER TABLE contact_relationships_new RENAME TO contact_relationships;
+  CREATE INDEX idx_relationships_related ON contact_relationships(related_id);
+
+  CREATE TABLE deal_borrowers (
+    id         INTEGER PRIMARY KEY,
+    deal_id    INTEGER NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (deal_id, contact_id)
+  );
+  CREATE INDEX idx_deal_borrowers_contact ON deal_borrowers(contact_id);
+  INSERT INTO deal_borrowers (deal_id, contact_id, position)
+    SELECT id, co_borrower_id, 0 FROM deals WHERE co_borrower_id IS NOT NULL AND co_borrower_id != contact_id;
+  -- deals.co_borrower_id always holds the first co-borrower, for code that only needs one.
+  CREATE TRIGGER deal_borrowers_ai AFTER INSERT ON deal_borrowers BEGIN
+    UPDATE deals SET co_borrower_id = (SELECT contact_id FROM deal_borrowers WHERE deal_id = NEW.deal_id ORDER BY position, id LIMIT 1) WHERE id = NEW.deal_id;
+  END;
+  CREATE TRIGGER deal_borrowers_au AFTER UPDATE ON deal_borrowers BEGIN
+    UPDATE deals SET co_borrower_id = (SELECT contact_id FROM deal_borrowers WHERE deal_id = NEW.deal_id ORDER BY position, id LIMIT 1) WHERE id = NEW.deal_id;
+  END;
+  CREATE TRIGGER deal_borrowers_ad AFTER DELETE ON deal_borrowers BEGIN
+    UPDATE deals SET co_borrower_id = (SELECT contact_id FROM deal_borrowers WHERE deal_id = OLD.deal_id ORDER BY position, id LIMIT 1) WHERE id = OLD.deal_id;
+  END;
+  -- Code that sets co_borrower_id directly (one co-borrower) keeps working.
+  CREATE TRIGGER deals_co_borrower_ai AFTER INSERT ON deals
+    WHEN NEW.co_borrower_id IS NOT NULL AND NEW.co_borrower_id != NEW.contact_id BEGIN
+    INSERT OR IGNORE INTO deal_borrowers (deal_id, contact_id, position) VALUES (NEW.id, NEW.co_borrower_id, 0);
+  END;
+  CREATE TRIGGER deals_co_borrower_au AFTER UPDATE OF co_borrower_id ON deals
+    WHEN NEW.co_borrower_id IS NOT (SELECT contact_id FROM deal_borrowers WHERE deal_id = NEW.id ORDER BY position, id LIMIT 1) BEGIN
+    DELETE FROM deal_borrowers WHERE deal_id = NEW.id AND contact_id = OLD.co_borrower_id;
+    INSERT OR IGNORE INTO deal_borrowers (deal_id, contact_id, position) SELECT NEW.id, NEW.co_borrower_id, -1 WHERE NEW.co_borrower_id IS NOT NULL AND NEW.co_borrower_id != NEW.contact_id;
+    UPDATE deal_borrowers SET position = -1 WHERE deal_id = NEW.id AND contact_id = NEW.co_borrower_id;
+  END;
+  CREATE TABLE loan_borrowers (
+    id         INTEGER PRIMARY KEY,
+    loan_id    INTEGER NOT NULL REFERENCES loans(id) ON DELETE CASCADE,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (loan_id, contact_id)
+  );
+  CREATE INDEX idx_loan_borrowers_contact ON loan_borrowers(contact_id);
+  INSERT INTO loan_borrowers (loan_id, contact_id, position)
+    SELECT id, co_borrower_id, 0 FROM loans WHERE co_borrower_id IS NOT NULL AND co_borrower_id != contact_id;
+  -- loans.co_borrower_id always holds the first co-borrower, for code that only needs one.
+  CREATE TRIGGER loan_borrowers_ai AFTER INSERT ON loan_borrowers BEGIN
+    UPDATE loans SET co_borrower_id = (SELECT contact_id FROM loan_borrowers WHERE loan_id = NEW.loan_id ORDER BY position, id LIMIT 1) WHERE id = NEW.loan_id;
+  END;
+  CREATE TRIGGER loan_borrowers_au AFTER UPDATE ON loan_borrowers BEGIN
+    UPDATE loans SET co_borrower_id = (SELECT contact_id FROM loan_borrowers WHERE loan_id = NEW.loan_id ORDER BY position, id LIMIT 1) WHERE id = NEW.loan_id;
+  END;
+  CREATE TRIGGER loan_borrowers_ad AFTER DELETE ON loan_borrowers BEGIN
+    UPDATE loans SET co_borrower_id = (SELECT contact_id FROM loan_borrowers WHERE loan_id = OLD.loan_id ORDER BY position, id LIMIT 1) WHERE id = OLD.loan_id;
+  END;
+  -- Code that sets co_borrower_id directly (one co-borrower) keeps working.
+  CREATE TRIGGER loans_co_borrower_ai AFTER INSERT ON loans
+    WHEN NEW.co_borrower_id IS NOT NULL AND NEW.co_borrower_id != NEW.contact_id BEGIN
+    INSERT OR IGNORE INTO loan_borrowers (loan_id, contact_id, position) VALUES (NEW.id, NEW.co_borrower_id, 0);
+  END;
+  CREATE TRIGGER loans_co_borrower_au AFTER UPDATE OF co_borrower_id ON loans
+    WHEN NEW.co_borrower_id IS NOT (SELECT contact_id FROM loan_borrowers WHERE loan_id = NEW.id ORDER BY position, id LIMIT 1) BEGIN
+    DELETE FROM loan_borrowers WHERE loan_id = NEW.id AND contact_id = OLD.co_borrower_id;
+    INSERT OR IGNORE INTO loan_borrowers (loan_id, contact_id, position) SELECT NEW.id, NEW.co_borrower_id, -1 WHERE NEW.co_borrower_id IS NOT NULL AND NEW.co_borrower_id != NEW.contact_id;
+    UPDATE loan_borrowers SET position = -1 WHERE loan_id = NEW.id AND contact_id = NEW.co_borrower_id;
+  END;
+  `,
+  // 34. Trail commissions are no longer tracked
+  `
+  DELETE FROM commissions WHERE type = 'trail';
+  `,  // 35. Business loans: a loan type on the tracker and a deal purpose
+  (db) => {
+    rebuildWithCheck(db, 'loans', "'commercial','personal'", "'commercial','business_loan','personal'");
+    rebuildWithCheck(db, 'deals', "'commercial','other'", "'commercial','business_loan','other'");
+  },  // 36. A loan type on each deal (home, commercial, business, SMSF…) for reporting; SMSF loans on the tracker
+  (db) => {
+    rebuildWithCheck(db, 'loans', "'business_loan','personal'", "'business_loan','smsf','personal'");
+    db.run('ALTER TABLE deals ADD COLUMN loan_type TEXT');
+    db.run(`UPDATE deals SET loan_type = CASE loan_purpose WHEN 'investment' THEN 'investment_loan' WHEN 'commercial' THEN 'commercial'
+      WHEN 'business_loan' THEN 'business_loan' WHEN 'construction' THEN 'construction' ELSE 'home_loan' END`);
+    // Deals added without one (imports, fact finds…) get the usual type for their purpose.
+    db.run(`CREATE TRIGGER deals_loan_type_ai AFTER INSERT ON deals WHEN NEW.loan_type IS NULL BEGIN
+      UPDATE deals SET loan_type = CASE NEW.loan_purpose WHEN 'investment' THEN 'investment_loan' WHEN 'commercial' THEN 'commercial'
+        WHEN 'business_loan' THEN 'business_loan' WHEN 'construction' THEN 'construction' ELSE 'home_loan' END WHERE id = NEW.id;
+    END`);
+    // Settled deals: the loan on the tracker knows best.
+    db.run(`UPDATE deals SET loan_type = (SELECT n.loan_type FROM loans n WHERE n.deal_id = deals.id LIMIT 1)
+      WHERE EXISTS (SELECT 1 FROM loans n WHERE n.deal_id = deals.id AND n.loan_type IN
+        ('home_loan','investment_loan','commercial','business_loan','smsf','construction','bridging','line_of_credit','car','personal'))`);
+  },  // 37. Securities that aren't property, for commercial and business loans: rent roll, GSA, guarantee
+  `
+  CREATE TABLE other_securities (
+    id            INTEGER PRIMARY KEY,
+    deal_id       INTEGER REFERENCES deals(id) ON DELETE CASCADE,
+    loan_id       INTEGER REFERENCES loans(id) ON DELETE CASCADE,
+    type          TEXT NOT NULL CHECK (type IN ('rent_roll','gsa','guarantee')),
+    contact_id    INTEGER REFERENCES contacts(id) ON DELETE SET NULL, -- the grantor or guarantor, when they're in the CRM
+    name          TEXT,    -- grantor/guarantor or rent roll business name, when not
+    description   TEXT,
+    value         REAL,    -- rent roll or secured assets value
+    limit_amount  REAL,    -- guarantee limit (blank = unlimited)
+    managements   INTEGER, -- rent roll: number of managements
+    ppsr_number   TEXT,    -- GSA: PPSR registration number
+    notes         TEXT,
+    created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    CHECK ((deal_id IS NULL) != (loan_id IS NULL))
+  );
+  CREATE INDEX idx_other_securities_deal ON other_securities(deal_id);
+  CREATE INDEX idx_other_securities_loan ON other_securities(loan_id);
+  CREATE INDEX idx_other_securities_contact ON other_securities(contact_id);
+  `,  // 38. Asking a referral partner for an invoice for their referral fee
+  (db) => {
+    db.run('ALTER TABLE referral_partners ADD COLUMN gst_registered INTEGER NOT NULL DEFAULT 1');
+    db.run('ALTER TABLE commissions ADD COLUMN invoice_requested_at TEXT');
+    // Existing installs; new ones get it with the standard templates.
+    const [name, category, subject, body] = REFERRAL_INVOICE_TEMPLATE;
+    if (db.one('SELECT 1 FROM email_templates LIMIT 1') && !db.one('SELECT 1 FROM email_templates WHERE name = ?', name)) db.insert('email_templates', { name, category, subject, body });
+  },
 );
 
 module.exports = MIGRATIONS;
 module.exports.LENDER_WEBSITES = LENDER_WEBSITES;
+module.exports.REFERRAL_INVOICE_TEMPLATE = REFERRAL_INVOICE_TEMPLATE;
 module.exports.addSmsDefaults = addSmsDefaults;
 module.exports.addCalendarDefaults = addCalendarDefaults;
 module.exports.addTrackerDefaults = addTrackerDefaults;

@@ -14,7 +14,9 @@ const FIELDS = [
   'first_name', 'last_name', 'email', 'mobile', 'phone', 'dob', 'address', 'suburb', 'state', 'postcode',
   'employment_type', 'employer', 'annual_income', 'marital_status', 'dependants', 'status', 'lead_source',
   'referral_partner_id', 'owner_id', 'tags', 'marketing_opt_in', 'sms_opt_out', 'next_review_date', 'google_reviewed_at', 'background',
+  'entity_type', 'abn', 'acn', 'trust_type',
 ];
+const borrowers = require('../services/borrowers');
 const CONTACT_TYPES = ['call', 'email', 'sms', 'meeting'];
 
 // Tags are stored as a clean, de-duplicated comma list ('' when none).
@@ -22,6 +24,16 @@ function normalise(row) {
   if ('tags' in row) row.tags = [...new Set(parseTags(row.tags))].join(',');
   if ('marketing_opt_in' in row && row.marketing_opt_in === null) row.marketing_opt_in = 0;
   if ('sms_opt_out' in row && row.sms_opt_out === null) row.sms_opt_out = 0;
+  if ('entity_type' in row) {
+    if (!row.entity_type) row.entity_type = 'person';
+    if (!borrowers.ENTITY_TYPES.includes(row.entity_type)) throw new HttpError(400, 'Type must be person, company or trust');
+    // A company or trust has one name (kept in first_name) and no personal details.
+    if (row.entity_type !== 'person') {
+      row.last_name = null;
+      for (const k of ['dob', 'marital_status', 'dependants', 'employment_type']) if (k in row) row[k] = null;
+    }
+  }
+  for (const k of ['abn', 'acn']) if (row[k]) row[k] = String(row[k]).replace(/[^\d]/g, '').replace(k === 'abn' ? /^(\d{2})(\d{3})(\d{3})(\d{3})$/ : /^(\d{3})(\d{3})(\d{3})$/, k === 'abn' ? '$1 $2 $3 $4' : '$1 $2 $3');
   return row;
 }
 
@@ -36,12 +48,13 @@ router.get('/', (req, res) => {
   if (req.query.owner_id) { where.push('c.owner_id = ?'); params.push(req.query.owner_id); }
   if (req.query.tag) { where.push("(',' || c.tags || ',') LIKE ? ESCAPE '\\'"); params.push(like(`,${req.query.tag},`)); }
   if (req.query.lead_source) { where.push('c.lead_source = ?'); params.push(req.query.lead_source); }
+  if (req.query.entity_type) { where.push('c.entity_type = ?'); params.push(req.query.entity_type); }
   const limit = Math.min(Number(req.query.limit) || 100, 500);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const rows = db.all(
     `SELECT c.*, u.name AS owner_name, p.name AS partner_name,
-       (SELECT COUNT(*) FROM deals d WHERE d.contact_id = c.id AND d.stage NOT IN ('settled','lost')) AS open_deals
+       (SELECT COUNT(*) FROM deals d WHERE (d.contact_id = c.id OR d.id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id = c.id)) AND d.stage NOT IN ('settled','lost')) AS open_deals
      FROM contacts c LEFT JOIN users u ON u.id = c.owner_id LEFT JOIN referral_partners p ON p.id = c.referral_partner_id
      ${whereSql} ORDER BY c.updated_at DESC LIMIT ? OFFSET ?`,
     ...params, limit, offset,
@@ -66,14 +79,17 @@ router.get('/:id', (req, res) => {
   ), 'Contact');
   contact.relationships = household.relatedTo(id);
   contact.household = household.household(id);
-  const hh = contact.household.map((m) => m.id);
-  const hhList = hh.map(() => '?').join(',');
+  // Companies and trusts this person is linked to, or the people behind this company or trust.
+  contact.entities = contact.entity_type === 'person' ? borrowers.entitiesOf(id) : [];
+  contact.people = contact.entity_type === 'person' ? [] : borrowers.peopleOf(id);
+  // Deals for the household, and for companies and trusts they're linked to.
+  const hh = [...new Set([...contact.household.map((m) => m.id), ...contact.entities.map((e) => e.id)])];
   contact.deals = db.all(
     `SELECT d.*, l.name AS lender_name, l.logo_asset_id AS lender_logo_id,
-            c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name, cb.first_name || ' ' || COALESCE(cb.last_name,'') AS co_borrower_name
-     FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id JOIN contacts c ON c.id = d.contact_id LEFT JOIN contacts cb ON cb.id = d.co_borrower_id
-     WHERE d.contact_id IN (${hhList}) OR d.co_borrower_id IN (${hhList}) ORDER BY d.created_at DESC`,
-    ...hh, ...hh,
+            c.first_name || ' ' || COALESCE(c.last_name,'') AS contact_name, ${borrowers.coNamesSql('deal', 'd')} AS co_borrower_name
+     FROM deals d LEFT JOIN lenders l ON l.id = d.lender_id JOIN contacts c ON c.id = d.contact_id
+     WHERE ${borrowers.involving('deal', 'd', hh)} ORDER BY d.created_at DESC`,
+    ...borrowers.params(hh),
   );
   contact.tasks = db.all(
     `SELECT t.*, u.name AS assigned_name FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to
@@ -105,9 +121,11 @@ router.post('/', (req, res) => {
   const row = normalise(pick(req.body, FIELDS));
   requireFields(row, ['first_name']);
   if (row.owner_id === undefined) row.owner_id = req.user.id;
+  if (row.entity_type && row.entity_type !== 'person' && row.marketing_opt_in === undefined) row.marketing_opt_in = 0;
   const id = db.insert('contacts', row);
   db.insert('activities', { contact_id: id, user_id: req.user.id, type: 'system', body: 'Contact created' });
-  automation.emit('contact.created', { contactId: id });
+  // A company or trust isn't a new enquiry: new-lead automations are for people.
+  if (!row.entity_type || row.entity_type === 'person') automation.emit('contact.created', { contactId: id });
   res.status(201).json(db.one('SELECT * FROM contacts WHERE id = ?', id));
 });
 
@@ -167,9 +185,13 @@ router.post('/:id/relationships', (req, res) => {
     if (!relatedId && req.body?.new_contact) {
       const nc = normalise(pick(req.body.new_contact, FIELDS));
       requireFields(nc, ['first_name']);
+      const entity = nc.entity_type && nc.entity_type !== 'person';
+      // From a person: surname and address carry over. From a company or trust: just the owner and status.
+      const fromPerson = me.entity_type === 'person';
       relatedId = db.insert('contacts', {
-        last_name: me.last_name, status: me.status, owner_id: me.owner_id, referral_partner_id: me.referral_partner_id, lead_source: me.lead_source,
-        address: me.address, suburb: me.suburb, state: me.state, postcode: me.postcode, ...nc,
+        ...(fromPerson && !entity ? { last_name: me.last_name } : {}), ...(entity ? { marketing_opt_in: 0 } : {}),
+        status: me.status, owner_id: me.owner_id, referral_partner_id: me.referral_partner_id, lead_source: me.lead_source,
+        ...(fromPerson ? { address: me.address, suburb: me.suburb, state: me.state, postcode: me.postcode } : {}), ...nc,
       });
       db.insert('activities', { contact_id: relatedId, user_id: req.user.id, type: 'system', body: `Contact created as ${me.first_name}'s ${String(req.body.relationship || 'partner').replace('_', ' ')}` });
     }
@@ -184,7 +206,18 @@ router.post('/:id/relationships', (req, res) => {
 router.get('/:id/household', (req, res) => {
   const id = intParam(req.params.id);
   notFound(db.one('SELECT id FROM contacts WHERE id = ?', id), 'Contact');
-  res.json({ rows: household.household(id), related: household.relatedTo(id) });
+  // On a deal: everyone borrowing on it too (and the people behind a company or trust).
+  const rows = household.household(id);
+  const dealId = Number(req.query.deal_id) || null;
+  if (dealId) {
+    const onDeal = borrowers.all('deal', dealId);
+    if (onDeal.some((b) => b.id === id)) {
+      for (const p of [...onDeal, ...borrowers.addresseesFor(onDeal)]) {
+        if (!rows.some((r) => r.id === p.id)) rows.push({ id: p.id, first_name: p.first_name, last_name: p.last_name, email: p.email, mobile: p.mobile, entity_type: p.entity_type });
+      }
+    }
+  }
+  res.json({ rows, related: household.relatedTo(id) });
 });
 
 router.patch('/relationships/:relId', (req, res) => {

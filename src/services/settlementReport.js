@@ -4,10 +4,10 @@
 // upfront commission on each (after referral fees).
 const db = require('../db');
 const { today, addMonths } = require('../util');
-const { STAGES } = require('../constants');
+const { STAGES, loanTypeLabel } = require('../constants');
 
 const round2 = (n) => Math.round(n * 100) / 100;
-const PURPOSES = { purchase: 'Purchase', first_home: 'First home', refinance: 'Refinance', investment: 'Investment', construction: 'Construction', top_up: 'Top-up', commercial: 'Commercial', other: 'Other' };
+const PURPOSES = { purchase: 'Purchase', first_home: 'First home', refinance: 'Refinance', investment: 'Investment', construction: 'Construction', top_up: 'Top-up', commercial: 'Commercial', business_loan: 'Business loan', other: 'Other' };
 const stageLabel = (k) => STAGES.find((s) => s.key === k)?.label || k;
 // Open deals far enough along to count as "expected" when they have no date yet.
 const LATE_STAGES = ['application_lodged', 'conditional_approval', 'unconditional_approval', 'settlement_booked'];
@@ -21,12 +21,11 @@ function monthsBetween(from, to) {
 }
 
 const DEAL_SQL = `
-  SELECT d.id, d.title, d.stage, d.loan_purpose, d.rate_type, d.loan_amount, d.settlement_date, d.contact_id, d.owner_id,
+  SELECT d.id, d.title, d.stage, d.loan_purpose, d.loan_type, d.rate_type, d.loan_amount, d.settlement_date, d.contact_id, d.owner_id,
          c.first_name || ' ' || COALESCE(c.last_name,'') AS client,
-         cb.first_name || ' ' || COALESCE(cb.last_name,'') AS co_borrower,
+         ${require('./borrowers').coNamesSql('deal', 'd')} AS co_borrower,
          l.name AS lender_name, l.logo_asset_id AS lender_logo_id, l.upfront_pct, p.referral_fee_pct, u.name AS owner_name
   FROM deals d JOIN contacts c ON c.id = d.contact_id
-  LEFT JOIN contacts cb ON cb.id = d.co_borrower_id
   LEFT JOIN lenders l ON l.id = d.lender_id
   LEFT JOIN referral_partners p ON p.id = d.referral_partner_id
   LEFT JOIN users u ON u.id = d.owner_id`;
@@ -58,7 +57,8 @@ function shape(d, now) {
     client: [d.client, d.co_borrower].map((n) => (n || '').trim()).filter(Boolean).join(' & '),
     lender_name: d.lender_name,
     lender_logo_id: d.lender_logo_id,
-    loan_type: PURPOSES[d.loan_purpose] || 'Loan',
+    // e.g. "Home loan · Refinance"; just "Commercial loan" when the purpose says the same.
+    loan_type: [loanTypeLabel(d.loan_type), !['investment', 'commercial', 'business_loan', 'construction'].includes(d.loan_purpose) ? PURPOSES[d.loan_purpose] : null].filter(Boolean).join(' · '),
     rate_type: d.rate_type,
     loan_amount: d.loan_amount || 0,
     settlement_date: d.settlement_date,
@@ -166,4 +166,4 @@ function csvRows(r) {
   return out;
 }
 
-module.exports = { report, csvRows, fyOf };
+module.exports = { report, csvRows, fyOf, commissionFor, monthsBetween, DEAL_SQL };

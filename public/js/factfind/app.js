@@ -536,6 +536,7 @@ const DEBT_FIELDS = {
   credit_card: ['lender', 'limit', 'balance'],
   personal: ['lender', 'balance', 'repayment'],
   car: ['lender', 'balance', 'repayment'],
+  business_loan: ['lender', 'balance', 'limit', 'repayment', 'rate'],
   hecs: ['balance'],
   bnpl: ['lender', 'limit', 'balance'],
   tax: ['balance', 'repayment'],

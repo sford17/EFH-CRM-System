@@ -143,7 +143,7 @@ export async function quickliCard(deal) {
 
   return h('section.card.ql-card',
     h('div.card-head', h('h2', 'Quickli servicing ', ready),
-      q.configured && q.connected ? h('div.actions', pushBtn, l ? h('button.small.secondary', { type: 'button', onclick: () => resultsDialog(deal, l) }, res ? 'Edit results' : 'Record results') : h('button.small.secondary', { type: 'button', onclick: () => linkDialog(deal) }, 'Link existing')) : null),
+      q.configured && q.connected && !q.blocked ? h('div.actions', pushBtn, l ? h('button.small.secondary', { type: 'button', onclick: () => resultsDialog(deal, l) }, res ? 'Edit results' : 'Record results') : h('button.small.secondary', { type: 'button', onclick: () => linkDialog(deal) }, 'Link existing')) : null),
     !q.configured ? h('p.small.muted', 'Connect Quickli in Settings → Quickli to send this deal straight to a servicing scenario.')
       : !q.connected ? h('p.small.muted', 'Add your Quickli access token in Settings → Quickli to send this deal to Quickli.') : null,
     l ? h('p.small', 'Scenario ', h('strong.mono', l.scenario_id), ' ', copyButton(l.scenario_id), ' ',
@@ -156,7 +156,7 @@ export async function quickliCard(deal) {
       tile('Best lender', res.best_lender || '—'),
       tile('Monthly surplus', res.surplus !== null && res.surplus !== undefined ? money(res.surplus) : '—')) : null,
     res?.notes ? h('p.small', res.notes, h('span.muted', ` (recorded ${date(res.recorded_at)})`)) : null,
-    h('details.ql-sent',
+    q.blocked ? h('p.small.text-warn', q.blocked) : h('details.ql-sent',
       h('summary.small', l ? 'What the CRM sends to Quickli' : 'What will be sent to Quickli'),
       h('dl.info',
         h('div.info-row', h('dt', 'Borrowers'), h('dd', `${s.borrowers.join(' & ')} · ${s.household}`)),

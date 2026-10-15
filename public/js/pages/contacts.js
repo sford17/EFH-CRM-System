@@ -16,9 +16,10 @@ import { relatedCard } from './household.js';
 import { googleReviewInfo, requestReviewDialog } from './googleReview.js';
 import { signingCard } from './signing.js';
 import { factFindsCard, sendFactFindDialog } from './factFinds.js';
+import { entityBadge, TRUST_TYPES } from './borrowers.js';
 
 const statusKind = { lead: 'info', prospect: 'warn', client: 'ok', past_client: '', lost: 'danger' };
-const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '' };
+const filters = { q: '', status: '', lead_source: '', owner_id: '', tag: '', entity_type: '' };
 
 export async function contactsPage() {
   // Links like #/contacts?tag=imported-2026-10-12 pre-set a filter.
@@ -32,7 +33,7 @@ export async function contactsPage() {
     results.replaceChildren(
       h('p.muted', `${total} contact${total === 1 ? '' : 's'}`),
       table([
-        { label: 'Name', value: (c) => h('a', { href: `#/contacts/${c.id}` }, fullName(c)) },
+        { label: 'Name', value: (c) => h('span', h('a', { href: `#/contacts/${c.id}` }, fullName(c)), ' ', entityBadge(c)) },
         { label: 'Status', value: (c) => badge(c.status, statusKind[c.status]) },
         { label: 'Email', value: (c) => c.email || '—' },
         { label: 'Mobile', value: (c) => c.mobile || '—' },
@@ -59,6 +60,7 @@ export async function contactsPage() {
       h('button', { type: 'button', onclick: () => newContact() }, '+ New contact')),
     h('div.filters',
       control('q', h('input', { type: 'search', placeholder: 'Search name, email, mobile…', 'aria-label': 'Search contacts' })),
+      select('entity_type', 'People, companies & trusts', [['person', 'People'], ['company', 'Companies'], ['trust', 'Trusts']]),
       select('status', 'All statuses', opts(CONTACT_STATUSES)),
       select('lead_source', 'All sources', opts(LEAD_SOURCES)),
       select('owner_id', 'All owners', userOptions()),
@@ -69,7 +71,8 @@ export async function contactsPage() {
 export async function contactPage(id) {
   const c = await api(`/contacts/${id}`);
   const tab = window.routeQuery?.get('tab') === 'tracker' ? 'tracker' : 'overview';
-  const edit = () => formModal(`Edit ${fullName(c)}`, contactFields(), c, async (v) => {
+  const entity = c.entity_type && c.entity_type !== 'person';
+  const edit = () => formModal(`Edit ${fullName(c)}`, contactFields(c.entity_type || 'person'), c, async (v) => {
     await attempt(() => api(`/contacts/${id}`, { method: 'PATCH', body: v }), 'Saved');
     refresh();
   });
@@ -82,7 +85,7 @@ export async function contactPage(id) {
 
   return h('div',
     h('div.page-header',
-      h('div', h('h1', fullName(c), ' ', badge(c.status, statusKind[c.status])),
+      h('div', h('h1', fullName(c), ' ', entityBadge(c), ' ', badge(c.status, statusKind[c.status])),
         h('div.muted', [c.email, c.mobile].filter(Boolean).join(' · '))),
       h('div.actions',
         c.email ? h('button.secondary', { type: 'button', onclick: () => composeDialog({ contactId: c.id, to: c.email }) }, 'Email') : null,
@@ -90,7 +93,7 @@ export async function contactPage(id) {
         c.mobile ? h('button.secondary', { type: 'button', onclick: () => smsDialog({ contactId: c.id, mobile: c.mobile, name: c.first_name }) }, 'SMS') : null,
         h('button.secondary', { type: 'button', onclick: () => bookingLinkDialog({ contact: c }) }, 'Booking link'),
         h('button.secondary', { type: 'button', onclick: () => startReview(c.id) }, 'Lending review'),
-        h('button.secondary', { type: 'button', onclick: () => sendFactFindDialog({ contact: c }) }, '📝 Fact find'),
+        entity ? null : h('button.secondary', { type: 'button', onclick: () => sendFactFindDialog({ contact: c }) }, '📝 Fact find'),
         h('button.secondary', { type: 'button', onclick: () => sendTemplateDialog({ contactId: c.id }) }, 'Send template'),
         h('button.secondary', { type: 'button', onclick: () => requestReviewDialog({ contact: c }) }, '⭐ Review request'),
         h('button.secondary', { type: 'button', onclick: edit }, 'Edit'),
@@ -104,6 +107,11 @@ export async function contactPage(id) {
           info('Owner', c.owner_name),
           info('Lead source', label(c.lead_source || '')),
           info('Referred by', c.partner_name),
+          info('ABN', c.abn),
+          info('ACN', c.acn),
+          info('Kind of trust', c.trust_type ? TRUST_TYPES.find(([k]) => k === c.trust_type)?.[1] || label(c.trust_type) : null),
+          entity ? info(c.entity_type === 'trust' ? 'Trustees & people' : 'Directors & people', c.people.length ? c.people.map((p, i) => [i ? ', ' : null, h('a', { href: `#/contacts/${p.id}` }, fullName(p)), h('span.muted', ` (${label(p.relationship)})`)]) : h('span.text-warn', 'None linked yet')) : null,
+          !entity && c.entities?.length ? info('Companies & trusts', c.entities.map((e, i) => [i ? ', ' : null, h('a', { href: `#/contacts/${e.id}` }, e.first_name), h('span.muted', ` (${label(e.relationship)})`)])) : null,
           info('Date of birth', c.dob ? date(c.dob) : null),
           info('Address', [c.address, c.suburb, c.state, c.postcode].filter(Boolean).join(', ')),
           info('Employment', c.employment_type ? `${label(c.employment_type)}${c.employer ? ` – ${c.employer}` : ''}` : null),
@@ -118,13 +126,13 @@ export async function contactPage(id) {
           info('Tags', c.tags ? c.tags.split(',').map((t) => h('span.tag', t)) : null)),
         c.background ? h('div.background', h('h3', 'Background'), h('p.pre', c.background)) : null),
         relatedCard(c),
-        await factFindsCard(c).catch(() => null),
+        entity ? null : await factFindsCard(c).catch(() => null),
         h('section.card',
           h('div.card-head', h('h2', 'Deals'), h('button.small', { type: 'button', onclick: () => newDeal(c.id) }, '+ Deal')),
           c.deals.length
             ? h('ul.plain', c.deals.map((d) => h('li', h('a', { href: `#/deals/${d.id}` }, d.title),
               h('div.muted', `${stageLabel(d.stage)} · ${money(d.loan_amount)}`, d.lender_name ? [' · ', lenderTag(d.lender_logo_id, d.lender_name)] : null),
-              c.household.length > 1 ? h('div.muted.small', [d.contact_name, d.co_borrower_name].filter(Boolean).map((n) => n.trim()).join(' & ')) : null)))
+              d.co_borrower_name || d.contact_id !== c.id ? h('div.muted.small', [d.contact_name, d.co_borrower_name].filter(Boolean).map((n) => n.trim()).join(' & ')) : null)))
             : h('p.empty', 'No deals yet.')),
         h('section.card',
           h('div.card-head', h('h2', 'Tasks'), h('button.small', { type: 'button', onclick: () => newTask({ contact_id: c.id }) }, '+ Task')),

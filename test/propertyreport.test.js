@@ -171,12 +171,15 @@ test('editing, the document preview, the email preview and the PDF', async () =>
     assert.ok(html.includes(s), `document shows ${s}`);
   }
   assert.ok(!html.includes('<script>alert'), 'escaped');
+  assert.match(html, /About the valuation types/);
+  assert.ok((html.match(/class="glossary"/g) || []).length === 1, 'one glossary for the whole report');
   await api.put('/newsletters/settings', { booking_url: 'https://calendly.com/efh/30min' });
   assert.equal((await api.get(`/property-reports/${reportId}`)).data.booking_ready, true);
   const email = await (await get('email-preview')).text();
   assert.ok(email.includes('https://calendly.com/efh/30min'), 'booking button');
   for (const s of ['Valuation history', 'Edited summary for Ryde.', '$2.05m', 'Metro West station', 'The full report is attached']) assert.ok(email.includes(s), `email shows ${s}`);
   assert.ok(!email.includes('<script>alert'));
+  assert.match(email, /About the valuation types/);
   const pdf = await get('pdf');
   assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0, 5).toString(), '%PDF-');
   assert.match(pdf.headers.get('content-disposition'), /Your%20property%20report\.pdf/);

@@ -56,11 +56,13 @@ const monthName = (m) => new Date(`${m}-01T00:00:00`).toLocaleString('en-AU', { 
 const tabs = (active) => h('nav.tabs.report-tabs', { 'aria-label': 'Report sections' },
   h(`a${active === 'overview' ? '.active' : ''}`, { href: '#/reports', 'aria-current': active === 'overview' ? 'page' : undefined }, 'Overview'),
   h(`a${active === 'settlements' ? '.active' : ''}`, { href: '#/reports?tab=settlements', 'aria-current': active === 'settlements' ? 'page' : undefined }, 'Settlements'),
+  h(`a${active === 'loan_types' ? '.active' : ''}`, { href: '#/reports?tab=loan_types', 'aria-current': active === 'loan_types' ? 'page' : undefined }, 'Loan types'),
   h(`a${active === 'refinances' ? '.active' : ''}`, { href: '#/reports?tab=refinances', 'aria-current': active === 'refinances' ? 'page' : undefined }, 'Internal refinances'),
   h(`a${active === 'costs' ? '.active' : ''}`, { href: '#/reports?tab=costs', 'aria-current': active === 'costs' ? 'page' : undefined }, 'Running costs'));
 
 export async function reportsPage() {
   if (window.routeQuery?.get('tab') === 'settlements') return settlementsReport();
+  if (window.routeQuery?.get('tab') === 'loan_types') return loanTypesReport();
   if (window.routeQuery?.get('tab') === 'refinances') return refinancesReport();
   if (window.routeQuery?.get('tab') === 'costs') return costsReport();
   const r = await api(`/reports?${new URLSearchParams(periodQuery())}`);
@@ -102,7 +104,6 @@ export async function reportsPage() {
       h('section.card', h('h2', 'Commission by month'), table([
         { label: 'Month', value: (m) => monthName(m.month) },
         { label: 'Upfront', value: (m) => money2(m.upfront), class: 'num' },
-        { label: 'Trail', value: (m) => money2(m.trail), class: 'num' },
         { label: 'Deductions', value: (m) => money2(m.deductions), class: 'num' },
         { label: 'Received', value: (m) => money2(m.received), class: 'num' },
       ], r.commission_by_month, { empty: 'No commission in this period.' })),
@@ -298,6 +299,63 @@ function costSettingsForm(s, onSaved) {
     }
   });
   return form;
+}
+
+// ---- Loan types: home, commercial, business, SMSF… ---------------------------------
+const loanTypeFilters = { owner_id: '' };
+async function loanTypesReport() {
+  const q = { ...periodQuery(), ...(loanTypeFilters.owner_id ? { owner_id: loanTypeFilters.owner_id } : {}) };
+  const r = await api(`/reports/loan-types?${new URLSearchParams(q)}`);
+  const ownerSel = h('select', { 'aria-label': 'Broker', onchange: (e) => { loanTypeFilters.owner_id = e.target.value; window.dispatchEvent(new Event('crm:refresh')); } },
+    h('option', { value: '' }, 'All brokers'), userOptions().map(([v, l]) => h('option', { value: v, selected: String(v) === loanTypeFilters.owner_id }, l)));
+  const csv = h('a.button.secondary', { href: `/api/reports/loan-types.csv?${new URLSearchParams(q)}`, download: '' }, 'Export CSV');
+  const tile = (l, v, sub) => h('div.tile', h('div.tile-label', l), h('div.tile-value', v), sub ? h('div.tile-sub', sub) : null);
+  const top = r.types[0];
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const withTotal = (rows, total) => (rows.length ? [...rows, { ...total, total: true }] : rows);
+  const strong = (row, text) => (row.total ? h('strong', text) : text);
+  const busyMonths = r.months.filter((m) => m.count);
+
+  return h('div',
+    pageHeader('Reports', await periodPicker(r.period), ownerSel, csv),
+    tabs('loan_types'),
+    h('p.muted.period-label', `Showing ${r.period.label}`),
+    h('div.tiles',
+      tile('Settled', money(r.totals.volume), plural(r.totals.count, 'loan')),
+      tile('Commission', money(r.totals.commission), 'upfront, after referral fees'),
+      tile('Biggest loan type', top ? top.label : '–', top ? `${top.share}% of settled volume` : 'Nothing settled yet'),
+      tile('Loan types used', String(r.types.length), r.types.map((t) => t.label).slice(0, 3).join(', ') + (r.types.length > 3 ? '…' : ''))),
+    h('section.card', h('h2', `Settled by loan type – ${r.period.label}`),
+      barList(r.types.map((t) => ({ label: t.label, value: t.volume, note: `· ${plural(t.count, 'loan')}` })), { format: money, empty: 'No loans settled in this period.' }),
+      r.types.length ? table([
+        { label: 'Loan type', value: (t) => strong(t, t.label) },
+        { label: 'Loans', value: (t) => strong(t, String(t.count)), class: 'num' },
+        { label: 'Volume', value: (t) => strong(t, money(t.volume)), class: 'num' },
+        { label: 'Share', value: (t) => strong(t, `${t.share}%`), class: 'num' },
+        { label: 'Average loan', value: (t) => strong(t, money(t.average)), class: 'num' },
+        { label: 'Commission', value: (t) => strong(t, money2(t.commission)), class: 'num' },
+      ], withTotal(r.types, { label: 'Total', count: r.totals.count, volume: r.totals.volume, share: 100, average: r.totals.count ? Math.round(r.totals.volume / r.totals.count) : 0, commission: r.totals.commission })) : null),
+    busyMonths.length ? h('section.card', h('h2', 'Month by month'),
+      h('p.muted.small', 'Loans settled each month by type: number of loans · volume. Months with nothing settled are left out.'),
+      table([
+        { label: 'Month', value: (m) => new Date(`${m.month}-01T00:00:00`).toLocaleString('en-AU', { month: 'long', year: 'numeric' }) },
+        ...r.types.map((t) => ({ label: t.label, value: (m) => (m.by[t.key].count ? `${m.by[t.key].count} · ${money(m.by[t.key].volume)}` : '–'), class: 'num' })),
+        { label: 'Total', value: (m) => h('strong', `${m.count} · ${money(m.volume)}`), class: 'num' },
+      ], busyMonths)) : null,
+    h('div.grid-2',
+      h('section.card', h('h2', 'In the pipeline now'), h('p.muted.small', 'Open deals (not settled or lost), whatever the period.'),
+        table([
+          { label: 'Loan type', value: (t) => t.label },
+          { label: 'Deals', value: (t) => String(t.count), class: 'num' },
+          { label: 'Volume', value: (t) => money(t.volume), class: 'num' },
+        ], r.pipeline, { empty: 'No open deals.' })),
+      h('section.card', h('h2', 'Your loan book'), h('p.muted.small', 'Active loans you arranged, from your clients\' mortgage trackers.'),
+        table([
+          { label: 'Loan type', value: (t) => t.label },
+          { label: 'Loans', value: (t) => String(t.count), class: 'num' },
+          { label: 'Owing', value: (t) => money(t.volume), class: 'num' },
+          { label: 'Share', value: (t) => `${t.share}%`, class: 'num' },
+        ], r.book, { empty: 'No active loans on the tracker yet.' }))));
 }
 
 async function costsReport() {

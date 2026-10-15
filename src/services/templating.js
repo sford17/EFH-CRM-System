@@ -23,6 +23,13 @@ function render(template, ctx) {
   });
 }
 
+// Everyone borrowing on the deal/loan, plus the people behind any company or trust among them.
+function borrowersOn(deal, loan) {
+  const b = require('./borrowers');
+  const list = [...(deal ? b.all('deal', deal.id) : []), ...(loan ? b.all('loan', loan.id) : [])];
+  return [...list.map((x) => x.id), ...b.addresseesFor(list).map((x) => x.id)];
+}
+
 function lvr(deal) {
   if (!deal || !deal.loan_amount || !deal.property_value) return null;
   return Math.round((deal.loan_amount / deal.property_value) * 10000) / 100;
@@ -68,7 +75,7 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
   // fields like {{deal.lender_name}} still fill in.
   if (!deal && contactId && latestDeal) {
     const latest = db.one(
-      `SELECT id FROM deals WHERE contact_id = ? OR co_borrower_id = ?
+      `SELECT id FROM deals WHERE contact_id = ? OR id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id = ?)
        ORDER BY stage = 'lost', updated_at DESC LIMIT 1`,
       contactId, contactId,
     );
@@ -81,7 +88,7 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
   if (!loan && latestDeal && contact) {
     const pickId = (deal && db.one('SELECT id FROM loans WHERE deal_id = ?', deal.id)?.id)
       ?? db.one(
-        `SELECT id FROM loans WHERE (contact_id = ? OR co_borrower_id = ?) AND status = 'active'
+        `SELECT id FROM loans WHERE (contact_id = ? OR id IN (SELECT loan_id FROM loan_borrowers WHERE contact_id = ?)) AND status = 'active'
          ORDER BY (rate_type != 'variable' AND fixed_expiry_date >= date('now')) DESC, fixed_expiry_date, id DESC LIMIT 1`,
         contact.id, contact.id,
       )?.id;
@@ -97,15 +104,18 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
   if (!Array.isArray(addresseeIds)) addresseeIds = null;
   // Only the contact's household or the co-borrower on this deal/loan.
   const allowed = new Set(contact && addresseeIds?.length
-    ? [...household.householdIds(contact.id), deal?.co_borrower_id, deal?.contact_id, loan?.co_borrower_id, loan?.contact_id].filter(Boolean)
+    ? [...household.householdIds(contact.id), ...borrowersOn(deal, loan)]
     : []);
   const extra = [...new Set((addresseeIds || []).map(Number))].filter((id) => id !== contact?.id && allowed.has(id));
   if (contact && extra.length) {
     const others = extra.map((id) => db.one('SELECT * FROM contacts WHERE id = ?', id)).filter(Boolean);
     addressees = [contact, ...others];
+    // Greet the people, not a company or trust they're writing on behalf of.
+    const people = addressees.filter((c) => c.entity_type !== 'company' && c.entity_type !== 'trust');
+    const named = people.length ? people : addressees;
     contact.single_first_name = contact.first_name;
-    contact.first_name = household.joinWords(addressees.map((c) => c.first_name));
-    contact.full_name = household.jointName(addressees);
+    contact.first_name = household.joinWords(named.map((c) => c.first_name));
+    contact.full_name = household.jointName(named);
   }
   const brokerId = userId || deal?.owner_id || contact?.owner_id;
   const broker = brokerId ? db.one('SELECT id, name, email, phone FROM users WHERE id = ?', brokerId) : null;
@@ -145,4 +155,4 @@ function buildContext({ contactId, dealId, userId, loanId, latestDeal = false, a
   };
 }
 
-module.exports = { render, buildContext, lvr, bookingLinkFor };
+module.exports = { borrowersOn, render, buildContext, lvr, bookingLinkFor };

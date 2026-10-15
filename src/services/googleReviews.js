@@ -54,7 +54,7 @@ async function send(contactId, { email, sms: text, dealId = null } = {}, userId)
   if (!email && !text) throw new HttpError(400, 'Choose email, SMS or both');
   if (!d.link) throw new HttpError(400, 'Add your Google review link in Settings → Business first');
   const contact = db.one('SELECT * FROM contacts WHERE id = ?', contactId);
-  if (dealId && !db.one('SELECT 1 FROM deals WHERE id = ? AND (contact_id = ? OR co_borrower_id = ?)', dealId, contactId, contactId)) {
+  if (dealId && !db.one('SELECT 1 FROM deals WHERE id = ? AND (contact_id = ? OR id IN (SELECT deal_id FROM deal_borrowers WHERE contact_id = ?))', dealId, contactId, contactId)) {
     throw new HttpError(400, 'That deal belongs to a different client');
   }
   if (email && d.email_blocked) throw new HttpError(400, d.email_blocked);

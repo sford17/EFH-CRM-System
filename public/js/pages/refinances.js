@@ -8,7 +8,7 @@ const refresh = () => window.dispatchEvent(new Event('crm:refresh'));
 export const STATUS_KIND = { needs_review: 'warn', in_progress: 'info', completed: 'ok' };
 const STATUS_OPTIONS = [['completed', 'Completed'], ['in_progress', 'In progress'], ['needs_review', 'Needs review']];
 const LOAN_TYPE_OPTIONS = [['home_loan', 'Home loan'], ['investment_loan', 'Investment loan'], ['line_of_credit', 'Line of credit'], ['construction', 'Construction'],
-  ['bridging', 'Bridging'], ['commercial', 'Commercial'], ['personal', 'Personal'], ['car', 'Car'], ['other', 'Other']];
+  ['bridging', 'Bridging'], ['commercial', 'Commercial'], ['business_loan', 'Business loan'], ['smsf', 'SMSF loan'], ['personal', 'Personal'], ['car', 'Car'], ['other', 'Other']];
 const RATE_OPTIONS = [['variable', 'Variable'], ['fixed', 'Fixed'], ['split', 'Split']];
 const REASONS = ['Better interest rate', 'Fixed rate expiry', 'Cash out / equity release', 'Debt consolidation', 'Lender service', 'Loan structure change',
   'Construction', 'Separation / change of borrowers', 'Retention offer declined'];

@@ -184,7 +184,7 @@ const ENUMS = {
   employment: (s) => (/self/.test(s) ? 'self_employed' : /contract/.test(s) ? 'contractor' : /casual/.test(s) ? 'casual' : /retire/.test(s) ? 'retired'
     : /payg|employ|full|part|salar|wage/.test(s) ? 'payg' : 'other'),
   purpose: (s) => (/first/.test(s) ? 'first_home' : /refi/.test(s) ? 'refinance' : /invest/.test(s) ? 'investment' : /constr|build/.test(s) ? 'construction'
-    : /top|equity|cash ?out/.test(s) ? 'top_up' : /commerc|business/.test(s) ? 'commercial' : /purchas|owner|home|buy/.test(s) ? 'purchase' : 'other'),
+    : /top|equity|cash ?out/.test(s) ? 'top_up' : /business ?loan/.test(s) ? 'business_loan' : /commerc|business/.test(s) ? 'commercial' : /purchas|owner|home|buy/.test(s) ? 'purchase' : 'other'),
 };
 
 // Lender names as brokers commonly write them.

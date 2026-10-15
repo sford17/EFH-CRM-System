@@ -11,6 +11,7 @@ const router = express.Router();
 const PROPERTY_FIELDS = ['contact_id', 'co_owner_id', 'address', 'suburb', 'state', 'postcode', 'property_type', 'usage', 'bedrooms',
   'purchase_date', 'purchase_price', 'rental_income_weekly', 'status', 'notes'];
 const VALUATION_FIELDS = ['valuation_date', 'amount', 'method', 'provider', 'lender_id', 'reference', 'notes'];
+const borrowers = require('../services/borrowers');
 const LOAN_FIELDS = ['contact_id', 'co_borrower_id', 'lender_id', 'lender_name', 'loan_type', 'account_number', 'product_name', 'limit_amount',
   'balance', 'balance_date', 'interest_rate', 'rate_type', 'fixed_expiry_date', 'repayment_type', 'io_expiry_date', 'repayment_amount',
   'repayment_frequency', 'offset_balance', 'settlement_date', 'loan_term_years', 'status', 'arranged_by_us', 'notes'];
@@ -115,6 +116,15 @@ function setSecurities(loanId, ids, contactId) {
   }
 }
 
+// ---- Rent rolls, GSAs and guarantees (commercial and business loans) ----------------------
+const securities = require('../services/securities');
+router.post('/securities', (req, res) => res.status(201).json(securities.create(req.body)));
+router.patch('/securities/:id', (req, res) => res.json(securities.update(intParam(req.params.id), req.body)));
+router.delete('/securities/:id', (req, res) => {
+  if (!securities.remove(intParam(req.params.id))) throw new HttpError(404, 'Security not found');
+  res.json({ ok: true });
+});
+
 router.post('/loans', (req, res) => {
   const row = pick(req.body, LOAN_FIELDS);
   requireFields(row, ['contact_id']);
@@ -123,6 +133,7 @@ router.post('/loans', (req, res) => {
   const id = db.transaction(() => {
     const loanId = db.insert('loans', row);
     setSecurities(loanId, req.body.security_ids, row.contact_id);
+    if (Array.isArray(req.body.co_borrower_ids)) borrowers.setCo('loan', loanId, req.body.co_borrower_ids);
     return loanId;
   });
   res.status(201).json(db.one('SELECT * FROM loans WHERE id = ?', id));
@@ -135,6 +146,7 @@ router.patch('/loans/:id', (req, res) => {
   db.transaction(() => {
     db.update('loans', id, { ...row, updated_at: nowIso() });
     setSecurities(id, req.body.security_ids, loan.contact_id);
+    if (Array.isArray(req.body.co_borrower_ids)) borrowers.setCo('loan', id, req.body.co_borrower_ids);
   });
   res.json(db.one('SELECT * FROM loans WHERE id = ?', id));
 });

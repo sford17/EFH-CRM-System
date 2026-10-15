@@ -150,7 +150,6 @@ router.get('/reports', (req, res) => {
     commission_by_month: db.all(
       `SELECT period AS month,
               SUM(CASE WHEN type='upfront' THEN amount ELSE 0 END) AS upfront,
-              SUM(CASE WHEN type='trail' THEN amount ELSE 0 END) AS trail,
               SUM(CASE WHEN type IN ('clawback','referral_fee') THEN amount ELSE 0 END) AS deductions,
               SUM(CASE WHEN status='received' THEN amount ELSE 0 END) AS received,
               SUM(amount) AS total
@@ -178,6 +177,18 @@ router.get('/reports/settlements.csv', (req, res) => {
   const tag = p.type === 'fy' ? `FY${String(p.fy).slice(2)}` : p.type === 'cy' ? String(p.year) : `${p.from}-to-${p.to}`;
   res.setHeader('Content-Disposition', `attachment; filename="settlements-${tag}.csv"`);
   res.send(require('../csv').stringify(settlementReport.csvRows(r)));
+});
+
+// ---- Loan types (home, commercial, business, SMSF…) ------------------------------
+const loanTypeReport = require('../services/loanTypeReport');
+router.get('/reports/loan-types', (req, res) => res.json(loanTypeReport.report(settlementArgs(req.query))));
+router.get('/reports/loan-types.csv', (req, res) => {
+  const args = settlementArgs(req.query);
+  const p = args.period;
+  const tag = p.type === 'fy' ? `FY${String(p.fy).slice(2)}` : p.type === 'cy' ? String(p.year) : `${p.from}-to-${p.to}`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="loan-types-${tag}.csv"`);
+  res.send(require('../csv').stringify(loanTypeReport.csvRows(args), loanTypeReport.CSV_COLUMNS));
 });
 
 // ---- Internal refinance register ------------------------------------------------
@@ -238,6 +249,7 @@ router.get('/commissions', (req, res) => {
 router.post('/commissions', (req, res) => {
   const row = pick(req.body, ['deal_id', 'type', 'amount', 'period', 'status', 'notes', 'received_at']);
   requireFields(row, ['deal_id', 'type', 'amount']);
+  if (!['upfront', 'clawback', 'referral_fee', 'other'].includes(row.type)) throw new HttpError(400, 'Type must be upfront, clawback, referral fee or other');
   if (row.type === 'clawback' && row.amount > 0) row.amount = -row.amount;
   const id = db.insert('commissions', row);
   res.status(201).json(db.one('SELECT * FROM commissions WHERE id = ?', id));
